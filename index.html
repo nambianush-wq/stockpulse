@@ -9241,6 +9241,14 @@ body.whatif-mode #sidebar { display: none; }
         <div class="help-text">If set, every stock you view fetches a second-source quote from Twelve Data and shows the delta vs Finnhub. Helps catch stale or anomalous data. Free tier: 800/day, 8/min — kept under the limit by caching cross-check prices for 60s. Get a key at <a href="https://twelvedata.com/register" target="_blank">twelvedata.com/register</a>.</div>
       </div>
       <div class="modal-row">
+        <label>Storage status</label>
+        <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+          <button type="button" class="btn" onclick="exportKeys()" title="Download a small text file with your API keys so you can restore them if localStorage gets wiped" style="padding:6px 12px; font-size:11px;">⬇ Export keys to file</button>
+          <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore keys from a previously-exported file" style="padding:6px 12px; font-size:11px;">⬆ Import keys from file</button>
+        </div>
+      </div>
+      <div class="modal-row">
         <label for="refresh-interval">Refresh interval</label>
         <select id="refresh-interval">
           <option value="0">Manual only</option>
@@ -9279,6 +9287,51 @@ const LS_KEY_BUNDLES  = 'sp_simulation_bundles';
 const LS_KEY_FAVS     = 'sp_favorites';
 const LS_KEY_SIMSET   = 'sp_sim_set';
 const LS_KEY_TD       = 'sp_td_key';
+const LS_KEY_API_BACKUP = 'sp_finnhub_key_backup';
+const LS_KEY_TD_BACKUP  = 'sp_td_key_backup';
+const LS_KEY_KEYS_SAVED_AT = 'sp_keys_saved_at';
+
+// Resilient API-key storage — writes to BOTH a primary slot and a backup slot
+// so that accidental localStorage clear or sync hiccup of one slot doesn't lose
+// the key. Reads check primary first, then fall back to backup. Both are
+// re-written on every successful load so they stay in sync.
+function loadKey(primary, backup) {
+  let v = '';
+  try { v = localStorage.getItem(primary) || ''; } catch (e) {}
+  if (!v) {
+    try { v = localStorage.getItem(backup) || ''; } catch (e) {}
+    if (v) {
+      // Backup had it but primary was wiped — write back to primary
+      try { localStorage.setItem(primary, v); } catch (e) {}
+    }
+  } else {
+    // Re-sync backup in case it was wiped
+    try { if (localStorage.getItem(backup) !== v) localStorage.setItem(backup, v); } catch (e) {}
+  }
+  return v;
+}
+function persistKey(primary, backup, val) {
+  let okPrimary = false, okBackup = false;
+  try { localStorage.setItem(primary, val); okPrimary = true; } catch (e) {}
+  try { localStorage.setItem(backup, val); okBackup = true; } catch (e) {}
+  return { okPrimary, okBackup };
+}
+function keyStorageStatus() {
+  try {
+    const api = localStorage.getItem(LS_KEY_API) || '';
+    const apiBak = localStorage.getItem(LS_KEY_API_BACKUP) || '';
+    const td = localStorage.getItem(LS_KEY_TD) || '';
+    const tdBak = localStorage.getItem(LS_KEY_TD_BACKUP) || '';
+    const savedAt = parseInt(localStorage.getItem(LS_KEY_KEYS_SAVED_AT) || '0', 10);
+    return {
+      finnhub: { has: !!api, hasBackup: !!apiBak, inSync: api === apiBak },
+      td:      { has: !!td,  hasBackup: !!tdBak, inSync: td === tdBak },
+      savedAt,
+    };
+  } catch (e) {
+    return { finnhub: { has: false, hasBackup: false, inSync: false }, td: { has: false, hasBackup: false, inSync: false }, savedAt: 0 };
+  }
+}
 
 // Layman-friendly explanations for every indicator. All include a 'What this means'
 // section so non-finance users know how to act on the number.
@@ -9464,8 +9517,8 @@ function updateSidebarCounters() {
 }
 
 let WATCHLIST = loadWatchlist();
-let API_KEY = localStorage.getItem(LS_KEY_API) || '';
-let TD_API_KEY = localStorage.getItem(LS_KEY_TD) || '';
+let API_KEY = loadKey(LS_KEY_API, LS_KEY_API_BACKUP);
+let TD_API_KEY = loadKey(LS_KEY_TD, LS_KEY_TD_BACKUP);
 let REFRESH_SEC = parseInt(localStorage.getItem(LS_KEY_REFRESH) || '300', 10);
 let NOTIFY_ON_CHANGE = (localStorage.getItem(LS_KEY_NOTIFY) || 'true') === 'true';
 let LAST_VERDICTS = JSON.parse(localStorage.getItem(LS_KEY_VERDICTS) || '{}');
@@ -13567,7 +13620,96 @@ function openSettings() {
   if (tdInput) tdInput.value = TD_API_KEY;
   $('refresh-interval').value = String(REFRESH_SEC);
   $('notify-on-change').checked = NOTIFY_ON_CHANGE;
+  renderKeyStorageStatus();
   $('settings-modal').classList.remove('hidden');
+}
+
+function renderKeyStorageStatus() {
+  const host = document.getElementById('settings-key-status');
+  if (!host) return;
+  const s = keyStorageStatus();
+  const lines = [];
+  // Finnhub status
+  if (s.finnhub.has && s.finnhub.hasBackup && s.finnhub.inSync) {
+    lines.push(`<span style="color:var(--bull)">✓ Finnhub key saved (primary + backup, in sync)</span>`);
+  } else if (s.finnhub.has) {
+    lines.push(`<span style="color:var(--warn)">⚠ Finnhub key saved but backup is out of sync — click Save to re-sync</span>`);
+  } else {
+    lines.push(`<span style="color:var(--muted)">○ Finnhub key not set (app runs in DEMO mode)</span>`);
+  }
+  // Twelve Data status
+  if (s.td.has && s.td.hasBackup && s.td.inSync) {
+    lines.push(`<span style="color:var(--bull)">✓ Twelve Data key saved (primary + backup, in sync)</span>`);
+  } else if (s.td.has) {
+    lines.push(`<span style="color:var(--warn)">⚠ Twelve Data key saved but backup is out of sync — click Save to re-sync</span>`);
+  } else {
+    lines.push(`<span style="color:var(--muted)">○ Twelve Data key not set (no cross-check)</span>`);
+  }
+  if (s.savedAt > 0) {
+    const ago = Math.floor((Date.now() - s.savedAt) / 1000);
+    const fmt = ago < 60 ? `${ago}s ago` : ago < 3600 ? `${Math.floor(ago/60)}m ago` : ago < 86400 ? `${Math.floor(ago/3600)}h ago` : `${Math.floor(ago/86400)}d ago`;
+    lines.push(`<span style="color:var(--dim)">Last save: ${fmt} (${new Date(s.savedAt).toLocaleString()})</span>`);
+  }
+  lines.push(`<span style="color:var(--dim); font-style:italic;">Keys live in localStorage at this file's origin. Export to a file to recover if browser data is cleared.</span>`);
+  host.innerHTML = lines.join('<br>');
+}
+
+// Download a small text file containing the current keys so the user can
+// restore them if localStorage is wiped (private mode, browser reset, etc.).
+function exportKeys() {
+  const content = [
+    `# StockPulse API Keys backup — ${new Date().toISOString()}`,
+    `# Paste this content back via 'Import keys from file' to restore.`,
+    `# Do NOT share this file — these keys give access to your API quotas.`,
+    ``,
+    `FINNHUB=${API_KEY}`,
+    `TWELVEDATA=${TD_API_KEY}`,
+    ``,
+  ].join('\n');
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `stockpulse-keys-${new Date().toISOString().slice(0,10)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast({ title: 'Keys exported', body: 'Saved to your Downloads folder. Keep this file private.', type: 'bull' });
+}
+
+function importKeysFromFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt,text/plain';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      let fh = '', td = '';
+      text.split('\n').forEach(line => {
+        const m = line.match(/^\s*(FINNHUB|TWELVEDATA)\s*=\s*(.*?)\s*$/i);
+        if (m) {
+          if (m[1].toUpperCase() === 'FINNHUB') fh = m[2];
+          else if (m[1].toUpperCase() === 'TWELVEDATA') td = m[2];
+        }
+      });
+      if (!fh && !td) {
+        showToast({ title: 'No keys found in file', body: 'File must contain FINNHUB=... and/or TWELVEDATA=...', type: 'bear' });
+        return;
+      }
+      if (fh) { $('api-key').value = fh; API_KEY = fh; persistKey(LS_KEY_API, LS_KEY_API_BACKUP, fh); }
+      if (td) { $('td-api-key').value = td; TD_API_KEY = td; persistKey(LS_KEY_TD, LS_KEY_TD_BACKUP, td); }
+      try { localStorage.setItem(LS_KEY_KEYS_SAVED_AT, String(Date.now())); } catch (e) {}
+      renderKeyStorageStatus();
+      updateModeIndicators();
+      showToast({ title: 'Keys imported', body: `${fh ? 'Finnhub' : ''}${fh && td ? ' + ' : ''}${td ? 'Twelve Data' : ''} restored from file.`, type: 'bull' });
+    } catch (e) {
+      showToast({ title: 'Could not import keys', body: e.message || 'File read failed', type: 'bear' });
+    }
+  };
+  input.click();
 }
 function closeSettings() { $('settings-modal').classList.add('hidden'); }
 
@@ -13583,10 +13725,16 @@ async function saveSettings() {
   TD_API_KEY = newTdKey;
   REFRESH_SEC = newRefresh;
   NOTIFY_ON_CHANGE = newNotify;
-  localStorage.setItem(LS_KEY_API, API_KEY);
-  localStorage.setItem(LS_KEY_TD, TD_API_KEY);
-  localStorage.setItem(LS_KEY_REFRESH, String(REFRESH_SEC));
-  localStorage.setItem(LS_KEY_NOTIFY, String(NOTIFY_ON_CHANGE));
+  // Persist with backup slots for resilience against accidental localStorage clear
+  const apiResult = persistKey(LS_KEY_API, LS_KEY_API_BACKUP, API_KEY);
+  const tdResult  = persistKey(LS_KEY_TD,  LS_KEY_TD_BACKUP,  TD_API_KEY);
+  try { localStorage.setItem(LS_KEY_KEYS_SAVED_AT, String(Date.now())); } catch (e) {}
+  try { localStorage.setItem(LS_KEY_REFRESH, String(REFRESH_SEC)); } catch (e) {}
+  try { localStorage.setItem(LS_KEY_NOTIFY, String(NOTIFY_ON_CHANGE)); } catch (e) {}
+  // Warn if storage failed silently
+  if ((newKey && !apiResult.okPrimary) || (newTdKey && !tdResult.okPrimary)) {
+    showToast({ title: 'Warning: keys may not have saved', body: 'Your browser may be in private mode or localStorage is full. Try again or export your keys.', type: 'bear' });
+  }
   updateModeIndicators();
   closeSettings();
   startRefreshTimer();
