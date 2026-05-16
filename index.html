@@ -8093,6 +8093,7 @@ body.whatif-mode #sidebar { display: none; }
           <button class="btn btn-primary wi-build-btn" onclick="buildPortfolioClick()">Build Portfolio</button>
         </div>
       </div>
+      <div id="saved-bundles-container"></div>
       <div id="whatif-results">
     <div class="wi-summary-grid">
       <div class="wi-summary-card">
@@ -8744,12 +8745,23 @@ const LS_KEY_API = 'sp_finnhub_key';
 const LS_KEY_REFRESH = 'sp_refresh_seconds';
 const LS_KEY_NOTIFY = 'sp_notify_on_change';
 const LS_KEY_VERDICTS = 'sp_last_verdicts';
+const LS_KEY_BUNDLES  = 'sp_simulation_bundles';
 
 let WATCHLIST = loadWatchlist();
 let API_KEY = localStorage.getItem(LS_KEY_API) || '';
 let REFRESH_SEC = parseInt(localStorage.getItem(LS_KEY_REFRESH) || '300', 10);
 let NOTIFY_ON_CHANGE = (localStorage.getItem(LS_KEY_NOTIFY) || 'true') === 'true';
 let LAST_VERDICTS = JSON.parse(localStorage.getItem(LS_KEY_VERDICTS) || '{}');
+let SAVED_BUNDLES = loadBundles();
+let _lastBuiltPortfolio = null;
+
+function loadBundles() {
+  try { const v = JSON.parse(localStorage.getItem(LS_KEY_BUNDLES) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function saveBundles() {
+  try { localStorage.setItem(LS_KEY_BUNDLES, JSON.stringify(SAVED_BUNDLES)); } catch (e) {}
+}
 
 let _selected = null;
 let _data = {};       // ticker -> { bars, verdict, quote, ts }
@@ -10597,7 +10609,7 @@ function buildPortfolio(amount, goalKey, horizon, historyYears) {
   const portfolioPeriodReturn = holdings.reduce((s, h) => s + ((h.risk && h.risk.periodReturn) || 0) * h.pct, 0) / 100;
   const hhi = computeHHI(holdings);
 
-  return {
+  const builtPortfolio = {
     strategy: def,
     goalKey, amount, horizon, historyYears,
     holdings,
@@ -10605,6 +10617,8 @@ function buildPortfolio(amount, goalKey, horizon, historyYears) {
              portfolioBeta, portfolioMaxDd, portfolioSharpe, portfolioVol, portfolioPeriodReturn,
              hhi, hhiText: hhiLabel(hhi) },
   };
+  _lastBuiltPortfolio = builtPortfolio;
+  return builtPortfolio;
 }
 
 function stockRationale(h, goalKey) {
@@ -10645,6 +10659,220 @@ function renderWhatIfPage() {
       <div class="sectors-empty-glyph">$</div>
       <div class="wi-empty-msg">Enter an investment amount and pick a goal above, then click <strong>Build Portfolio</strong> to see your optimized mix with every parameter shown.</div>
     </div>`;
+  renderSavedBundles();
+}
+
+// ========================================================================
+// Saved simulation bundles — name a portfolio, persist, track P&L over time
+// ========================================================================
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+// Compute current value of a bundle by re-pricing each holding's shares
+function valueBundle(bundle) {
+  let curValue = 0, prevBarValue = 0;
+  for (const h of bundle.holdings) {
+    const bars = getBars(h.ticker);
+    const last = bars[bars.length - 1].close;
+    const prev = bars.length > 1 ? bars[bars.length - 2].close : last;
+    curValue += h.shares * last;
+    prevBarValue += h.shares * prev;
+  }
+  const initial = bundle.amount;
+  const cumGain = curValue - initial;
+  const cumGainPct = initial > 0 ? (cumGain / initial * 100) : 0;
+  // Day P&L: prefer history-tracked snapshot (today vs previous recorded date)
+  let dayGain, dayGainPct, daySource;
+  const hist = bundle.history || [];
+  if (hist.length >= 2) {
+    const prev = hist[hist.length - 2];
+    dayGain = curValue - prev.value;
+    dayGainPct = prev.value > 0 ? (dayGain / prev.value * 100) : 0;
+    daySource = 'snapshot';
+  } else {
+    // No previous snapshot yet — fall back to bar-over-bar (week-over-week)
+    dayGain = curValue - prevBarValue;
+    dayGainPct = prevBarValue > 0 ? (dayGain / prevBarValue * 100) : 0;
+    daySource = 'bar';
+  }
+  return { curValue, initial, cumGain, cumGainPct, dayGain, dayGainPct, daySource };
+}
+
+// Append or update today's snapshot in the bundle's history (one per day)
+function trackBundleValue(bundle) {
+  const today = todayStr();
+  if (!bundle.history) bundle.history = [];
+  const cur = valueBundle(bundle).curValue;
+  const last = bundle.history[bundle.history.length - 1];
+  if (last && last.date === today) last.value = cur;
+  else bundle.history.push({ date: today, value: cur });
+  if (bundle.history.length > 365) bundle.history = bundle.history.slice(-365);
+}
+
+function saveCurrentBundle() {
+  if (!_lastBuiltPortfolio) {
+    showToast({ title: 'Build a portfolio first', body: 'Click Build Portfolio above, then save.', type: 'bear' });
+    return;
+  }
+  const nameInput = $('wi-save-name');
+  const rawName = nameInput ? nameInput.value.trim() : '';
+  const p = _lastBuiltPortfolio;
+  const defaultName = `${STRATEGY_DEFS[p.goalKey].label} · $${fmt(p.amount)} · ${todayStr()}`;
+  const name = rawName || defaultName;
+  // Reject duplicate names
+  if (SAVED_BUNDLES.some(b => b.name === name)) {
+    showToast({ title: 'Name already used', body: `A bundle called "${name}" already exists. Pick a different name.`, type: 'bear' });
+    return;
+  }
+  const bundle = {
+    id: 'b_' + Date.now() + '_' + Math.floor(Math.random() * 9999),
+    name,
+    createdAt: Date.now(),
+    goalKey: p.goalKey,
+    amount: p.amount,
+    horizon: p.horizon,
+    historyYears: p.historyYears,
+    holdings: p.holdings.map(h => ({
+      ticker: h.ticker, kind: h.kind,
+      name: h.name, industry: h.industry,
+      pct: h.pct, amount: h.amount, shares: h.shares,
+      entryPrice: h.last,
+      entryForecast12: (h.forecasts && h.forecasts.find(f => f.months === 12) || {}).expReturn || 0,
+    })),
+    history: [{ date: todayStr(), value: p.amount }],
+  };
+  SAVED_BUNDLES.push(bundle);
+  saveBundles();
+  if (nameInput) nameInput.value = '';
+  showToast({ title: `Saved "${bundle.name}"`, body: `Captured at $${fmt(p.amount)}. Open the bundle below to see daily and cumulative P&L over time.`, type: 'bull' });
+  renderSavedBundles();
+}
+
+function deleteBundle(id) {
+  const b = SAVED_BUNDLES.find(x => x.id === id);
+  if (!b) return;
+  if (!confirm(`Delete bundle "${b.name}"? This cannot be undone.`)) return;
+  SAVED_BUNDLES = SAVED_BUNDLES.filter(x => x.id !== id);
+  saveBundles();
+  renderSavedBundles();
+}
+
+function renderSavedBundles() {
+  const host = $('saved-bundles-container');
+  if (!host) return;
+  if (!SAVED_BUNDLES || SAVED_BUNDLES.length === 0) {
+    host.innerHTML = `<div class="bundles-section">
+      <div class="bundles-section-head">
+        <div class="bundles-section-title">Saved Simulation Bundles</div>
+        <div class="news-card-sub">0 saved · build a portfolio below and click Save to track it over time</div>
+      </div>
+      <div class="bundles-empty">No saved bundles yet. <strong>Build a portfolio</strong> above and click <strong>Save as bundle</strong> in the results to track its daily and cumulative performance over time.</div>
+    </div>`;
+    return;
+  }
+  // Track today's snapshot for each bundle, then persist
+  for (const b of SAVED_BUNDLES) trackBundleValue(b);
+  saveBundles();
+  const cards = SAVED_BUNDLES.slice().sort((a, b) => b.createdAt - a.createdAt).map(renderBundleCard).join('');
+  host.innerHTML = `<div class="bundles-section">
+    <div class="bundles-section-head">
+      <div class="bundles-section-title">Saved Simulation Bundles · ${SAVED_BUNDLES.length} tracked</div>
+      <div class="news-card-sub">Daily snapshot taken on every visit · cumulative P&L from inception</div>
+    </div>
+    ${cards}
+  </div>`;
+}
+
+function renderBundleCard(b) {
+  const stats = valueBundle(b);
+  const def = STRATEGY_DEFS[b.goalKey] || { label: b.goalKey };
+  const cumDir = stats.cumGain >= 0 ? 'up' : 'down';
+  const dayDir = stats.dayGain >= 0 ? 'up' : 'down';
+  const daysSince = Math.max(0, Math.floor((Date.now() - b.createdAt) / 86400000));
+  const samples = (b.history || []).map(e => e.value);
+  const spark = samples.length >= 2 ? sparklineSvg(sampleSparkPoints(samples, 80), 240, 32) : '';
+  const sparkRange = samples.length >= 2 ? `low $${fmt(Math.min(...samples))} · high $${fmt(Math.max(...samples))} · ${samples.length} snapshot${samples.length === 1 ? '' : 's'}` : 'tracking begins next session';
+  // Forward forecast — weighted 12M from holdings (re-uses What If cache when present)
+  let fwd12 = 0;
+  const cache = (_whatIfCache && _whatIfCache.get && _whatIfCache.get(b.historyYears)) || null;
+  if (cache) {
+    for (const h of b.holdings) {
+      const m = cache.find(x => x.ticker === h.ticker);
+      if (m && m.forecasts) {
+        const f12 = m.forecasts.find(f => f.months === 12);
+        if (f12) fwd12 += f12.expReturn * h.pct;
+      }
+    }
+    fwd12 /= 100;
+  } else {
+    // Fallback to entry-time forecast
+    for (const h of b.holdings) fwd12 += (h.entryForecast12 || 0) * h.pct;
+    fwd12 /= 100;
+  }
+  const fwdDir = fwd12 >= 0 ? 'up' : 'down';
+  const daySourceNote = stats.daySource === 'bar' ? '<span class="news-card-sub"> · using last-bar (weekly) until 2nd snapshot</span>' : '';
+  return `<div class="bundle-card">
+    <div class="bundle-head">
+      <div>
+        <div class="bundle-name">${_escapeHtml(b.name)}</div>
+        <div class="bundle-meta">${_escapeHtml(def.label)} · $${fmt(b.amount)} initial · ${b.holdings.length} holdings · ${daysSince} day${daysSince === 1 ? '' : 's'} ago · grounded ${b.historyYears}Y</div>
+      </div>
+      <div class="bundle-actions">
+        <button class="bundle-btn danger" onclick="deleteBundle('${b.id}')" title="Delete bundle">✕</button>
+      </div>
+    </div>
+    <div class="bundle-stats">
+      <div class="bundle-stat">
+        <div class="lbl">Current Value</div>
+        <div class="val">$${fmt(stats.curValue)}</div>
+        <div class="sub">vs $${fmt(stats.initial)} initial</div>
+      </div>
+      <div class="bundle-stat">
+        <div class="lbl">Cumulative P&L</div>
+        <div class="val ${cumDir}">${stats.cumGain >= 0 ? '+' : '−'}$${fmt(Math.abs(stats.cumGain))}</div>
+        <div class="sub ${cumDir}">${stats.cumGain >= 0 ? '+' : ''}${stats.cumGainPct.toFixed(2)}% since inception</div>
+      </div>
+      <div class="bundle-stat">
+        <div class="lbl">Latest P&L</div>
+        <div class="val ${dayDir}">${stats.dayGain >= 0 ? '+' : '−'}$${fmt(Math.abs(stats.dayGain))}</div>
+        <div class="sub ${dayDir}">${stats.dayGain >= 0 ? '+' : ''}${stats.dayGainPct.toFixed(2)}% ${stats.daySource === 'bar' ? '(week-over-week)' : '(vs last snapshot)'}</div>
+      </div>
+      <div class="bundle-stat">
+        <div class="lbl">12M Forecast</div>
+        <div class="val ${fwdDir}">${fwd12 >= 0 ? '+' : ''}${fwd12.toFixed(1)}%</div>
+        <div class="sub">Weighted across holdings</div>
+      </div>
+    </div>
+    <div class="bundle-spark">
+      <div class="bundle-spark-main">
+        <div class="bundle-spark-lbl">Value trend</div>
+        <div class="bundle-spark-sub">${sparkRange}${daySourceNote}</div>
+      </div>
+      ${spark || '<div class="news-card-sub" style="text-align:right;">Sparkline appears after 2nd daily snapshot</div>'}
+    </div>
+    <details class="bundle-details">
+      <summary>Show ${b.holdings.length} holding${b.holdings.length === 1 ? '' : 's'}</summary>
+      <div class="bundle-holdings">
+        ${b.holdings.map(renderBundleHolding).join('')}
+      </div>
+    </details>
+  </div>`;
+}
+
+function renderBundleHolding(h) {
+  const bars = getBars(h.ticker);
+  const cur = bars[bars.length - 1].close;
+  const initValue = h.shares * h.entryPrice;
+  const curValue = h.shares * cur;
+  const gain = curValue - initValue;
+  const gainPct = initValue > 0 ? gain / initValue * 100 : 0;
+  const dir = gain >= 0 ? 'up' : 'down';
+  return `<div class="bundle-h-row" onclick="tileClick && tileClick('${h.ticker}')" title="Click to open ${h.ticker} in the dashboard" style="cursor:pointer;">
+    <div class="bundle-h-sym">${h.ticker}</div>
+    <div class="bundle-h-name">${_escapeHtml(h.name || h.ticker)}</div>
+    <div class="bundle-h-shares">${h.shares.toFixed(2)} sh</div>
+    <div class="bundle-h-prices"><span class="lbl">Entry</span>$${fmt(h.entryPrice)} → <span class="lbl">Now</span>$${fmt(cur)}</div>
+    <div class="bundle-h-pnl ${dir}">${gain >= 0 ? '+' : '−'}$${fmt(Math.abs(gain))}<span class="pct">(${gain >= 0 ? '+' : ''}${gainPct.toFixed(2)}%)</span></div>
+  </div>`;
 }
 
 function buildPortfolioClick() {
@@ -10746,7 +10974,13 @@ function renderWhatIfResults(p) {
   const horizonReturn = p.horizon === 12 ? stats.expected12 : p.horizon === 24 ? stats.expected24 : stats.expected36;
   const finalAmt = p.amount * (1 + horizonReturn / 100);
   const profit = finalAmt - p.amount;
+  const defaultBundleName = `${def.label} · $${fmt(p.amount)} · ${todayStr()}`;
   $('whatif-results').innerHTML = `
+    <div class="wi-save-row">
+      <div class="wi-save-lbl">Save this simulation:</div>
+      <input id="wi-save-name" type="text" placeholder="${_escapeHtml(defaultBundleName)}" value="" maxlength="80" autocomplete="off">
+      <button class="btn btn-primary" onclick="saveCurrentBundle()">💾 Save as bundle</button>
+    </div>
     <div class="wi-summary-grid">
       <div class="wi-summary-card">
         <div class="wi-sc-lbl">Total Invested</div>
