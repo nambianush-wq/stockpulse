@@ -2763,6 +2763,288 @@ body.whatif-mode #sidebar { display: none; }
   border-radius: 3px;
   display: inline-block;
 }
+
+/* Cockpit (real-time dashboard view) */
+#cockpit-page { padding: 24px 28px; display: none; }
+body.cockpit-mode #sidebar { display: none; }
+.cockpit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cockpit-title { font-size: 26px; font-weight: 700; letter-spacing: -.018em; line-height: 1.2; }
+.cockpit-sub { color: var(--muted); font-size: 13px; margin-top: 4px; max-width: 620px; line-height: 1.5; }
+.cockpit-meta {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: right;
+}
+.cockpit-refresh-btn {
+  padding: 6px 12px;
+  font-size: 11px;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background .15s;
+}
+.cockpit-refresh-btn:hover { background: #0080ff; }
+.cockpit-live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--bull);
+  display: inline-block;
+  box-shadow: 0 0 8px var(--bull);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Hero stats — 6 KPI cards */
+.cockpit-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+@media (max-width: 1280px) { .cockpit-hero-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px)  { .cockpit-hero-grid { grid-template-columns: repeat(2, 1fr); } }
+.cockpit-hero-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.cockpit-hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent);
+  opacity: .6;
+}
+.cockpit-hero-card.up::before { background: var(--bull); }
+.cockpit-hero-card.down::before { background: var(--bear); }
+.cockpit-hero-card.warn::before { background: var(--warn); }
+.cockpit-hero-lbl {
+  font-size: 9.5px;
+  color: var(--muted);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.cockpit-hero-val {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+}
+.cockpit-hero-val.up { color: var(--bull); }
+.cockpit-hero-val.down { color: var(--bear); }
+.cockpit-hero-val.warn { color: var(--warn); }
+.cockpit-hero-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cockpit sections */
+.cockpit-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.cockpit-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line);
+}
+.cockpit-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cockpit-section-sub {
+  font-size: 10.5px;
+  color: var(--dim);
+  font-style: italic;
+}
+
+/* Heatmap */
+.cockpit-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
+  gap: 6px;
+}
+.cockpit-heat-cell {
+  padding: 10px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, filter .15s;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+}
+.cockpit-heat-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.5);
+  filter: brightness(1.15);
+}
+.cockpit-heat-cell .sym {
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  letter-spacing: -.005em;
+}
+.cockpit-heat-cell .delta {
+  font-size: 10px;
+  opacity: .95;
+  font-variant-numeric: tabular-nums;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+.cockpit-heat-cell .score-badge {
+  font-size: 8.5px;
+  background: rgba(0,0,0,.35);
+  color: white;
+  padding: 1px 5px;
+  border-radius: 99px;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .03em;
+}
+
+/* Performance grid */
+.cockpit-perf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+.cockpit-perf-card {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.cockpit-perf-card:hover {
+  background: var(--line);
+  border-color: var(--dim);
+  transform: translateY(-1px);
+}
+.cockpit-perf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.cockpit-perf-sym { font-size: 13px; font-weight: 700; color: var(--text); }
+.cockpit-perf-price { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cockpit-perf-spark { margin: 4px 0; height: 24px; display: flex; align-items: center; }
+.cockpit-perf-spark svg { width: 100%; height: 24px; }
+.cockpit-perf-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.cockpit-perf-stats .pair { display: inline-flex; gap: 2px; align-items: baseline; }
+.cockpit-perf-stats .lbl {
+  color: var(--muted);
+  font-size: 8.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.cockpit-perf-stats .up { color: var(--bull); font-weight: 600; }
+.cockpit-perf-stats .down { color: var(--bear); font-weight: 600; }
+
+/* Sector mix */
+.cockpit-sector-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 60px;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.cockpit-sector-name {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cockpit-sector-bar { height: 8px; background: var(--raised); border-radius: 4px; overflow: hidden; }
+.cockpit-sector-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--bull));
+  border-radius: 4px;
+  transition: width 1s cubic-bezier(.4,0,.2,1);
+}
+.cockpit-sector-pct {
+  text-align: right;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Alerts strip */
+.cockpit-alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.cockpit-alert {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  align-items: flex-start;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.cockpit-alert:hover { background: var(--line); border-color: var(--dim); }
+.cockpit-alert.bull { border-left: 3px solid var(--bull); }
+.cockpit-alert.bear { border-left: 3px solid var(--bear); }
+.cockpit-alert.warn { border-left: 3px solid var(--warn); }
+.cockpit-alert.info { border-left: 3px solid var(--accent); }
+.cockpit-alert-icon { font-size: 16px; flex-shrink: 0; line-height: 1.3; }
+.cockpit-alert-body { font-size: 12px; flex: 1; line-height: 1.45; }
+.cockpit-alert-body b { color: var(--text); font-weight: 600; }
+.cockpit-alert-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+.cockpit-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+.cockpit-empty h2 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
 .bundle-details { margin-top: 4px; padding-top: 4px; }
 .bundle-details summary {
   cursor: pointer;
@@ -3107,10 +3389,11 @@ body.whatif-mode #sidebar { display: none; }
     StockPulse
   </div>
   <nav class="tab-nav" role="tablist" aria-label="Primary navigation">
-    <button class="tab active" data-view="watchlist" role="tab" aria-selected="true" onclick="showView(&#39;watchlist&#39;)">Watchlist</button>
-    <button class="tab" data-view="sectors" role="tab" aria-selected="false" onclick="showView(&#39;sectors&#39;)">Sectors</button>
-    <button class="tab" data-view="picks" role="tab" aria-selected="false" onclick="showView(&#39;picks&#39;)">Top Picks</button>
-    <button class="tab" data-view="whatif" role="tab" aria-selected="false" onclick="showView(&#39;whatif&#39;)">What If</button>
+    <button class="tab" data-view="cockpit" role="tab" aria-selected="false" onclick="showView('cockpit')" title="Real-time dashboard for the entire watchlist">Cockpit</button>
+    <button class="tab active" data-view="watchlist" role="tab" aria-selected="true" onclick="showView('watchlist')">Watchlist</button>
+    <button class="tab" data-view="sectors" role="tab" aria-selected="false" onclick="showView('sectors')">Sectors</button>
+    <button class="tab" data-view="picks" role="tab" aria-selected="false" onclick="showView('picks')">Top Picks</button>
+    <button class="tab" data-view="whatif" role="tab" aria-selected="false" onclick="showView('whatif')">What If</button>
   </nav>
   <div class="actions">
     <span id="mode-pill" class="mode-pill live">LIVE</span>
@@ -9288,8 +9571,8 @@ body.whatif-mode #sidebar { display: none; }
         <label>Storage status</label>
         <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-          <button type="button" class="btn" onclick="exportKeys()" title="Download a small text file with your API keys so you can restore them if localStorage gets wiped" style="padding:6px 12px; font-size:11px;">⬇ Export keys to file</button>
-          <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore keys from a previously-exported file" style="padding:6px 12px; font-size:11px;">⬆ Import keys from file</button>
+          <button type="button" class="btn" onclick="exportKeys()" title="Download a JSON file with your API keys, watchlist, favorites, sim set, saved bundles, and preferences. Use to migrate to another browser, origin, or device — localStorage is per-origin so the same URL on a different host has empty storage." style="padding:6px 12px; font-size:11px;">⬇ Export all data</button>
+          <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore from a previously-exported JSON backup (or a legacy keys.txt). Merges with whatever is already on this origin — never overwrites local progress." style="padding:6px 12px; font-size:11px;">⬆ Import data</button>
         </div>
       </div>
       <div class="modal-row">
@@ -9334,6 +9617,23 @@ const LS_KEY_TD       = 'sp_td_key';
 const LS_KEY_API_BACKUP = 'sp_finnhub_key_backup';
 const LS_KEY_TD_BACKUP  = 'sp_td_key_backup';
 const LS_KEY_KEYS_SAVED_AT = 'sp_keys_saved_at';
+// Backup slots for every persisted user-data list, mirroring the API-key
+// resilience pattern. Any user data that takes effort to rebuild gets a
+// twin slot so a wipe of one (sync glitch, private-mode quirk) doesn't lose it.
+const LS_KEY_WL_BACKUP       = 'sp_watchlist_backup';
+const LS_KEY_BUNDLES_BACKUP  = 'sp_simulation_bundles_backup';
+const LS_KEY_FAVS_BACKUP     = 'sp_favorites_backup';
+const LS_KEY_SIMSET_BACKUP   = 'sp_sim_set_backup';
+const LS_KEY_DATA_SAVED_AT   = 'sp_data_saved_at';
+// Primary → backup lookup, used by loadStringSet / persistSet. Defined here
+// (top of script) so initialisation code (`let FAVORITES = loadStringSet(...)`)
+// can reach it without hitting the temporal-dead-zone.
+const LS_BACKUP_MAP = {
+  [LS_KEY_FAVS]:    LS_KEY_FAVS_BACKUP,
+  [LS_KEY_SIMSET]:  LS_KEY_SIMSET_BACKUP,
+  [LS_KEY_WL]:      LS_KEY_WL_BACKUP,
+  [LS_KEY_BUNDLES]: LS_KEY_BUNDLES_BACKUP,
+};
 
 // Resilient API-key storage — writes to BOTH a primary slot and a backup slot
 // so that accidental localStorage clear or sync hiccup of one slot doesn't lose
@@ -9375,6 +9675,77 @@ function keyStorageStatus() {
   } catch (e) {
     return { finnhub: { has: false, hasBackup: false, inSync: false }, td: { has: false, hasBackup: false, inSync: false }, savedAt: 0 };
   }
+}
+
+// Generic resilient JSON loader — primary slot first, fall back to backup slot
+// if the primary is missing or unparseable. If BOTH are unparseable but at
+// least one carried a non-empty string, copy the raw text to a one-time
+// `<primary>__corrupt_<ts>` slot so the bad payload isn't overwritten by the
+// fallback default; that gives the user a recovery path.
+function loadJsonResilient(primary, backup, fallback) {
+  const tryParse = (key) => {
+    let raw = '';
+    try { raw = localStorage.getItem(key) || ''; } catch (e) { return { ok: false, raw: '' }; }
+    if (!raw) return { ok: false, raw: '' };
+    try { return { ok: true, raw, val: JSON.parse(raw) }; }
+    catch (e) { return { ok: false, raw, parseError: true }; }
+  };
+  const pri = tryParse(primary);
+  if (pri.ok) {
+    // Re-sync backup if it differs (defensive — backup might be older)
+    try {
+      const bRaw = localStorage.getItem(backup) || '';
+      if (bRaw !== pri.raw) localStorage.setItem(backup, pri.raw);
+    } catch (e) {}
+    return pri.val;
+  }
+  const bak = tryParse(backup);
+  if (bak.ok) {
+    // Primary was empty/corrupt, backup parsed — restore primary from backup
+    try { localStorage.setItem(primary, bak.raw); } catch (e) {}
+    return bak.val;
+  }
+  // Both failed. If either had a parse error (not just empty), preserve the
+  // raw payload in a corrupt-quarantine slot so the user can investigate later.
+  if (pri.parseError || bak.parseError) {
+    try {
+      const ts = Date.now();
+      if (pri.parseError) localStorage.setItem(`${primary}__corrupt_${ts}`, pri.raw);
+      if (bak.parseError) localStorage.setItem(`${backup}__corrupt_${ts}`, bak.raw);
+      console.warn(`[StockPulse] Corrupt payload preserved at ${primary}__corrupt_${ts}`);
+    } catch (e) {}
+  }
+  return fallback;
+}
+
+// Generic resilient JSON persister — writes the JSON-stringified value to both
+// the primary and backup slots and stamps the global data-saved-at timestamp.
+// Never throws; surfaces success state per slot for callers that want to warn.
+function persistJsonResilient(primary, backup, val) {
+  let okPrimary = false, okBackup = false;
+  let json = '';
+  try { json = JSON.stringify(val); } catch (e) { return { okPrimary, okBackup, err: e.message }; }
+  try { localStorage.setItem(primary, json); okPrimary = true; } catch (e) {}
+  try { localStorage.setItem(backup, json); okBackup = true; } catch (e) {}
+  try { localStorage.setItem(LS_KEY_DATA_SAVED_AT, String(Date.now())); } catch (e) {}
+  return { okPrimary, okBackup };
+}
+
+// Storage-health snapshot covering EVERY user-data list. Used by the Settings
+// panel so the user can see whether favorites / watchlist / bundles persisted.
+function dataStorageStatus() {
+  const peek = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  const pair = (p, b) => {
+    const pv = peek(p), bv = peek(b);
+    return { has: !!pv, hasBackup: !!bv, inSync: pv === bv };
+  };
+  return {
+    watchlist: pair(LS_KEY_WL, LS_KEY_WL_BACKUP),
+    bundles:   pair(LS_KEY_BUNDLES, LS_KEY_BUNDLES_BACKUP),
+    favorites: pair(LS_KEY_FAVS, LS_KEY_FAVS_BACKUP),
+    simSet:    pair(LS_KEY_SIMSET, LS_KEY_SIMSET_BACKUP),
+    savedAt:   parseInt(peek(LS_KEY_DATA_SAVED_AT) || '0', 10),
+  };
 }
 
 // Layman-friendly explanations for every indicator. All include a 'What this means'
@@ -9420,14 +9791,17 @@ function tip(key) { return (TIP[key] || '').replace(/"/g, '&quot;'); }
 let FAVORITES = loadStringSet(LS_KEY_FAVS);
 let SIM_SET   = loadStringSet(LS_KEY_SIMSET);
 
+// String-set loader/persister — dual-slot resilient. The `key` argument is the
+// primary slot; the backup is resolved via LS_BACKUP_MAP (defined above) so
+// callers don't have to pass both. Falls back to an empty set; never throws.
 function loadStringSet(key) {
-  try {
-    const v = JSON.parse(localStorage.getItem(key) || '[]');
-    return new Set(Array.isArray(v) ? v : []);
-  } catch (e) { return new Set(); }
+  const backup = LS_BACKUP_MAP[key] || `${key}_backup`;
+  const arr = loadJsonResilient(key, backup, []);
+  return new Set(Array.isArray(arr) ? arr : []);
 }
 function persistSet(key, set) {
-  try { localStorage.setItem(key, JSON.stringify([...set])); } catch (e) {}
+  const backup = LS_BACKUP_MAP[key] || `${key}_backup`;
+  persistJsonResilient(key, backup, [...set]);
 }
 function isFavorite(t) { return FAVORITES.has(t); }
 function isInSimSet(t) { return SIM_SET.has(t); }
@@ -9608,11 +9982,11 @@ let SAVED_BUNDLES = loadBundles();
 let _lastBuiltPortfolio = null;
 
 function loadBundles() {
-  try { const v = JSON.parse(localStorage.getItem(LS_KEY_BUNDLES) || '[]'); return Array.isArray(v) ? v : []; }
-  catch (e) { return []; }
+  const v = loadJsonResilient(LS_KEY_BUNDLES, LS_KEY_BUNDLES_BACKUP, []);
+  return Array.isArray(v) ? v : [];
 }
 function saveBundles() {
-  try { localStorage.setItem(LS_KEY_BUNDLES, JSON.stringify(SAVED_BUNDLES)); } catch (e) {}
+  persistJsonResilient(LS_KEY_BUNDLES, LS_KEY_BUNDLES_BACKUP, SAVED_BUNDLES);
 }
 
 let _selected = null;
@@ -9622,14 +9996,12 @@ let _refreshTimer = null;
 let _alertedTickers = new Set();
 
 function loadWatchlist() {
-  try {
-    const raw = localStorage.getItem(LS_KEY_WL);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {}
+  const v = loadJsonResilient(LS_KEY_WL, LS_KEY_WL_BACKUP, null);
+  if (Array.isArray(v)) return v;
   return ['ACN', 'AAPL', 'MSFT', 'NVDA'];
 }
 function saveWatchlist() {
-  localStorage.setItem(LS_KEY_WL, JSON.stringify(WATCHLIST));
+  persistJsonResilient(LS_KEY_WL, LS_KEY_WL_BACKUP, WATCHLIST);
 }
 
 // ========================================================================
@@ -13758,65 +14130,170 @@ function renderKeyStorageStatus() {
   if (s.savedAt > 0) {
     const ago = Math.floor((Date.now() - s.savedAt) / 1000);
     const fmt = ago < 60 ? `${ago}s ago` : ago < 3600 ? `${Math.floor(ago/60)}m ago` : ago < 86400 ? `${Math.floor(ago/3600)}h ago` : `${Math.floor(ago/86400)}d ago`;
-    lines.push(`<span style="color:var(--dim)">Last save: ${fmt} (${new Date(s.savedAt).toLocaleString()})</span>`);
+    lines.push(`<span style="color:var(--dim)">Keys last saved: ${fmt}</span>`);
   }
-  lines.push(`<span style="color:var(--dim); font-style:italic;">Keys live in localStorage at this file's origin. Export to a file to recover if browser data is cleared.</span>`);
+  // User-data persistence (watchlist / favorites / sim set / bundles) — every
+  // list now uses the same primary+backup pattern as the API keys.
+  const d = dataStorageStatus();
+  const row = (label, p, count) => {
+    if (p.has && p.hasBackup && p.inSync) return `<span style="color:var(--bull)">✓ ${label} (${count}) — saved + mirrored</span>`;
+    if (p.has) return `<span style="color:var(--warn)">⚠ ${label} (${count}) — backup out of sync</span>`;
+    return `<span style="color:var(--muted)">○ ${label} (empty)</span>`;
+  };
+  lines.push(row('Watchlist', d.watchlist, Array.isArray(WATCHLIST) ? WATCHLIST.length : 0));
+  lines.push(row('Favorites', d.favorites, FAVORITES.size));
+  lines.push(row('Sim Set',  d.simSet,    SIM_SET.size));
+  lines.push(row('Bundles',  d.bundles,   Array.isArray(SAVED_BUNDLES) ? SAVED_BUNDLES.length : 0));
+  if (d.savedAt > 0) {
+    const ago2 = Math.floor((Date.now() - d.savedAt) / 1000);
+    const fmt2 = ago2 < 60 ? `${ago2}s ago` : ago2 < 3600 ? `${Math.floor(ago2/60)}m ago` : ago2 < 86400 ? `${Math.floor(ago2/3600)}h ago` : `${Math.floor(ago2/86400)}d ago`;
+    lines.push(`<span style="color:var(--dim)">Data last saved: ${fmt2}</span>`);
+  }
+  lines.push(`<span style="color:var(--dim); font-style:italic;">Everything lives in localStorage at this URL's origin. localStorage is per-origin — moving the app to a new domain starts with empty storage. Use Export all data → Import data to migrate.</span>`);
   host.innerHTML = lines.join('<br>');
 }
 
-// Download a small text file containing the current keys so the user can
-// restore them if localStorage is wiped (private mode, browser reset, etc.).
+// Download a JSON file containing EVERY piece of user-saved state so the user
+// can restore on a fresh browser, a different origin (file:// → github.io →
+// stocknaut.github.io), or after a localStorage wipe. localStorage is scoped
+// per-origin, so moving the app to a new URL = empty storage; this file is
+// the canonical migration artifact.
 function exportKeys() {
-  const content = [
-    `# StockPulse API Keys backup — ${new Date().toISOString()}`,
-    `# Paste this content back via 'Import keys from file' to restore.`,
-    `# Do NOT share this file — these keys give access to your API quotas.`,
-    ``,
-    `FINNHUB=${API_KEY}`,
-    `TWELVEDATA=${TD_API_KEY}`,
-    ``,
-  ].join('\n');
-  const blob = new Blob([content], { type: 'text/plain' });
+  const payload = {
+    _kind: 'stockpulse-backup',
+    _version: 2,
+    _exportedAt: new Date().toISOString(),
+    _origin: (typeof location !== 'undefined') ? location.origin : '',
+    keys: {
+      finnhub:    API_KEY || '',
+      twelvedata: TD_API_KEY || '',
+    },
+    watchlist:  Array.isArray(WATCHLIST) ? WATCHLIST.slice() : [],
+    favorites:  [...FAVORITES],
+    simSet:     [...SIM_SET],
+    bundles:    Array.isArray(SAVED_BUNDLES) ? SAVED_BUNDLES.slice() : [],
+    preferences: {
+      refreshSec: REFRESH_SEC,
+      notifyOnChange: NOTIFY_ON_CHANGE,
+    },
+  };
+  const content = JSON.stringify(payload, null, 2);
+  const blob = new Blob([content], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `stockpulse-keys-${new Date().toISOString().slice(0,10)}.txt`;
+  a.download = `stockpulse-backup-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast({ title: 'Keys exported', body: 'Saved to your Downloads folder. Keep this file private.', type: 'bull' });
+  const counts = `${WATCHLIST.length} watchlist · ${FAVORITES.size} favorites · ${SIM_SET.size} sim · ${SAVED_BUNDLES.length} bundles`;
+  showToast({ title: 'Backup exported', body: `Keys + ${counts}. Saved to Downloads. Keep this file private.`, type: 'bull' });
 }
 
+// Restore from a previously-exported file. Accepts:
+//   • new v2 JSON format (full app state — keys + lists + bundles + prefs)
+//   • legacy v1 TXT format (FINNHUB=... / TWELVEDATA=... lines)
+// Detects format by attempting JSON.parse first; falls back to line-parse.
 function importKeysFromFile() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.txt,text/plain';
+  input.accept = '.json,.txt,application/json,text/plain';
   input.onchange = async () => {
     const file = input.files && input.files[0];
     if (!file) return;
     try {
       const text = await file.text();
-      let fh = '', td = '';
-      text.split('\n').forEach(line => {
-        const m = line.match(/^\s*(FINNHUB|TWELVEDATA)\s*=\s*(.*?)\s*$/i);
-        if (m) {
-          if (m[1].toUpperCase() === 'FINNHUB') fh = m[2];
-          else if (m[1].toUpperCase() === 'TWELVEDATA') td = m[2];
+      let restored = { keys: 0, watchlist: 0, favorites: 0, simSet: 0, bundles: 0, prefs: 0 };
+      let parsed = null;
+      try { parsed = JSON.parse(text); } catch (e) { /* fall through to TXT parser */ }
+      if (parsed && typeof parsed === 'object' && parsed._kind === 'stockpulse-backup') {
+        // v2 JSON — full restore
+        if (parsed.keys && typeof parsed.keys === 'object') {
+          const fh = (parsed.keys.finnhub || '').trim();
+          const td = (parsed.keys.twelvedata || '').trim();
+          if (fh) { $('api-key').value = fh; API_KEY = fh; persistKey(LS_KEY_API, LS_KEY_API_BACKUP, fh); restored.keys++; }
+          if (td) { $('td-api-key').value = td; TD_API_KEY = td; persistKey(LS_KEY_TD, LS_KEY_TD_BACKUP, td); restored.keys++; }
         }
-      });
-      if (!fh && !td) {
-        showToast({ title: 'No keys found in file', body: 'File must contain FINNHUB=... and/or TWELVEDATA=...', type: 'bear' });
-        return;
+        if (Array.isArray(parsed.watchlist) && parsed.watchlist.length) {
+          // Union with current watchlist — don't drop tickers the user added on this origin
+          const merged = Array.from(new Set([...(WATCHLIST || []), ...parsed.watchlist.filter(t => typeof t === 'string')]));
+          WATCHLIST.length = 0;
+          for (const t of merged) WATCHLIST.push(t);
+          saveWatchlist();
+          restored.watchlist = parsed.watchlist.length;
+        }
+        if (Array.isArray(parsed.favorites)) {
+          for (const t of parsed.favorites) if (typeof t === 'string') FAVORITES.add(t);
+          persistSet(LS_KEY_FAVS, FAVORITES);
+          restored.favorites = parsed.favorites.length;
+        }
+        if (Array.isArray(parsed.simSet)) {
+          for (const t of parsed.simSet) if (typeof t === 'string') SIM_SET.add(t);
+          persistSet(LS_KEY_SIMSET, SIM_SET);
+          restored.simSet = parsed.simSet.length;
+        }
+        if (Array.isArray(parsed.bundles) && parsed.bundles.length) {
+          // Merge by id — keep local bundles, append any imported ones whose id
+          // isn't already present. Avoids destroying user's local progress.
+          const existingIds = new Set(SAVED_BUNDLES.map(b => b.id));
+          for (const b of parsed.bundles) {
+            if (b && b.id && !existingIds.has(b.id)) {
+              SAVED_BUNDLES.push(b);
+              existingIds.add(b.id);
+              restored.bundles++;
+            }
+          }
+          saveBundles();
+        }
+        if (parsed.preferences && typeof parsed.preferences === 'object') {
+          if (typeof parsed.preferences.refreshSec === 'number') {
+            REFRESH_SEC = parsed.preferences.refreshSec;
+            try { localStorage.setItem(LS_KEY_REFRESH, String(REFRESH_SEC)); } catch (e) {}
+            restored.prefs++;
+          }
+          if (typeof parsed.preferences.notifyOnChange === 'boolean') {
+            NOTIFY_ON_CHANGE = parsed.preferences.notifyOnChange;
+            try { localStorage.setItem(LS_KEY_NOTIFY, String(NOTIFY_ON_CHANGE)); } catch (e) {}
+            restored.prefs++;
+          }
+        }
+      } else {
+        // Legacy v1 TXT — keys only
+        let fh = '', td = '';
+        text.split('\n').forEach(line => {
+          const m = line.match(/^\s*(FINNHUB|TWELVEDATA)\s*=\s*(.*?)\s*$/i);
+          if (m) {
+            if (m[1].toUpperCase() === 'FINNHUB') fh = m[2];
+            else if (m[1].toUpperCase() === 'TWELVEDATA') td = m[2];
+          }
+        });
+        if (!fh && !td) {
+          showToast({ title: 'No data found in file', body: 'File must be a stockpulse-backup JSON or a legacy keys.txt.', type: 'bear' });
+          return;
+        }
+        if (fh) { $('api-key').value = fh; API_KEY = fh; persistKey(LS_KEY_API, LS_KEY_API_BACKUP, fh); restored.keys++; }
+        if (td) { $('td-api-key').value = td; TD_API_KEY = td; persistKey(LS_KEY_TD, LS_KEY_TD_BACKUP, td); restored.keys++; }
       }
-      if (fh) { $('api-key').value = fh; API_KEY = fh; persistKey(LS_KEY_API, LS_KEY_API_BACKUP, fh); }
-      if (td) { $('td-api-key').value = td; TD_API_KEY = td; persistKey(LS_KEY_TD, LS_KEY_TD_BACKUP, td); }
       try { localStorage.setItem(LS_KEY_KEYS_SAVED_AT, String(Date.now())); } catch (e) {}
+      // Re-render every surface that consumes the restored state
       renderKeyStorageStatus();
       updateModeIndicators();
-      showToast({ title: 'Keys imported', body: `${fh ? 'Finnhub' : ''}${fh && td ? ' + ' : ''}${td ? 'Twelve Data' : ''} restored from file.`, type: 'bull' });
+      updateSidebarCounters();
+      updateVerdictFilterPills();
+      updateTypeFilterPills();
+      if (typeof renderWatchlist === 'function') renderWatchlist($('search') ? $('search').value : '');
+      if (typeof renderSavedBundles === 'function') renderSavedBundles();
+      const parts = [];
+      if (restored.keys) parts.push(`${restored.keys} key${restored.keys === 1 ? '' : 's'}`);
+      if (restored.watchlist) parts.push(`${restored.watchlist} watchlist`);
+      if (restored.favorites) parts.push(`${restored.favorites} fav`);
+      if (restored.simSet) parts.push(`${restored.simSet} sim`);
+      if (restored.bundles) parts.push(`${restored.bundles} bundle${restored.bundles === 1 ? '' : 's'}`);
+      if (restored.prefs) parts.push(`${restored.prefs} pref${restored.prefs === 1 ? '' : 's'}`);
+      showToast({ title: 'Backup imported', body: parts.length ? parts.join(' · ') + ' restored.' : 'No new data found in file.', type: 'bull' });
     } catch (e) {
-      showToast({ title: 'Could not import keys', body: e.message || 'File read failed', type: 'bear' });
+      showToast({ title: 'Could not import file', body: e.message || 'File read failed', type: 'bear' });
     }
   };
   input.click();
