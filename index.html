@@ -2558,6 +2558,98 @@ body.whatif-mode #sidebar { display: none; }
 .modify-search-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .modify-search-meta { font-size: 10px; color: var(--dim); letter-spacing: .03em; }
 .modify-search-empty { padding: 14px; text-align: center; color: var(--muted); font-size: 11.5px; }
+
+/* Cross-check chip + outbound verify links — stock view */
+.cross-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 8px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.cross-check::before { content: '⇄'; font-weight: 700; font-size: 12px; }
+.cross-check.match { background: rgba(48,209,88,.12);  border: 1px solid rgba(48,209,88,.35);  color: var(--bull); }
+.cross-check.warn  { background: rgba(255,159,10,.12); border: 1px solid rgba(255,159,10,.35); color: var(--warn); }
+.cross-check.bad   { background: rgba(255,69,58,.12);  border: 1px solid rgba(255,69,58,.4);   color: var(--bear); }
+.cross-check.loading { background: rgba(138,146,166,.10); border: 1px solid rgba(138,146,166,.25); color: var(--muted); }
+
+.verify-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 11px;
+}
+.verify-lbl {
+  color: var(--muted);
+  letter-spacing: .05em;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-right: 2px;
+}
+.verify-link {
+  color: var(--accent);
+  text-decoration: none;
+  padding: 3px 9px;
+  background: rgba(0,113,227,.08);
+  border: 1px solid rgba(0,113,227,.22);
+  border-radius: 99px;
+  transition: background .15s, border-color .15s, transform .1s;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.verify-link:hover { background: rgba(0,113,227,.20); border-color: rgba(0,113,227,.45); }
+.verify-link:active { transform: translateY(1px); }
+.verify-link.analyst {
+  background: rgba(191,90,242,.08);
+  border-color: rgba(191,90,242,.22);
+  color: var(--violet);
+}
+.verify-link.analyst:hover { background: rgba(191,90,242,.18); border-color: rgba(191,90,242,.4); }
+
+/* Watchlist verdict filter pills (Stage E) */
+.verdict-filter {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.vf-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--muted);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: color .15s, background .15s, border-color .15s;
+  text-align: center;
+  font-family: inherit;
+}
+.vf-pill:hover { color: var(--text); background: var(--line); }
+.vf-pill.active {
+  color: white;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.vf-pill.vf-buy.active { background: var(--bull); border-color: var(--bull); color: #042a10; }
+.vf-pill.vf-sell.active { background: var(--bear); border-color: var(--bear); color: white; }
+.vf-pill.vf-hold.active { background: var(--muted); border-color: var(--muted); color: var(--bg); }
+.vf-pill b { font-variant-numeric: tabular-nums; opacity: .85; margin-left: 2px; }
+.vf-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bundle-details { margin-top: 4px; padding-top: 4px; }
 .bundle-details summary {
   cursor: pointer;
@@ -2925,6 +3017,7 @@ body.whatif-mode #sidebar { display: none; }
         </div>
       </div>
       <div id="sidebar-counters" class="sidebar-counters"></div>
+      <div id="verdict-filter" class="verdict-filter"></div>
     </div>
     <div id="watchlist"><div class="wl-item heat-hot  " data-ticker="AMAT" onclick="selectTicker(&#39;AMAT&#39;)" title="Heat score: +70">
       <div class="wl-heat" style="--heat-color: rgb(255, 150, 0)"></div>
@@ -9068,9 +9161,14 @@ body.whatif-mode #sidebar { display: none; }
     </div>
     <div class="modal-body">
       <div class="modal-row">
-        <label for="api-key">Finnhub API key (optional)</label>
+        <label for="api-key">Finnhub API key (primary)</label>
         <input id="api-key" type="password" placeholder="Paste your Finnhub key for live data">
         <div class="help-text">Free tier: 60 calls/min. Get a key at <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a>. Without a key, the app runs on synthetic data so you can explore the features.</div>
+      </div>
+      <div class="modal-row">
+        <label for="td-api-key">Twelve Data API key (optional · cross-check)</label>
+        <input id="td-api-key" type="password" placeholder="Paste your Twelve Data key for a second-source price">
+        <div class="help-text">If set, every stock you view fetches a second-source quote from Twelve Data and shows the delta vs Finnhub. Helps catch stale or anomalous data. Free tier: 800/day, 8/min — kept under the limit by caching cross-check prices for 60s. Get a key at <a href="https://twelvedata.com/register" target="_blank">twelvedata.com/register</a>.</div>
       </div>
       <div class="modal-row">
         <label for="refresh-interval">Refresh interval</label>
@@ -9110,6 +9208,7 @@ const LS_KEY_VERDICTS = 'sp_last_verdicts';
 const LS_KEY_BUNDLES  = 'sp_simulation_bundles';
 const LS_KEY_FAVS     = 'sp_favorites';
 const LS_KEY_SIMSET   = 'sp_sim_set';
+const LS_KEY_TD       = 'sp_td_key';
 
 let FAVORITES = loadStringSet(LS_KEY_FAVS);
 let SIM_SET   = loadStringSet(LS_KEY_SIMSET);
@@ -9181,12 +9280,43 @@ function syncFavoritesToWatchlist() {
   return missing.length;
 }
 
-// Watchlist sub-filter — let user click a sidebar counter to filter to favorites or sim-set
+// Watchlist sub-filter — favorites / sim-set toggle from sidebar counters
 let _watchlistSubFilter = null;   // null | 'fav' | 'sim'
 function setWatchlistFilter(mode) {
   _watchlistSubFilter = (_watchlistSubFilter === mode) ? null : mode;
   updateSidebarCounters();
   renderWatchlist($('search') ? $('search').value : '');
+}
+
+// Watchlist verdict filter (Stage E) — separate from fav/sim sub-filter
+let _watchlistVerdictFilter = null;   // null | 'buy' | 'hold' | 'sell'
+function setVerdictFilter(mode) {
+  _watchlistVerdictFilter = (_watchlistVerdictFilter === mode) ? null : mode;
+  updateVerdictFilterPills();
+  renderWatchlist($('search') ? $('search').value : '');
+}
+function countByVerdictBucket() {
+  let buy = 0, hold = 0, sell = 0;
+  for (const t of WATCHLIST) {
+    const v = _data[t] && _data[t].verdict && _data[t].verdict.label;
+    if (!v) continue;
+    if (v === 'STRONG BUY' || v === 'BUY') buy++;
+    else if (v === 'HOLD') hold++;
+    else if (v === 'SELL' || v === 'STRONG SELL') sell++;
+  }
+  return { buy, hold, sell, all: WATCHLIST.length };
+}
+function updateVerdictFilterPills() {
+  const host = document.getElementById('verdict-filter');
+  if (!host) return;
+  const c = countByVerdictBucket();
+  const mode = _watchlistVerdictFilter;
+  host.innerHTML = `
+    <button class="vf-pill ${mode === null ? 'active' : ''}" onclick="setVerdictFilter(null)" title="Show all tickers regardless of verdict">All <b>${c.all}</b></button>
+    <button class="vf-pill vf-buy ${mode === 'buy' ? 'active' : ''}" onclick="setVerdictFilter('buy')" title="Show only BUY or STRONG BUY tickers">Buy <b>${c.buy}</b></button>
+    <button class="vf-pill vf-hold ${mode === 'hold' ? 'active' : ''}" onclick="setVerdictFilter('hold')" title="Show only HOLD tickers">Hold <b>${c.hold}</b></button>
+    <button class="vf-pill vf-sell ${mode === 'sell' ? 'active' : ''}" onclick="setVerdictFilter('sell')" title="Show only SELL or STRONG SELL tickers">Sell <b>${c.sell}</b></button>
+  `;
 }
 function toggleSimSet(t) {
   if (SIM_SET.has(t)) SIM_SET.delete(t); else SIM_SET.add(t);
@@ -9225,6 +9355,7 @@ function updateSidebarCounters() {
 
 let WATCHLIST = loadWatchlist();
 let API_KEY = localStorage.getItem(LS_KEY_API) || '';
+let TD_API_KEY = localStorage.getItem(LS_KEY_TD) || '';
 let REFRESH_SEC = parseInt(localStorage.getItem(LS_KEY_REFRESH) || '300', 10);
 let NOTIFY_ON_CHANGE = (localStorage.getItem(LS_KEY_NOTIFY) || 'true') === 'true';
 let LAST_VERDICTS = JSON.parse(localStorage.getItem(LS_KEY_VERDICTS) || '{}');
@@ -10040,6 +10171,49 @@ function renderNewsCard(ticker, result) {
     <div class="news-summary">News flow: <b>${counts.pos}</b> positive · <b>${counts.neg}</b> negative · <b>${counts.neutral}</b> neutral — overall <b>${dominant}</b></div>
     <a href="https://finance.yahoo.com/quote/${encodeURIComponent(ticker)}/news" target="_blank" rel="noopener">All news ↗</a>
   </div>`;
+}
+
+// ---- Twelve Data cross-check (secondary provider for price sanity check) ----
+function isCrossCheck() { return !!TD_API_KEY; }
+const _crossCheckCache = {};
+async function fetchTwelveDataPrice(ticker) {
+  if (!TD_API_KEY) return null;
+  const cached = _crossCheckCache[ticker];
+  if (cached && (Date.now() - cached.ts) < 60000) return cached.price;
+  try {
+    const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(ticker)}&apikey=${encodeURIComponent(TD_API_KEY)}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (!j || j.status === 'error' || !j.price) return null;
+    const price = parseFloat(j.price);
+    if (isNaN(price) || price <= 0) return null;
+    _crossCheckCache[ticker] = { price, ts: Date.now() };
+    return price;
+  } catch (e) { return null; }
+}
+
+function renderCrossCheckChip(ticker, fhPrice, tdPrice) {
+  const slot = document.getElementById('cross-check-slot');
+  if (!slot) return;
+  if (tdPrice == null) {
+    slot.innerHTML = `<div class="cross-check warn" title="Twelve Data returned no quote — symbol may not be supported or rate limit hit">⇄ Cross-check: Twelve Data returned no quote for ${ticker}</div>`;
+    return;
+  }
+  const delta = tdPrice - fhPrice;
+  const pctAbs = Math.abs(delta) / fhPrice * 100;
+  const cls = pctAbs < 1 ? 'match' : pctAbs < 5 ? 'warn' : 'bad';
+  const verdict = pctAbs < 1 ? 'in agreement' : pctAbs < 5 ? 'minor divergence' : 'large divergence';
+  const sign = delta >= 0 ? '+' : '−';
+  slot.innerHTML = `<div class="cross-check ${cls}" title="Primary: Finnhub  ·  Secondary: Twelve Data  ·  Δ = secondary − primary">Cross-check (Twelve Data): $${fmt(tdPrice)} · Δ ${sign}$${fmt(Math.abs(delta))} (${pctAbs.toFixed(2)}%) · ${verdict}</div>`;
+}
+
+async function runCrossCheck(ticker, fhPrice) {
+  if (!isCrossCheck()) return;
+  const slot = document.getElementById('cross-check-slot');
+  if (slot) slot.innerHTML = `<div class="cross-check loading">⇄ Cross-checking with Twelve Data…</div>`;
+  const tdPrice = await fetchTwelveDataPrice(ticker);
+  if (_selected === ticker) renderCrossCheckChip(ticker, fhPrice, tdPrice);
 }
 
 async function loadNewsFor(ticker) {
@@ -12578,10 +12752,23 @@ function renderWatchlist(filter = '') {
 
   const f = filter.trim().toUpperCase();
   // Apply sub-filter (favorites or sim set) on top of text filter
-  const subFiltered = _watchlistSubFilter === 'fav' ? sorted.filter(t => FAVORITES.has(t))
-                    : _watchlistSubFilter === 'sim' ? sorted.filter(t => SIM_SET.has(t))
-                    : sorted;
+  let subFiltered = _watchlistSubFilter === 'fav' ? sorted.filter(t => FAVORITES.has(t))
+                  : _watchlistSubFilter === 'sim' ? sorted.filter(t => SIM_SET.has(t))
+                  : sorted;
+  // Verdict bucket filter (Stage E): null | 'buy' | 'hold' | 'sell'
+  if (_watchlistVerdictFilter) {
+    subFiltered = subFiltered.filter(t => {
+      const v = _data[t] && _data[t].verdict && _data[t].verdict.label;
+      if (!v) return false;
+      if (_watchlistVerdictFilter === 'buy')  return v === 'STRONG BUY' || v === 'BUY';
+      if (_watchlistVerdictFilter === 'hold') return v === 'HOLD';
+      if (_watchlistVerdictFilter === 'sell') return v === 'SELL' || v === 'STRONG SELL';
+      return true;
+    });
+  }
   const visible = subFiltered.filter(t => !f || t.toUpperCase().includes(f));
+  // Keep verdict pill counts fresh whenever the watchlist re-renders
+  updateVerdictFilterPills();
 
   host.innerHTML = visible.map(t => {
     const d = _data[t];
@@ -12706,6 +12893,15 @@ function renderMain() {
             ${cleanExchange(profile.exchange) || ''}${profile.exchange && profile.finnhubIndustry ? '<span class="sep">·</span>' : ''}${profile.finnhubIndustry || ''}${(profile.country && profile.country !== 'US') ? `<span class="sep">·</span>${profile.country}` : ''}
           </div>
           ${(d.barsSource === 'hybrid' || d.barsSource === 'fallback') ? `<div class="data-warning ${d.barsSource === 'fallback' ? 'bad' : ''}" title="${(d.barsNote || '').replace(/"/g, '&quot;')}">${d.barsSource === 'hybrid' ? 'Hybrid data — live current price, synthetic history' : 'Synthetic data — live fetch failed'}</div>` : ''}
+          <div id="cross-check-slot"></div>
+          <div class="verify-row">
+            <span class="verify-lbl">Verify on</span>
+            <a class="verify-link" href="https://finance.yahoo.com/quote/${encodeURIComponent(_selected)}" target="_blank" rel="noopener noreferrer">Yahoo Finance ↗</a>
+            <a class="verify-link" href="https://www.tradingview.com/symbols/${encodeURIComponent(_selected)}/" target="_blank" rel="noopener noreferrer">TradingView ↗</a>
+            <a class="verify-link" href="https://stockcharts.com/h-sc/ui?s=${encodeURIComponent(_selected)}" target="_blank" rel="noopener noreferrer">StockCharts ↗</a>
+            <a class="verify-link" href="https://www.google.com/finance/quote/${encodeURIComponent(_selected)}" target="_blank" rel="noopener noreferrer">Google Finance ↗</a>
+            <a class="verify-link analyst" href="https://finance.yahoo.com/quote/${encodeURIComponent(_selected)}/analysis" target="_blank" rel="noopener noreferrer" title="Wall-Street analyst price targets + recommendations">Analyst forecast ↗</a>
+          </div>
         </div>
         <div>
           <div class="t-price" id="t-price">$${fmt(last.close)}</div>
@@ -12914,6 +13110,9 @@ function renderMain() {
 
   // Load latest news for the selected ticker (Finnhub /company-news)
   loadNewsFor(_selected);
+
+  // Fire Twelve Data cross-check if the user has supplied a key
+  if (isCrossCheck()) runCrossCheck(_selected, last.close);
 }
 
 function destroyChart(key) {
@@ -13222,6 +13421,8 @@ function removeStock(t) {
 
 function openSettings() {
   $('api-key').value = API_KEY;
+  const tdInput = $('td-api-key');
+  if (tdInput) tdInput.value = TD_API_KEY;
   $('refresh-interval').value = String(REFRESH_SEC);
   $('notify-on-change').checked = NOTIFY_ON_CHANGE;
   $('settings-modal').classList.remove('hidden');
@@ -13230,18 +13431,27 @@ function closeSettings() { $('settings-modal').classList.add('hidden'); }
 
 async function saveSettings() {
   const newKey = $('api-key').value.trim();
+  const tdInput = $('td-api-key');
+  const newTdKey = tdInput ? tdInput.value.trim() : TD_API_KEY;
   const newRefresh = parseInt($('refresh-interval').value, 10);
   const newNotify = $('notify-on-change').checked;
   const keyChanged = newKey !== API_KEY;
+  const tdKeyChanged = newTdKey !== TD_API_KEY;
   API_KEY = newKey;
+  TD_API_KEY = newTdKey;
   REFRESH_SEC = newRefresh;
   NOTIFY_ON_CHANGE = newNotify;
   localStorage.setItem(LS_KEY_API, API_KEY);
+  localStorage.setItem(LS_KEY_TD, TD_API_KEY);
   localStorage.setItem(LS_KEY_REFRESH, String(REFRESH_SEC));
   localStorage.setItem(LS_KEY_NOTIFY, String(NOTIFY_ON_CHANGE));
   updateModeIndicators();
   closeSettings();
   startRefreshTimer();
+  if (tdKeyChanged) {
+    Object.keys(_crossCheckCache).forEach(k => delete _crossCheckCache[k]);
+    if (_selected && _data[_selected]) renderMain();
+  }
   if (keyChanged) {
     showToast({ title: 'Settings saved', body: 'Refreshing data with new key…' });
     await refreshAll(true);
@@ -13264,6 +13474,7 @@ async function init() {
   // One-time sync: any starred ticker that's not in WATCHLIST gets pulled in
   const synced = syncFavoritesToWatchlist();
   updateSidebarCounters();
+  updateVerdictFilterPills();
   renderWatchlist();
   _selected = WATCHLIST[0] || null;
   renderMain();
