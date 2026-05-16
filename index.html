@@ -2403,6 +2403,161 @@ body.whatif-mode #sidebar { display: none; }
 .bundle-hl-val b { font-weight: 700; }
 .bundle-hl-val .up { color: var(--bull); }
 .bundle-hl-val .down { color: var(--bear); }
+
+/* Modify-bundle modal */
+#modify-modal .modal { width: 620px; max-width: 95vw; max-height: 88vh; display: flex; flex-direction: column; }
+#modify-modal .modal-body { overflow-y: auto; padding: 16px 18px; }
+.modify-header-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 11.5px;
+}
+.modify-header-stats .lbl {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.modify-header-stats .val { font-weight: 600; color: var(--text); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.modify-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.modify-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.modify-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  align-items: center;
+}
+.modify-row-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.modify-row-sym { font-weight: 700; font-size: 13px; color: var(--text); }
+.modify-row-name {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+.modify-row-price { font-size: 10.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.modify-row-controls { display: flex; align-items: center; gap: 6px; }
+.modify-row-input {
+  width: 78px;
+  padding: 6px 10px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.modify-row-suffix { font-size: 11px; color: var(--muted); }
+.modify-row-remove {
+  width: 24px; height: 24px;
+  border-radius: 5px;
+  background: rgba(255,69,58,.10);
+  border: 1px solid rgba(255,69,58,.30);
+  color: var(--bear);
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.modify-row-remove:hover { background: rgba(255,69,58,.25); }
+.modify-empty {
+  padding: 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.modify-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+.modify-total b { font-variant-numeric: tabular-nums; font-size: 14px; }
+.modify-total.good { border-color: rgba(48,209,88,.4); color: var(--bull); }
+.modify-total.bad { border-color: rgba(255,159,10,.4); color: var(--warn); }
+.modify-normalize-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modify-normalize-btn:hover { background: #0080ff; }
+.modify-ok-mark { color: var(--bull); font-weight: 700; }
+.modify-add-section {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.modify-add-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.modify-add-row { position: relative; }
+.modify-add-row input { width: 100%; padding: 9px 12px; }
+.modify-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  margin-top: 6px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 5;
+}
+.modify-search-results.hidden { display: none; }
+.modify-search-item {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+  font-size: 12px;
+}
+.modify-search-item:last-child { border-bottom: none; }
+.modify-search-item:hover { background: var(--line); }
+.modify-search-sym { font-weight: 700; color: var(--text); }
+.modify-search-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modify-search-meta { font-size: 10px; color: var(--dim); letter-spacing: .03em; }
+.modify-search-empty { padding: 14px; text-align: center; color: var(--muted); font-size: 11.5px; }
 .bundle-details { margin-top: 4px; padding-top: 4px; }
 .bundle-details summary {
   cursor: pointer;
@@ -8865,6 +9020,21 @@ body.whatif-mode #sidebar { display: none; }
   </main>
 </div>
 
+<!-- Modify Bundle Modal -->
+<div id="modify-modal" class="modal-overlay hidden" onclick="if(event.target===this) closeModifyModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modify-modal-title">Modify bundle</div>
+      <button class="modal-close" onclick="closeModifyModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modify-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModifyModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveModifiedBundle()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Stock Modal -->
 <div id="add-modal" class="modal-overlay hidden" onclick="if(event.target===this) closeAddStock()">
   <div class="modal">
@@ -8956,10 +9126,67 @@ function persistSet(key, set) {
 function isFavorite(t) { return FAVORITES.has(t); }
 function isInSimSet(t) { return SIM_SET.has(t); }
 function toggleFavorite(t) {
-  if (FAVORITES.has(t)) FAVORITES.delete(t); else FAVORITES.add(t);
+  const wasFav = FAVORITES.has(t);
+  if (wasFav) {
+    FAVORITES.delete(t);
+    persistSet(LS_KEY_FAVS, FAVORITES);
+    refreshAllListRenders();
+    showToast({ title: `${t} unstarred`, body: `Favorites: ${FAVORITES.size}` });
+    return;
+  }
+  FAVORITES.add(t);
   persistSet(LS_KEY_FAVS, FAVORITES);
+  const needsWatchlist = !WATCHLIST.includes(t);
+  if (needsWatchlist) ensureInWatchlist(t);
   refreshAllListRenders();
-  showToast({ title: isFavorite(t) ? `${t} starred` : `${t} unstarred`, body: `Favorites: ${FAVORITES.size}` });
+  showToast({
+    title: `${t} starred${needsWatchlist ? ' + added to watchlist' : ''}`,
+    body: `Favorites: ${FAVORITES.size} · Watchlist: ${WATCHLIST.length}`,
+  });
+}
+
+// Auto-add a ticker to the watchlist (no validation prompt, async data fetch)
+async function ensureInWatchlist(ticker) {
+  if (WATCHLIST.includes(ticker)) return;
+  WATCHLIST.push(ticker);
+  saveWatchlist();
+  renderWatchlist($('search') ? $('search').value : '');
+  try {
+    _data[ticker] = await fetchTickerBundle(ticker);
+    LAST_VERDICTS[ticker] = _data[ticker].verdict.label;
+    localStorage.setItem(LS_KEY_VERDICTS, JSON.stringify(LAST_VERDICTS));
+    if (typeof invalidateCatalogCaches === 'function') invalidateCatalogCaches();
+    renderWatchlist($('search') ? $('search').value : '');
+  } catch (e) {
+    // Tolerate — ticker is in the list; data will fill on next refresh
+  }
+}
+
+// One-time sync at startup: every favorite must be in the watchlist so the
+// user can actually find their starred stocks on the Watchlist page.
+function syncFavoritesToWatchlist() {
+  const missing = [...FAVORITES].filter(t => !WATCHLIST.includes(t));
+  if (missing.length === 0) return 0;
+  for (const t of missing) WATCHLIST.push(t);
+  saveWatchlist();
+  // Background-fetch the data for each newly-added ticker
+  for (const t of missing) {
+    fetchTickerBundle(t).then(d => {
+      _data[t] = d;
+      LAST_VERDICTS[t] = d.verdict.label;
+      localStorage.setItem(LS_KEY_VERDICTS, JSON.stringify(LAST_VERDICTS));
+      renderWatchlist($('search') ? $('search').value : '');
+    }).catch(() => {});
+  }
+  return missing.length;
+}
+
+// Watchlist sub-filter — let user click a sidebar counter to filter to favorites or sim-set
+let _watchlistSubFilter = null;   // null | 'fav' | 'sim'
+function setWatchlistFilter(mode) {
+  _watchlistSubFilter = (_watchlistSubFilter === mode) ? null : mode;
+  updateSidebarCounters();
+  renderWatchlist($('search') ? $('search').value : '');
 }
 function toggleSimSet(t) {
   if (SIM_SET.has(t)) SIM_SET.delete(t); else SIM_SET.add(t);
@@ -8985,11 +9212,13 @@ function rowActionsHtml(ticker) {
 function updateSidebarCounters() {
   const host = document.getElementById('sidebar-counters');
   if (!host) return;
+  const favActive = _watchlistSubFilter === 'fav';
+  const simActive = _watchlistSubFilter === 'sim';
   host.innerHTML = `
-    <div class="sidebar-counter fav" title="Stocks you've starred">
+    <div class="sidebar-counter fav ${favActive ? 'active' : ''}" style="cursor:pointer; ${favActive ? 'background:rgba(255,159,10,.18); border-color:rgba(255,159,10,.5);' : ''}" onclick="setWatchlistFilter('fav')" title="Click to filter watchlist to starred stocks only">
       <span class="icn">★</span><span>Favorites <b>${FAVORITES.size}</b></span>
     </div>
-    <div class="sidebar-counter sim" title="Stocks in your Simulation Set — feeds into the What-If portfolio builder">
+    <div class="sidebar-counter sim ${simActive ? 'active' : ''}" style="cursor:pointer; ${simActive ? 'background:rgba(0,113,227,.18); border-color:rgba(0,113,227,.5);' : ''}" onclick="setWatchlistFilter('sim')" title="Click to filter watchlist to your Simulation Set only">
       <span class="icn">⊕</span><span>Sim Set <b>${SIM_SET.size}</b></span>
     </div>`;
 }
@@ -11045,6 +11274,204 @@ function deleteBundle(id) {
   renderSavedBundles();
 }
 
+// ========================================================================
+// Modify-bundle modal — add/remove holdings, change allocation %
+// ========================================================================
+let _modifyingBundleId = null;
+let _modifyHoldings = [];
+let _modifySearchTimer = null;
+
+function openModifyBundle(id) {
+  const b = SAVED_BUNDLES.find(x => x.id === id);
+  if (!b) return;
+  _modifyingBundleId = id;
+  _modifyHoldings = b.holdings.map(h => ({ ...h })); // deep clone
+  document.getElementById('modify-modal-title').textContent = `Modify bundle · ${b.name}`;
+  renderModifyModal(b);
+  document.getElementById('modify-modal').classList.remove('hidden');
+}
+function closeModifyModal() {
+  document.getElementById('modify-modal').classList.add('hidden');
+  _modifyingBundleId = null;
+  _modifyHoldings = [];
+}
+
+function modifyAddHolding(ticker) {
+  ticker = ticker.toUpperCase();
+  if (_modifyHoldings.find(h => h.ticker === ticker)) {
+    showToast({ title: `${ticker} already in bundle`, body: 'Adjust its allocation below instead.', type: '' });
+    return;
+  }
+  const catEntry = STOCK_CATALOG.find(s => s.t === ticker);
+  if (!catEntry) {
+    showToast({ title: `${ticker} not in catalog`, body: 'Use a ticker from the built-in catalog.', type: 'bear' });
+    return;
+  }
+  const bars = getBars(ticker);
+  const cur = bars[bars.length - 1].close;
+  // Take 5% from the largest existing holding (or default 5% if list empty)
+  let defaultPct = 5;
+  if (_modifyHoldings.length > 0) {
+    const totalUsed = _modifyHoldings.reduce((s, h) => s + h.pct, 0);
+    const free = 100 - totalUsed;
+    if (free >= 4) {
+      defaultPct = Math.min(free, 10);
+    } else {
+      // Carve from the biggest holding
+      const biggest = [..._modifyHoldings].sort((a, b) => b.pct - a.pct)[0];
+      const carve = Math.min(5, biggest.pct - 1);
+      biggest.pct -= carve;
+      defaultPct = carve > 0 ? carve : 5;
+    }
+  }
+  _modifyHoldings.push({
+    ticker,
+    kind: /^ETF/i.test(catEntry.i) ? 'etf' : 'stock',
+    name: catEntry.n,
+    industry: catEntry.i,
+    pct: defaultPct,
+    entryPrice: cur,
+    entryForecast12: 0,
+  });
+  const b = SAVED_BUNDLES.find(x => x.id === _modifyingBundleId);
+  if (b) renderModifyModal(b);
+  // Clear search
+  const sx = document.getElementById('modify-add-search');
+  if (sx) { sx.value = ''; document.getElementById('modify-search-results').classList.add('hidden'); }
+}
+
+function modifyRemoveHolding(idx) {
+  _modifyHoldings.splice(idx, 1);
+  const b = SAVED_BUNDLES.find(x => x.id === _modifyingBundleId);
+  if (b) renderModifyModal(b);
+}
+
+function modifySetPct(idx, val) {
+  const num = parseFloat(val);
+  if (isNaN(num)) return;
+  _modifyHoldings[idx].pct = Math.max(0, Math.min(100, num));
+  // Light update: just refresh total bar
+  const total = _modifyHoldings.reduce((s, h) => s + h.pct, 0);
+  const totalEl = document.getElementById('modify-total-bar');
+  if (totalEl) {
+    const cls = Math.abs(total - 100) < 0.5 ? 'good' : 'bad';
+    totalEl.className = `modify-total ${cls}`;
+    totalEl.innerHTML = `<span>Total: <b>${total.toFixed(2)}%</b> / 100%</span>
+      ${Math.abs(total - 100) > 0.5
+        ? `<button class="modify-normalize-btn" onclick="modifyNormalize()">Normalize to 100%</button>`
+        : '<span class="modify-ok-mark">✓ Balanced</span>'}`;
+  }
+}
+
+function modifyNormalize() {
+  const total = _modifyHoldings.reduce((s, h) => s + h.pct, 0);
+  if (total === 0) return;
+  const factor = 100 / total;
+  for (const h of _modifyHoldings) h.pct = h.pct * factor;
+  const b = SAVED_BUNDLES.find(x => x.id === _modifyingBundleId);
+  if (b) renderModifyModal(b);
+}
+
+function saveModifiedBundle() {
+  const total = _modifyHoldings.reduce((s, h) => s + h.pct, 0);
+  if (Math.abs(total - 100) > 0.5) {
+    showToast({ title: 'Allocation must equal 100%', body: `Currently ${total.toFixed(2)}%. Click Normalize.`, type: 'bear' });
+    return;
+  }
+  if (_modifyHoldings.length === 0) {
+    showToast({ title: 'Bundle must have at least one holding', body: '', type: 'bear' });
+    return;
+  }
+  const b = SAVED_BUNDLES.find(x => x.id === _modifyingBundleId);
+  if (!b) return;
+  for (const h of _modifyHoldings) {
+    h.amount = h.pct / 100 * b.amount;
+    const price = h.entryPrice || getBars(h.ticker)[getBars(h.ticker).length - 1].close;
+    h.shares = price > 0 ? h.amount / price : 0;
+  }
+  b.holdings = _modifyHoldings.map(h => ({ ...h }));
+  b.modifiedAt = Date.now();
+  saveBundles();
+  showToast({ title: `${b.name} updated`, body: `${_modifyHoldings.length} holding${_modifyHoldings.length === 1 ? '' : 's'} · allocation balanced`, type: 'bull' });
+  closeModifyModal();
+  renderSavedBundles();
+}
+
+function modifyOnSearchInput(value) {
+  clearTimeout(_modifySearchTimer);
+  const slot = document.getElementById('modify-search-results');
+  if (!slot) return;
+  const q = (value || '').trim();
+  if (q.length < 1) { slot.classList.add('hidden'); return; }
+  _modifySearchTimer = setTimeout(() => {
+    const lowerQ = q.toLowerCase();
+    const results = STOCK_CATALOG
+      .filter(s => !_modifyHoldings.find(h => h.ticker === s.t))
+      .filter(s => s.t.toLowerCase().includes(lowerQ) || s.n.toLowerCase().includes(lowerQ))
+      .slice(0, 8);
+    if (results.length === 0) {
+      slot.innerHTML = '<div class="modify-search-empty">No matches in catalog (or already added).</div>';
+    } else {
+      slot.innerHTML = results.map(s => `
+        <div class="modify-search-item" onclick="modifyAddHolding('${s.t}')">
+          <span class="modify-search-sym">${s.t}</span>
+          <span class="modify-search-name">${_escapeHtml(s.n)}</span>
+          <span class="modify-search-meta">${_escapeHtml(s.i)}</span>
+        </div>`).join('');
+    }
+    slot.classList.remove('hidden');
+  }, 150);
+}
+
+function renderModifyModal(bundle) {
+  const host = document.getElementById('modify-modal-body');
+  if (!host) return;
+  const total = _modifyHoldings.reduce((s, h) => s + h.pct, 0);
+  const totalCls = Math.abs(total - 100) < 0.5 ? 'good' : 'bad';
+  const def = STRATEGY_DEFS[bundle.goalKey] || { label: bundle.goalKey };
+  host.innerHTML = `
+    <div class="modify-header-stats">
+      <div><div class="lbl">Initial</div><div class="val">$${fmt(bundle.amount)}</div></div>
+      <div><div class="lbl">Strategy</div><div class="val">${_escapeHtml(def.label)}</div></div>
+      <div><div class="lbl">Holdings</div><div class="val">${_modifyHoldings.length}</div></div>
+    </div>
+    <div class="modify-list-head">
+      <span>Holdings</span><span>% allocation</span>
+    </div>
+    <div class="modify-list">
+      ${_modifyHoldings.length ? _modifyHoldings.map((h, i) => {
+        const bars = getBars(h.ticker);
+        const cur = bars[bars.length - 1].close;
+        return `<div class="modify-row">
+          <div class="modify-row-info">
+            <span class="modify-row-sym">${h.ticker}</span>
+            <span class="modify-row-name">${_escapeHtml(h.name || h.ticker)}</span>
+            <span class="modify-row-price">Entry $${fmt(h.entryPrice || cur)} · Now $${fmt(cur)}</span>
+          </div>
+          <div class="modify-row-controls">
+            <input type="number" class="modify-row-input" min="0" max="100" step="0.1" value="${h.pct.toFixed(2)}" oninput="modifySetPct(${i}, this.value)">
+            <span class="modify-row-suffix">%</span>
+            <button class="modify-row-remove" onclick="modifyRemoveHolding(${i})" title="Remove holding">✕</button>
+          </div>
+        </div>`;
+      }).join('') : '<div class="modify-empty">No holdings. Add at least one below.</div>'}
+    </div>
+    <div id="modify-total-bar" class="modify-total ${totalCls}">
+      <span>Total: <b>${total.toFixed(2)}%</b> / 100%</span>
+      ${Math.abs(total - 100) > 0.5
+        ? `<button class="modify-normalize-btn" onclick="modifyNormalize()">Normalize to 100%</button>`
+        : '<span class="modify-ok-mark">✓ Balanced</span>'}
+    </div>
+    <div class="modify-add-section">
+      <div class="modify-add-label">Add a stock or ETF</div>
+      <div class="modify-add-row">
+        <input id="modify-add-search" type="text" placeholder="Type ticker (AAPL) or name (Apple)…" autocomplete="off" oninput="modifyOnSearchInput(this.value)">
+        <div id="modify-search-results" class="modify-search-results hidden"></div>
+      </div>
+    </div>
+  `;
+}
+
 function renderSavedBundles() {
   const host = $('saved-bundles-container');
   if (!host) return;
@@ -11185,6 +11612,7 @@ function renderBundleCard(b) {
         <div class="bundle-meta">${_escapeHtml(def.label)} · $${fmt(b.amount)} initial · ${b.holdings.length} holdings · ${daysSince} day${daysSince === 1 ? '' : 's'} ago · grounded ${b.historyYears}Y</div>
       </div>
       <div class="bundle-actions">
+        <button class="bundle-btn" onclick="openModifyBundle('${b.id}')" title="Add or remove holdings, change allocation %">Modify</button>
         <button class="bundle-btn danger" onclick="deleteBundle('${b.id}')" title="Delete bundle">✕</button>
       </div>
     </div>
@@ -12149,7 +12577,11 @@ function renderWatchlist(filter = '') {
   });
 
   const f = filter.trim().toUpperCase();
-  const visible = sorted.filter(t => !f || t.toUpperCase().includes(f));
+  // Apply sub-filter (favorites or sim set) on top of text filter
+  const subFiltered = _watchlistSubFilter === 'fav' ? sorted.filter(t => FAVORITES.has(t))
+                    : _watchlistSubFilter === 'sim' ? sorted.filter(t => SIM_SET.has(t))
+                    : sorted;
+  const visible = subFiltered.filter(t => !f || t.toUpperCase().includes(f));
 
   host.innerHTML = visible.map(t => {
     const d = _data[t];
@@ -12829,6 +13261,8 @@ function updateModeIndicators() {
 
 async function init() {
   updateModeIndicators();
+  // One-time sync: any starred ticker that's not in WATCHLIST gets pulled in
+  const synced = syncFavoritesToWatchlist();
   updateSidebarCounters();
   renderWatchlist();
   _selected = WATCHLIST[0] || null;
@@ -12836,6 +13270,7 @@ async function init() {
   requestNotificationPermission();
   await refreshAll(true);
   startRefreshTimer();
+  if (synced > 0) showToast({ title: `${synced} favorite${synced === 1 ? '' : 's'} synced to watchlist`, body: 'Starred stocks are now tracked.', type: 'bull' });
 }
 
 document.addEventListener('DOMContentLoaded', init);
