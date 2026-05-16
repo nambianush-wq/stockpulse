@@ -10320,12 +10320,12 @@ function renderNewsCard(ticker, result) {
     const sent = classifyHeadlineSentiment(text);
     counts[sent.type]++;
     return `<a class="news-item news-${sent.type}" href="${_escapeHtml(n.url || '#')}" target="_blank" rel="noopener noreferrer" title="${_escapeHtml((n.summary || n.headline || '').slice(0, 280))}">
-      <div class="news-sym" aria-hidden="true">${sent.icon}</div>
+      <div class="news-sym" aria-hidden="true" title="${tip('newsSent')}">${sent.icon}</div>
       <div class="news-body">
         <div class="news-head">${_escapeHtml(n.headline || 'Untitled')}</div>
         <div class="news-meta">${_escapeHtml(n.source || 'Source')} · ${timeAgoFromUnix(n.datetime)}</div>
       </div>
-      <span class="news-impact ${sent.type === 'pos' ? 'pos' : sent.type === 'neg' ? 'neg' : 'neutral'}">${sent.impact}</span>
+      <span class="news-impact ${sent.type === 'pos' ? 'pos' : sent.type === 'neg' ? 'neg' : 'neutral'}" title="${tip('newsSent')}">${sent.impact}</span>
     </a>`;
   }).join('');
   const dominant = counts.pos > counts.neg ? 'lean positive' : counts.neg > counts.pos ? 'lean negative' : 'mixed';
@@ -11954,22 +11954,22 @@ function renderBundleCard(b) {
       </div>
     </div>
     <div class="bundle-stats">
-      <div class="bundle-stat">
+      <div class="bundle-stat" title="Current dollar value of all holdings combined, re-priced live every visit.\n\nWhat this means: How much the bundle is worth RIGHT NOW. Compare to 'initial' to see the gain/loss." style="cursor:help">
         <div class="lbl">Current Value</div>
         <div class="val">$${fmt(stats.curValue)}</div>
         <div class="sub">vs $${fmt(stats.initial)} initial</div>
       </div>
-      <div class="bundle-stat">
+      <div class="bundle-stat" title="${tip('cumPnL')}" style="cursor:help">
         <div class="lbl">Cumulative P&L</div>
         <div class="val ${cumDir}">${stats.cumGain >= 0 ? '+' : '−'}$${fmt(Math.abs(stats.cumGain))}</div>
         <div class="sub ${cumDir}">${stats.cumGain >= 0 ? '+' : ''}${stats.cumGainPct.toFixed(2)}% since inception</div>
       </div>
-      <div class="bundle-stat">
+      <div class="bundle-stat" title="${tip('latestPnL')}" style="cursor:help">
         <div class="lbl">Latest P&L</div>
         <div class="val ${dayDir}">${stats.dayGain >= 0 ? '+' : '−'}$${fmt(Math.abs(stats.dayGain))}</div>
         <div class="sub ${dayDir}">${stats.dayGain >= 0 ? '+' : ''}${stats.dayGainPct.toFixed(2)}% ${stats.daySource === 'bar' ? '(week-over-week)' : '(vs last snapshot)'}</div>
       </div>
-      <div class="bundle-stat">
+      <div class="bundle-stat" title="${tip('forecast12')}\n\nWeighted across holdings by allocation %." style="cursor:help">
         <div class="lbl">12M Forecast</div>
         <div class="val ${fwdDir}">${fwd12 >= 0 ? '+' : ''}${fwd12.toFixed(1)}%</div>
         <div class="sub">Weighted across holdings</div>
@@ -12208,19 +12208,22 @@ function renderHoldingCard(h, goalKey, historyYears) {
         <span class="wi-h-sym">${h.ticker}</span>
         <span class="wi-h-name">${h.name}</span>
         <span class="wi-h-tag ${h.kind === 'etf' ? 'etf' : ''}">${h.kind === 'etf' ? 'ETF' : (h.industry || 'STOCK')}</span>
-        <span class="pos-neg-pill ${pn.cls}" title="Composite signal from heat score and 12-month forecast"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
+        <span class="pos-neg-pill ${pn.cls}" title="${tip('posNeg')}" style="cursor:help"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
       </div>
       <div class="wi-h-rationale">${rationale}</div>
-      <div class="wi-h-perf" title="Computed on last ${historyYears} year${historyYears===1?'':'s'} of weekly data">
-        <span class="wi-h-perf-stat"><span class="lbl">${historyYears}Y Return</span><b class="${periodReturn >= 0 ? 'up' : 'down'}">${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%</b></span>
-        <span class="wi-h-perf-stat"><span class="lbl">Max Drawdown</span><b class="down">${maxDd.toFixed(1)}%</b></span>
-        <span class="wi-h-perf-stat"><span class="lbl">Volatility</span><b>${h.volatility.toFixed(1)}%</b></span>
-        <span class="wi-h-perf-stat"><span class="lbl">Sharpe</span><b>${sharpe.toFixed(2)}</b></span>
-        <span class="wi-h-perf-stat"><span class="lbl">Beta</span><b>${(h.beta || 1).toFixed(2)}</b></span>
-        ${spark ? `<span class="sparkline right" title="${historyYears}-year price path">${spark}</span>` : ''}
+      <div class="wi-h-perf" title="All metrics computed on the last ${historyYears} year${historyYears===1?'':'s'} of weekly data. Hover each value for an explanation.">
+        <span class="wi-h-perf-stat" title="${tip('periodReturn')}" style="cursor:help"><span class="lbl">${historyYears}Y Return</span><b class="${periodReturn >= 0 ? 'up' : 'down'}">${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%</b></span>
+        <span class="wi-h-perf-stat" title="${tip('maxDd')}" style="cursor:help"><span class="lbl">Max Drawdown</span><b class="down">${maxDd.toFixed(1)}%</b></span>
+        <span class="wi-h-perf-stat" title="${tip('vol')}" style="cursor:help"><span class="lbl">Volatility</span><b>${h.volatility.toFixed(1)}%</b></span>
+        <span class="wi-h-perf-stat" title="${tip('sharpe')}" style="cursor:help"><span class="lbl">Sharpe</span><b>${sharpe.toFixed(2)}</b></span>
+        <span class="wi-h-perf-stat" title="${tip('beta')}" style="cursor:help"><span class="lbl">Beta</span><b>${(h.beta || 1).toFixed(2)}</b></span>
+        ${spark ? `<span class="sparkline right" title="${historyYears}-year price path · matches the period selected at the top of the Sectors / Top Picks page">${spark}</span>` : ''}
       </div>
       <div class="wi-h-forecasts">
-        ${h.forecasts.map(f => `<div class="wi-h-fc">${f.months}M <b class="${f.expReturn >= 0 ? 'up' : 'down'}">${f.expReturn >= 0 ? '+' : ''}${f.expReturn.toFixed(1)}%</b> · ${f.confidence}% conf</div>`).join('')}
+        ${h.forecasts.map(f => {
+          const fKey = f.months === 12 ? 'forecast12' : f.months === 24 ? 'forecast24' : 'forecast36';
+          return `<div class="wi-h-fc" title="${tip(fKey)}\n\n— Confidence —\n${tip('confidence')}" style="cursor:help">${f.months}M <b class="${f.expReturn >= 0 ? 'up' : 'down'}">${f.expReturn >= 0 ? '+' : ''}${f.expReturn.toFixed(1)}%</b> · ${f.confidence}% conf</div>`;
+        }).join('')}
       </div>
     </div>
     <div class="wi-h-side">
@@ -12321,32 +12324,32 @@ function renderWhatIfResults(p) {
     <div class="wi-mix-card">
       <div class="wi-mix-title">Portfolio Risk — grounded on last ${p.historyYears} year${p.historyYears===1?'':'s'}</div>
       <div class="wi-risk-row">
-        <div class="wi-risk-cell">
+        <div class="wi-risk-cell" title="${tip('periodReturn')}" style="cursor:help">
           <div class="lbl">Period Return (${p.historyYears}Y)</div>
           <div class="val ${stats.portfolioPeriodReturn >= 0 ? 'up' : 'down'}" style="color:${stats.portfolioPeriodReturn >= 0 ? 'var(--bull)' : 'var(--bear)'}">${stats.portfolioPeriodReturn >= 0 ? '+' : ''}${stats.portfolioPeriodReturn.toFixed(1)}%</div>
           <div class="sub">Weighted across all holdings</div>
         </div>
-        <div class="wi-risk-cell">
+        <div class="wi-risk-cell" title="${tip('maxDd')}" style="cursor:help">
           <div class="lbl">Max Drawdown</div>
           <div class="val" style="color:var(--bear)">${stats.portfolioMaxDd.toFixed(1)}%</div>
           <div class="sub">Worst peak-to-trough in window</div>
         </div>
-        <div class="wi-risk-cell">
+        <div class="wi-risk-cell" title="${tip('vol')}" style="cursor:help">
           <div class="lbl">Volatility (annualised)</div>
           <div class="val">${stats.portfolioVol.toFixed(1)}%</div>
           <div class="sub">Higher = more price swing</div>
         </div>
-        <div class="wi-risk-cell">
+        <div class="wi-risk-cell" title="${tip('sharpe')}" style="cursor:help">
           <div class="lbl">Sharpe-like</div>
           <div class="val">${stats.portfolioSharpe.toFixed(2)}</div>
           <div class="sub">Return per unit of risk (4% rf)</div>
         </div>
-        <div class="wi-risk-cell">
+        <div class="wi-risk-cell" title="${tip('beta')}" style="cursor:help">
           <div class="lbl">Beta vs SPY</div>
           <div class="val">${stats.portfolioBeta.toFixed(2)}</div>
           <div class="sub">${stats.portfolioBeta > 1.1 ? 'More volatile than market' : stats.portfolioBeta < 0.9 ? 'Less volatile than market' : 'In line with market'}</div>
         </div>
-        <div class="wi-risk-cell">
+        <div class="wi-risk-cell" title="${tip('hhi')}" style="cursor:help">
           <div class="lbl">Concentration (HHI)</div>
           <div class="val">${Math.round(stats.hhi)}</div>
           <div class="sub">${stats.hhiText}</div>
@@ -13222,14 +13225,14 @@ function renderMain() {
         <div class="cd-meta">${profile.currency || 'USD'}${profile.country ? ' · ' + profile.country : ''}</div>
       </div>
       <div class="cd-grid">
-        <div class="cd-cell"><div class="cd-lbl">Market Cap</div><div class="cd-val">${fmtMcap(profile.marketCapitalization)}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">P/E Ratio</div><div class="cd-val">${fmtNum(metrics.peExclExtraTTM)}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">EPS (TTM)</div><div class="cd-val">$${fmtNum(metrics.epsBasicExclExtraItemsTTM)}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">Div Yield</div><div class="cd-val">${fmtPct(metrics.dividendYieldIndicatedAnnual)}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">Ann. Dividend</div><div class="cd-val">$${fmtNum(metrics.dividendPerShareAnnual)}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">52W High</div><div class="cd-val">$${fmtNum(metrics['52WeekHigh'])}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">52W Low</div><div class="cd-val">$${fmtNum(metrics['52WeekLow'])}</div></div>
-        <div class="cd-cell"><div class="cd-lbl">Beta</div><div class="cd-val">${fmtNum(metrics.beta)}</div></div>
+        <div class="cd-cell" title="${tip('marketCap')}" style="cursor:help"><div class="cd-lbl">Market Cap</div><div class="cd-val">${fmtMcap(profile.marketCapitalization)}</div></div>
+        <div class="cd-cell" title="${tip('pe')}" style="cursor:help"><div class="cd-lbl">P/E Ratio</div><div class="cd-val">${fmtNum(metrics.peExclExtraTTM)}</div></div>
+        <div class="cd-cell" title="${tip('eps')}" style="cursor:help"><div class="cd-lbl">EPS (TTM)</div><div class="cd-val">$${fmtNum(metrics.epsBasicExclExtraItemsTTM)}</div></div>
+        <div class="cd-cell" title="${tip('divYield')}" style="cursor:help"><div class="cd-lbl">Div Yield</div><div class="cd-val">${fmtPct(metrics.dividendYieldIndicatedAnnual)}</div></div>
+        <div class="cd-cell" title="${tip('divAnnual')}" style="cursor:help"><div class="cd-lbl">Ann. Dividend</div><div class="cd-val">$${fmtNum(metrics.dividendPerShareAnnual)}</div></div>
+        <div class="cd-cell" title="${tip('hi52')}" style="cursor:help"><div class="cd-lbl">52W High</div><div class="cd-val">$${fmtNum(metrics['52WeekHigh'])}</div></div>
+        <div class="cd-cell" title="${tip('lo52')}" style="cursor:help"><div class="cd-lbl">52W Low</div><div class="cd-val">$${fmtNum(metrics['52WeekLow'])}</div></div>
+        <div class="cd-cell" title="${tip('beta')}" style="cursor:help"><div class="cd-lbl">Beta</div><div class="cd-val">${fmtNum(metrics.beta)}</div></div>
       </div>
     </div>
 
