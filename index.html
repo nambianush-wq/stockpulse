@@ -2044,6 +2044,21 @@ body.whatif-mode #sidebar { display: none; }
   color: var(--muted);
   margin-bottom: 14px;
 }
+.wi-risk-approx-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 1px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--warn);
+  background: rgba(255,159,10,.12);
+  border: 1px solid rgba(255,159,10,.4);
+  border-radius: 9px;
+  cursor: help;
+  text-transform: none;
+  vertical-align: middle;
+}
 .wi-mix-bar {
   display: flex;
   height: 36px;
@@ -11939,14 +11954,31 @@ function buildUpcomingEvents(ticker, profile, metrics) {
   const events = [];
   const now = new Date();
 
-  // Earnings — deterministic per ticker, 20-90 days out (synthesised; would be
-  // replaced by Finnhub /calendar/earnings in live mode).
-  let h = 0; for (const c of ticker) h = (h * 31 + c.charCodeAt(0)) | 0;
-  const earningsDate = new Date(now.getTime() + (20 + (Math.abs(h) % 70)) * 86400000);
+  // Earnings — prefers live Finnhub /calendar/earnings result; falls back to a
+  // synthesized deterministic date when LIVE data isn't available, AND tags
+  // the soWhat note with "(approximate)" so the user isn't misled.
+  const liveEarnings = getEarningsDateCached(ticker);
+  let earningsDate, earningsApprox, earningsExtra = '';
+  if (liveEarnings && liveEarnings.date) {
+    earningsDate = new Date(liveEarnings.date + 'T16:00:00');
+    earningsApprox = false;
+    const parts = [];
+    if (liveEarnings.hour === 'bmo') parts.push('Before market open');
+    else if (liveEarnings.hour === 'amc') parts.push('After market close');
+    else if (liveEarnings.hour) parts.push(liveEarnings.hour);
+    if (typeof liveEarnings.epsEstimate === 'number' && isFinite(liveEarnings.epsEstimate)) parts.push(`EPS est. $${liveEarnings.epsEstimate.toFixed(2)}`);
+    if (parts.length) earningsExtra = ' · ' + parts.join(' · ');
+  } else {
+    // Synthesized fallback — deterministic-per-ticker hash, 20-90 days out
+    let h = 0; for (const c of ticker) h = (h * 31 + c.charCodeAt(0)) | 0;
+    earningsDate = new Date(now.getTime() + (20 + (Math.abs(h) % 70)) * 86400000);
+    earningsApprox = true;
+  }
   events.push({
-    icon: '📊', kind: 'earnings', date: earningsDate, title: 'Quarterly Earnings',
+    icon: '📊', kind: 'earnings', date: earningsDate,
+    title: earningsApprox ? 'Quarterly Earnings (approx.)' : 'Quarterly Earnings',
     impact: 'High',
-    soWhat: `Quarterly results + forward guidance. Typically moves price ±5–10%. Guidance tone often matters more than the actual EPS print.`,
+    soWhat: `Quarterly results + forward guidance${earningsExtra}. Typically moves price ±5–10%. Guidance tone often matters more than the actual EPS print.${earningsApprox ? ' <i style="color:var(--warn);">Date is approximate — pulled from a deterministic synthesised schedule; LIVE Finnhub mode replaces this with the actual filing date when available.</i>' : ''}`,
   });
 
   // Ex-dividend (if pays)
@@ -12197,6 +12229,74 @@ async function fetchFinnhubMetrics(ticker) {
     const j = await res.json();
     return (j && j.metric) || null;
   } catch (e) { return null; }
+}
+
+// Finnhub /calendar/earnings — REAL upcoming earnings date for a ticker.
+// Replaces the synthesized-from-ticker-hash date that was previously shown
+// on the ticker dashboard's "Calendar at a glance" card (was inaccurate; the
+// dashboard appeared to show live earnings dates but actually emitted a
+// hash-derived value 20-90 days out from today).
+//
+// Cached for 12 hours per ticker in localStorage so we don't burn the free
+// 60/min quota on every dashboard view. DEMO mode returns null and the
+// caller falls back to the synthesized date with a "(approximate)" marker.
+const LS_KEY_EARNINGS_CACHE_PREFIX = 'sp_earnings_';
+const _SP_EARNINGS_TTL_MS = 12 * 60 * 60 * 1000;
+async function fetchEarningsDate(ticker) {
+  if (!isLive()) return null;
+  const cacheKey = LS_KEY_EARNINGS_CACHE_PREFIX + ticker;
+  try {
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < _SP_EARNINGS_TTL_MS) {
+      return cached.earningsDate || null;
+    }
+  } catch (e) {}
+  try {
+    const to = new Date(Date.now() + 120 * 86400000);   // 4 months forward
+    const from = new Date(Date.now() - 7 * 86400000);   // 1 week back (sometimes the most recent is days-ago)
+    const fmt = d => d.toISOString().slice(0, 10);
+    const url = `https://finnhub.io/api/v1/calendar/earnings?symbol=${encodeURIComponent(ticker)}&from=${fmt(from)}&to=${fmt(to)}&token=${encodeURIComponent(API_KEY)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      // Cache the failure too so we don't hammer the endpoint on every render
+      try { localStorage.setItem(cacheKey, JSON.stringify({ earningsDate: null, fetchedAt: Date.now() })); } catch (e) {}
+      return null;
+    }
+    const j = await res.json();
+    const list = (j && Array.isArray(j.earningsCalendar)) ? j.earningsCalendar : [];
+    // Pick the first FUTURE earnings date (or most-recent past if no future exists)
+    const now = Date.now();
+    const future = list
+      .map(e => ({ date: e.date, ts: new Date(e.date + 'T16:00:00').getTime(), hour: e.hour, epsEstimate: e.epsEstimate, revenueEstimate: e.revenueEstimate }))
+      .filter(e => isFinite(e.ts))
+      .sort((a, b) => a.ts - b.ts);
+    let picked = future.find(e => e.ts > now);
+    if (!picked && future.length) picked = future[future.length - 1];  // fall back to most recent past
+    const result = picked
+      ? { date: picked.date, hour: picked.hour || '', epsEstimate: picked.epsEstimate, revenueEstimate: picked.revenueEstimate, isPast: picked.ts <= now }
+      : null;
+    try { localStorage.setItem(cacheKey, JSON.stringify({ earningsDate: result, fetchedAt: Date.now() })); } catch (e) {}
+    return result;
+  } catch (e) {
+    return null;
+  }
+}
+// Session-level in-memory cache so we don't hit localStorage on every render
+const _earningsCache = {};
+function getEarningsDateCached(ticker) {
+  if (Object.prototype.hasOwnProperty.call(_earningsCache, ticker)) return _earningsCache[ticker];
+  return undefined; // means "not yet fetched"
+}
+// Fire-and-forget lazy fetcher — called from renderMain. If the result comes
+// back during this session, stash it and trigger a re-render.
+function _kickEarningsFetch(ticker) {
+  if (Object.prototype.hasOwnProperty.call(_earningsCache, ticker)) return;
+  _earningsCache[ticker] = null;   // pending sentinel — don't fire twice
+  fetchEarningsDate(ticker).then(result => {
+    _earningsCache[ticker] = result;
+    // Only re-render if the user is still looking at this ticker
+    if (_selected === ticker && _data[_selected]) renderMain();
+  }).catch(() => { _earningsCache[ticker] = null; });
 }
 
 // Latest news via Finnhub /company-news — cached 5 minutes per ticker.
@@ -15826,7 +15926,7 @@ function renderWhatIfResults(p) {
     ${renderCalendarCard(p)}
 
     <div class="wi-mix-card">
-      <div class="wi-mix-title">Portfolio Risk — grounded on last ${p.historyYears} year${p.historyYears===1?'':'s'}</div>
+      <div class="wi-mix-title">Portfolio Risk — grounded on last ${p.historyYears} year${p.historyYears===1?'':'s'}<span class="wi-risk-approx-badge" title="The portfolio-level Sharpe, Volatility, Max Drawdown and Period Return shown below are weighted means of each holding's INDIVIDUAL value — they do not account for correlation between holdings (which is what a true portfolio-level calculation would require, via a covariance matrix). Diversification benefit is therefore NOT reflected. Beta and HHI are correctly computed at the portfolio level. Use these as directional comparisons across What If runs, not as a precise risk forecast.">~ approximation</span></div>
       <div class="wi-risk-row">
         <div class="wi-risk-cell" title="${tip('periodReturn')}" style="cursor:help">
           <div class="lbl">Period Return (${p.historyYears}Y)</div>
@@ -17319,6 +17419,10 @@ function renderMain() {
   const exec = buildExecutiveSummary(_selected, bars, v, profile, metrics);
   const forecast = buildForecast(bars, v, [12, 24, 36]);
   const timing = computeBuyTiming(bars, v, forecast);
+  // Kick off async earnings-date fetch if LIVE — first render uses the
+  // synthesized fallback; the response triggers a re-render with the real
+  // date once it lands.
+  _kickEarningsFetch(_selected);
   const events = buildUpcomingEvents(_selected, profile, metrics);
   const lastDate = new Date(last.time * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
