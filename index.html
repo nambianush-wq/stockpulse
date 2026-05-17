@@ -59,11 +59,16 @@ input:focus, select:focus { border-color: var(--accent); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(13,18,30,.85);
+  background: rgba(13,18,30,.92);  /* slightly more opaque since it now overlays content while sticky-scrolling */
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--line);
-  position: relative;
+  /* Sticky so the tab nav stays accessible while scrolling long pages
+     (What If / Cockpit / Sectors are all taller than the viewport). z-index
+     100 keeps it BELOW the modal overlay (1000) and toast host (2000) but
+     ABOVE all page content (default 0). */
+  position: sticky;
+  top: 0;
   z-index: 100;
 }
 #topbar .brand {
@@ -13943,7 +13948,14 @@ function saveCurrentBundle() {
   const nameInput = $('wi-save-name');
   const rawName = nameInput ? nameInput.value.trim() : '';
   const p = _lastBuiltPortfolio;
-  const defaultName = `${STRATEGY_DEFS[p.goalKey].label} · $${fmt(p.amount)} · ${todayStr()}`;
+  // p.strategy.label is set by EVERY builder — goal-based (buildPortfolio),
+  // sim-set (buildPortfolioFromSimSet), and investor-clone
+  // (buildPortfolioFromInvestor). Was previously STRATEGY_DEFS[p.goalKey].label
+  // which threw for investor-clone goalKeys like 'clone_buffett' that aren't
+  // in STRATEGY_DEFS. Fallback to a generic label keeps the save working even
+  // if strategy is somehow missing.
+  const stratLabel = (p.strategy && p.strategy.label) || 'Portfolio';
+  const defaultName = `${stratLabel} · $${fmt(p.amount)} · ${todayStr()}`;
   const name = rawName || defaultName;
   // Reject duplicate names
   if (SAVED_BUNDLES.some(b => b.name === name)) {
