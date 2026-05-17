@@ -4325,6 +4325,7 @@ body { padding-bottom: 44px; }
       <div id="sidebar-counters" class="sidebar-counters"></div>
       <div id="verdict-filter" class="verdict-filter"></div>
       <div id="type-filter" class="verdict-filter" style="margin-top:6px"></div>
+      <div id="timing-filter" class="verdict-filter" style="margin-top:6px" title="Filter by buy-timing recommendation (Buy now / On dip / DCA / Wait / Avoid)"></div>
     </div>
     <div id="watchlist"><div class="wl-item heat-hot  " data-ticker="AMAT" onclick="selectTicker(&#39;AMAT&#39;)" title="Heat score: +70">
       <div class="wl-heat" style="--heat-color: rgb(255, 150, 0)"></div>
@@ -5596,6 +5597,7 @@ body { padding-bottom: 44px; }
           <button class="picks-period-pill" data-yrs="5" onclick="selectPicksHistory(5)">5 Years</button>
           <div class="picks-filter-lbl" style="margin-left:auto;text-transform:none;letter-spacing:.02em;font-weight:400;color:var(--dim);font-style:italic;">Historical performance over the selected window appears alongside the forecast cards.</div>
         </div>
+        <div class="picks-filters" id="picks-timing-pills" style="margin-top:6px;"></div>
       </div>
       <div id="picks-list"><section class="sector-block" id="sec-technology">
     <div class="sector-block-head">
@@ -10942,6 +10944,50 @@ function setTypeFilter(mode) {
   updateTypeFilterPills();
   renderWatchlist($('search') ? $('search').value : '');
 }
+// Buy-timing filter — also a separate dimension (composes with verdict + type).
+// Values mirror computeBuyTiming output: BUY_NOW / BUY_ON_DIP / DCA / WAIT / AVOID
+let _watchlistTimingFilter = null;
+function setTimingFilter(mode) {
+  _watchlistTimingFilter = (_watchlistTimingFilter === mode) ? null : mode;
+  updateTimingFilterPills();
+  renderWatchlist($('search') ? $('search').value : '');
+}
+function _timingForWatchlistRow(ticker) {
+  const d = _data[ticker];
+  if (!d || !d.bars || !d.verdict) return null;
+  try {
+    const fc = buildForecast(d.bars, d.verdict, [12]);
+    const t = computeBuyTiming(d.bars, d.verdict, fc);
+    return t.action;
+  } catch (e) {
+    return null;
+  }
+}
+function countByTimingBucket() {
+  const c = { BUY_NOW: 0, BUY_ON_DIP: 0, DCA: 0, WAIT: 0, AVOID: 0, total: 0 };
+  for (const t of WATCHLIST) {
+    const a = _timingForWatchlistRow(t);
+    if (!a) continue;
+    if (c[a] != null) c[a]++;
+    c.total++;
+  }
+  return c;
+}
+function updateTimingFilterPills() {
+  const host = document.getElementById('timing-filter');
+  if (!host) return;
+  const c = countByTimingBucket();
+  const mode = _watchlistTimingFilter;
+  const pill = (key, label, full) => `<button class="vf-pill ${mode === key ? 'active' : ''}" onclick="setTimingFilter('${key}')" title="${full.replace(/"/g,'&quot;')}">${label} <b>${c[key]}</b></button>`;
+  host.innerHTML = `
+    <button class="vf-pill ${mode === null ? 'active' : ''}" onclick="setTimingFilter(null)" title="Show all tickers regardless of buy timing">All <b>${c.total}</b></button>
+    ${pill('BUY_NOW',    'Buy',  'Model expects positive 12M return AND conditions favour immediate entry')}
+    ${pill('BUY_ON_DIP', 'Dip',  'Strong forecast but the stock is overbought / stretched — wait for 5–10% pullback')}
+    ${pill('DCA',        'DCA',  'Positive forecast but high volatility — average in over 4–8 weeks')}
+    ${pill('WAIT',       'Wait', 'Flat forecast / mixed signals — no clear trigger yet')}
+    ${pill('AVOID',      'Avoid','Negative forecast or Strong Sell — capital better deployed elsewhere')}
+  `;
+}
 function getStockTypeInfo(ticker) {
   const d = _data[ticker];
   const industry = (d && d.profile && d.profile.finnhubIndustry) || '';
@@ -12812,6 +12858,7 @@ const _DEFAULT_SECTORS_FILTERS = {
   confMin:  0,       // 0 | 40 | 60  (min 12M confidence %)
   div:      'all',   // all | pays | hi_yield
   cross:    'all',   // all | cross2 | cross3  (top-20 in >=2 or >=3 goals)
+  timing:   'all',   // all | BUY_NOW | BUY_ON_DIP | DCA | WAIT | AVOID
 };
 let _sectorsFilters = (function () {
   const stored = loadJsonResilient(LS_KEY_SECTORS_FILTERS, LS_KEY_SECTORS_FILTERS_BACKUP, null);
@@ -12881,6 +12928,41 @@ function _attachCrossGoalIndex(cache) {
   return cache;
 }
 
+// Shared buy-timing classifier — derives action from cached metrics. Used
+// for filter purposes across Sectors / Watchlist / Top Picks. A best-effort
+// approximation of computeBuyTiming that works without bars / RSI / MA40 —
+// for the ticker dashboard the FULL computeBuyTiming is still used.
+function _classifyTimingFromCache(m) {
+  if (!m) return 'WAIT';
+  // If the caller already attached the full timing (computeBuyTiming.action),
+  // use it directly so cached + classified results stay consistent.
+  if (m._timing) return m._timing;
+  const f12 = isFinite(m.forecast12) ? m.forecast12 : 0;
+  const score = isFinite(m.score) ? m.score : 0;
+  const vol = isFinite(m.volatility) ? m.volatility : 0;
+  const verdict = m.verdict || '';
+  if (f12 < -3 || verdict === 'STRONG SELL') return 'AVOID';
+  if (f12 < 1 && (verdict === 'HOLD' || verdict === 'SELL')) return 'WAIT';
+  if (f12 >= 5 && vol > 50) return 'DCA';
+  if (f12 >= 5 && score >= 70) return 'BUY_ON_DIP';  // very hot, likely extended
+  if (f12 >= 5) return 'BUY_NOW';
+  if (f12 >= 1 && vol > 35) return 'DCA';
+  if (f12 >= 1) return 'BUY_NOW';
+  return 'WAIT';
+}
+
+// Short label for the timing chip when shown as a stock attribute.
+function _timingShortLabel(action) {
+  switch (action) {
+    case 'BUY_NOW':    return 'Buy now';
+    case 'BUY_ON_DIP': return 'On dip';
+    case 'DCA':        return 'DCA';
+    case 'WAIT':       return 'Wait';
+    case 'AVOID':      return 'Avoid';
+    default:           return '';
+  }
+}
+
 // Apply the active filter set to a cache array (pre-rank, pre-slice).
 function _applySectorsFilters(cache) {
   const f = _sectorsFilters;
@@ -12894,6 +12976,7 @@ function _applySectorsFilters(cache) {
     if (f.div === 'hi_yield' && !(m.divYield >= 4)) return false;
     if (f.cross === 'cross2' && !(m.crossCount >= 2)) return false;
     if (f.cross === 'cross3' && !(m.crossCount >= 3)) return false;
+    if (f.timing !== 'all' && _classifyTimingFromCache(m) !== f.timing) return false;
     return true;
   });
 }
@@ -12978,6 +13061,14 @@ function renderSectorsFilterPills() {
       { v:'all',    l:'Any',                       t:'No cross-goal filter' },
       { v:'cross2', l:'Strong in ≥ 2 goals',       t:'Stocks that rank in the top 20 across at least 2 of the 5 investment goals — versatile picks' },
       { v:'cross3', l:'All-rounders (≥ 3 goals)',  t:'Stocks that rank in the top 20 across at least 3 of the 5 goals — strongest cross-style picks' },
+    ])}
+    ${row('Buy timing', 'timing', [
+      { v:'all',        l:'Any',        t:'No timing filter — show all stocks regardless of buy-now / wait recommendation' },
+      { v:'BUY_NOW',    l:'Buy now',    t:'Stocks where the model expects a positive 12M return AND conditions favour an immediate entry' },
+      { v:'BUY_ON_DIP', l:'Buy on dip', t:'Strong forecast but the stock is overbought / stretched above MA40 — wait for a 5–10% pullback' },
+      { v:'DCA',        l:'DCA',        t:'Positive forecast but high volatility — dollar-cost-average over 4–8 weeks rather than lump-sum' },
+      { v:'WAIT',       l:'Wait',       t:'Flat forecast with mixed signals — no clear entry trigger yet, watch for a break' },
+      { v:'AVOID',      l:'Avoid',      t:'Negative 12M forecast or Strong Sell verdict — capital better deployed elsewhere' },
     ])}
     <div class="sec-filter-row sec-filter-foot">
       <span class="sec-filter-lbl">${activeCount > 0 ? `${activeCount} filter${activeCount === 1 ? '' : 's'} active` : 'No filters active'}</span>
@@ -15590,6 +15681,30 @@ function selectPicksHistory(yrs) {
   renderPicksPage();
 }
 
+// Top Picks buy-timing filter. null = no filter; else one of computeBuyTiming
+// action values. Composes with the existing sector + history-window filters.
+let _picksTimingFilter = null;
+function setPicksTimingFilter(mode) {
+  _picksTimingFilter = (_picksTimingFilter === mode) ? null : mode;
+  _renderPicksTimingPills();
+  renderPicksPage();
+}
+function _renderPicksTimingPills() {
+  const host = document.getElementById('picks-timing-pills');
+  if (!host) return;
+  const mode = _picksTimingFilter;
+  const pill = (key, label, full) => `<button class="picks-period-pill ${mode === key ? 'active' : ''}" onclick="setPicksTimingFilter('${key}')" title="${full.replace(/"/g,'&quot;')}">${label}</button>`;
+  host.innerHTML = `
+    <span class="picks-period-lbl" style="margin-right:8px;">Buy timing</span>
+    <button class="picks-period-pill ${mode === null ? 'active' : ''}" onclick="setPicksTimingFilter(null)" title="Show all picks regardless of buy timing">All</button>
+    ${pill('BUY_NOW',    'Buy now',    'Show only picks where the model favours immediate entry')}
+    ${pill('BUY_ON_DIP', 'On dip',     'Show only picks that are stretched / overbought — wait for a pullback')}
+    ${pill('DCA',        'DCA',        'Show only picks where high vol favours dollar-cost-averaging')}
+    ${pill('WAIT',       'Wait',       'Show only picks with no clear entry trigger')}
+    ${pill('AVOID',      'Avoid',      'Show only picks the model flags as negative-expected')}
+  `;
+}
+
 function computeFullPickMetrics(s, historyYears) {
   historyYears = historyYears || 3;
   try {
@@ -15598,6 +15713,7 @@ function computeFullPickMetrics(s, historyYears) {
     const profile = getProfileFor(ticker, { name: s.n, finnhubIndustry: s.i });
     const verdict = computeVerdict(bars);
     const forecasts = buildForecast(bars, verdict, [12, 24, 36]);
+    const timing = computeBuyTiming(bars, verdict, forecasts);
     const closes = bars.map(b => b.close);
     const n = closes.length - 1;
     const last = closes[n];
@@ -15618,6 +15734,11 @@ function computeFullPickMetrics(s, historyYears) {
       forecasts,
       history,
       historyYears,
+      // Stamp the FULL timing action onto the metric — used for filter +
+      // chip rendering. _timing keeps parity with the cached field name in
+      // _classifyTimingFromCache so shared filter logic works either way.
+      _timing: timing.action,
+      _timingFull: timing,
     };
   } catch (e) { return null; }
 }
@@ -15657,7 +15778,13 @@ function renderPicksLoading() {
 function renderPicksList() {
   const host = $('picks-list');
   if (!host) return;
-  const all = STOCK_CATALOG.map(s => computeFullPickMetrics(s, _picksHistoryYears)).filter(Boolean);
+  // Re-render the timing-pill row so its active state stays in sync with state
+  _renderPicksTimingPills();
+  let all = STOCK_CATALOG.map(s => computeFullPickMetrics(s, _picksHistoryYears)).filter(Boolean);
+  // Apply buy-timing filter (composable with everything below)
+  if (_picksTimingFilter) {
+    all = all.filter(m => m._timing === _picksTimingFilter);
+  }
 
   // Group by industry
   const bySector = {};
@@ -15788,6 +15915,7 @@ function renderPickRow(m, rank) {
         <span class="pick-name">${m.name}</span>
         <span class="pick-verdict ${verdictClass}">${m.verdict}</span>
         <span class="pos-neg-pill ${pn.cls}"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
+        ${m._timingFull ? renderTimingChip(m._timingFull, true) : ''}
         ${rowActionsHtml(m.ticker)}
       </div>
       <div class="pick-stats">
@@ -15889,6 +16017,13 @@ function computeRankableMetrics(ticker, profileInput, historyYears) {
   const history3Y = computeRiskMetrics(bars, 3);
   const history5Y = computeRiskMetrics(bars, 5);
   const history = historyYears === 1 ? history1Y : historyYears === 5 ? history5Y : history3Y;
+  // Full buy-timing classification — stamped onto every cache entry so the
+  // Sectors tile chip + filter row both render off the same source of truth.
+  let timingAction = 'WAIT';
+  try {
+    const t = computeBuyTiming(bars, verdict, forecasts);
+    timingAction = t.action;
+  } catch (e) { /* tolerate; fall back to WAIT */ }
   return {
     ticker,
     name: profile.name || ticker,
@@ -15909,6 +16044,7 @@ function computeRankableMetrics(ticker, profileInput, historyYears) {
     history,
     history1Y, history3Y, history5Y,
     historyYears,
+    _timing: timingAction,
   };
 }
 
@@ -15974,8 +16110,15 @@ function renderTilesFromCache() {
         <div class="tile-price">$${fmt(m.last)}</div>
         <div class="tile-chg ${dir}">${m.wkChange >= 0 ? '+' : ''}${m.wkChange.toFixed(2)}% 1W</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:-4px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-top:-4px;flex-wrap:wrap;">
         <span class="pos-neg-pill ${pn.cls}" title="${tip('posNeg')}" style="cursor:help"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
+        ${(() => {
+          const action = _classifyTimingFromCache(m);
+          const icon = _TIMING_ICONS[action] || '·';
+          const lbl  = _timingShortLabel(action);
+          const tt = `Buy timing: ${lbl}\n\nForecast 12M ${m.forecast12 >= 0 ? '+' : ''}${m.forecast12.toFixed(1)}% · verdict ${m.verdict} · volatility ${(m.volatility || 0).toFixed(0)}%.\n\nClick the tile to open the full analysis with detailed timing rationale + window.`;
+          return `<span class="timing-chip timing-${action}" title="${tt.replace(/"/g,'&quot;')}"><span class="timing-icon">${icon}</span>${lbl}</span>`;
+        })()}
       </div>
       ${_renderTileCrossGoalBadge(m)}
       ${(m.history1Y && m.history3Y && m.history5Y) ? (() => {
@@ -16669,10 +16812,15 @@ function renderWatchlist(filter = '') {
       return true;
     });
   }
+  // Buy-timing filter: composable with verdict + type
+  if (_watchlistTimingFilter) {
+    subFiltered = subFiltered.filter(t => _timingForWatchlistRow(t) === _watchlistTimingFilter);
+  }
   const visible = subFiltered.filter(t => !f || t.toUpperCase().includes(f));
   // Keep filter pill counts fresh whenever the watchlist re-renders
   updateVerdictFilterPills();
   updateTypeFilterPills();
+  updateTimingFilterPills();
 
   host.innerHTML = visible.map(t => {
     const d = _data[t];
@@ -17614,6 +17762,7 @@ async function init() {
   updateSidebarCounters();
   updateVerdictFilterPills();
   updateTypeFilterPills();
+  updateTimingFilterPills();
   _injectPageDisclaimers();
   renderWatchlist();
   _selected = WATCHLIST[0] || null;
