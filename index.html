@@ -1281,13 +1281,16 @@ input:focus, select:focus { border-color: var(--accent); }
 /* Toast */
 #toast-host {
   position: fixed;
-  bottom: 20px;
+  bottom: 56px;   /* clears the disclaimer footer (~36px tall + 20px gap) */
   right: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   z-index: 2000;
   pointer-events: none;
+}
+@media (max-width: 720px) {
+  #toast-host { bottom: 88px; }   /* footer is taller on narrow screens */
 }
 .toast {
   background: var(--panel);
@@ -3322,11 +3325,13 @@ body.cockpit-mode.cockpit-sidebar-collapsed #main { margin-left: 0; }
 /* Disclaimer footer — pinned at the bottom of the viewport on every tab.
    Always visible so the user is never reading verdicts/forecasts without
    the educational-purposes notice in sight. Adds bottom padding to body
-   so content doesn't sit behind the footer. */
+   so content doesn't sit behind the footer. z-index sits BELOW the modal
+   overlay (1000) so modals fully obscure it; above body content but below
+   any modal / toast layer. */
 #sp-footer {
   position: fixed;
   left: 0; right: 0; bottom: 0;
-  z-index: 1000;
+  z-index: 100;
   padding: 8px 18px;
   background: rgba(10,10,20,.92);
   backdrop-filter: saturate(180%) blur(10px);
@@ -3358,6 +3363,37 @@ body { padding-bottom: 44px; }
 @media (max-width: 720px) {
   #sp-footer { font-size: 10px; padding: 6px 12px; text-align: left; }
   body { padding-bottom: 72px; }
+}
+
+/* Inline per-page disclaimer — rendered as the last child of every tab's
+   content container. The fixed footer is the always-on safety net; this
+   inline block is the "in-flow" copy that lands at the natural end of
+   each page when the user scrolls. Both must agree word-for-word. */
+.sp-page-disclaimer {
+  margin: 28px 0 18px;
+  padding: 12px 16px;
+  background: rgba(10,10,20,.35);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+  font-style: italic;
+}
+.sp-page-disclaimer .sp-page-disclaimer-lbl {
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--warn);
+  margin-right: 6px;
+  font-size: 10px;
+}
+.sp-page-disclaimer b {
+  color: var(--fg);
+  font-style: normal;
+  font-weight: 700;
 }
 
 /* Sector mix */
@@ -3416,6 +3452,119 @@ body { padding-bottom: 44px; }
 .cockpit-alert-body b { color: var(--text); font-weight: 600; }
 .cockpit-alert-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
 .cockpit-empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+
+/* Key-indices gauge grid — animated semicircle dials for major benchmarks.
+   Needle rotates based on 1-week change; clamps at ±5%. */
+.cockpit-indices-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+@media (max-width: 1280px) { .cockpit-indices-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 720px)  { .cockpit-indices-grid { grid-template-columns: repeat(2, 1fr); } }
+.cockpit-index-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 10px 10px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s;
+}
+.cockpit-index-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.cockpit-index-card.up   { border-top: 2px solid var(--bull); }
+.cockpit-index-card.down { border-top: 2px solid var(--bear); }
+.cockpit-index-card.warn { border-top: 2px solid var(--warn); }
+.cockpit-index-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.cockpit-index-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+.cockpit-index-gauge-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 2 / 1;
+}
+.cockpit-index-gauge {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.cockpit-index-gauge .arc-bg { fill: none; stroke: var(--line); stroke-width: 8; }
+.cockpit-index-gauge .arc-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s cubic-bezier(.2,.8,.2,1), stroke 0.4s ease;
+}
+.cockpit-index-gauge .needle {
+  stroke: var(--fg);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transform-origin: center bottom;
+  transition: transform 0.9s cubic-bezier(.2,.8,.2,1);
+}
+.cockpit-index-gauge .pivot { fill: var(--fg); }
+.cockpit-index-gauge .tick { stroke: var(--muted); stroke-width: 1; }
+.cockpit-index-gauge .tick-lbl { font-size: 8px; fill: var(--dim); font-weight: 700; }
+.cockpit-index-val {
+  position: absolute;
+  bottom: 4px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.cockpit-index-val.up   { color: var(--bull); }
+.cockpit-index-val.down { color: var(--bear); }
+.cockpit-index-val.warn { color: var(--warn); }
+.cockpit-index-price {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.cockpit-index-spark {
+  margin-top: 4px;
+  height: 16px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cockpit-index-source {
+  font-size: 8.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-top: 4px;
+  font-style: italic;
+}
+.cockpit-index-source.live { color: var(--bull); font-style: normal; }
+.cockpit-index-source.synth { color: var(--warn); }
+/* Subtle pulsing glow ring while loading live data */
+@keyframes idx-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,113,227,.0); }
+  50%      { box-shadow: 0 0 0 4px rgba(0,113,227,.12); }
+}
+.cockpit-index-card.loading { animation: idx-pulse 1.8s infinite; }
 .cockpit-empty h2 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
 .bundle-details { margin-top: 4px; padding-top: 4px; }
 .bundle-details summary {
@@ -3937,6 +4086,15 @@ body { padding-bottom: 44px; }
         </div>
       </div>
       <div class="cockpit-hero-grid" id="cockpit-hero"></div>
+      <div class="cockpit-section" id="cockpit-indices-section">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">Key exchanges &amp; indices</div>
+            <div class="cockpit-section-sub">Animated gauges for the headline US benchmarks — S&amp;P 500, NASDAQ-100, Dow 30, Russell 2000, the VIX fear gauge, Gold, and 20-year Treasuries · needle position = 1-week change · click any card to add the proxy ETF to your watchlist</div>
+          </div>
+        </div>
+        <div class="cockpit-indices-grid" id="cockpit-indices"></div>
+      </div>
       <div class="cockpit-section" id="cockpit-heatmap-section">
         <div class="cockpit-section-head">
           <div>
@@ -10046,6 +10204,38 @@ body { padding-bottom: 44px; }
 // ========================================================================
 // State
 // ========================================================================
+// Operator-baked global API keys — applicable to ALL visitors across every
+// machine / browser / origin / device. When set, a visitor whose localStorage
+// is empty inherits these on first load; clearing localStorage re-inherits
+// them. Stored AS THE FIRST DEFINITION in the JS so they're available to
+// loadKey() at startup.
+//
+// SECURITY TRADE-OFFS (read before populating):
+//   • These keys are visible in the served HTML source AND in the public
+//     GitHub repo commit history. Anyone who reads either can extract them.
+//   • Every visitor's API calls consume YOUR free-tier quota:
+//       - Finnhub: 60 calls/min total, shared across all visitors
+//       - Twelve Data: 800 calls/day, 8/min, shared across all visitors
+//   • For personal-portfolio / educational deployments only — never use
+//     this for a commercial or high-traffic site.
+//   • A user can still override the baked key in their own browser via
+//     Settings → API key field — that override persists locally and takes
+//     precedence over the baked key for that browser only.
+//
+// HOW TO POPULATE:
+//   1. Replace the two empty strings below with your real keys
+//   2. Commit + push to BOTH remotes (origin + stocknaut)
+//   3. Every visitor to the deployed URL inherits live mode on first load
+const _SP_BAKED_KEYS = {
+  finnhub:    '',   // ← paste your Finnhub API key here (60 calls/min free tier)
+  twelvedata: '',   // ← paste your Twelve Data API key here (optional cross-check)
+};
+function _bakedKeyFor(primarySlot) {
+  if (primarySlot === LS_KEY_API) return (_SP_BAKED_KEYS.finnhub    || '').trim();
+  if (primarySlot === LS_KEY_TD)  return (_SP_BAKED_KEYS.twelvedata || '').trim();
+  return '';
+}
+
 const LS_KEY_WL = 'sp_watchlist';
 const LS_KEY_API = 'sp_finnhub_key';
 const LS_KEY_REFRESH = 'sp_refresh_seconds';
@@ -10084,10 +10274,16 @@ const LS_BACKUP_MAP = {
   [LS_KEY_SECTORS_FILTERS]:  LS_KEY_SECTORS_FILTERS_BACKUP,
 };
 
-// Resilient API-key storage — writes to BOTH a primary slot and a backup slot
-// so that accidental localStorage clear or sync hiccup of one slot doesn't lose
-// the key. Reads check primary first, then fall back to backup. Both are
-// re-written on every successful load so they stay in sync.
+// Resilient API-key storage with global-fallback to the operator-baked key.
+//   Priority order: local primary → local backup → _SP_BAKED_KEYS.
+// Writes to BOTH a primary slot and a backup slot so that accidental
+// localStorage clear or sync hiccup of one slot doesn't lose the key.
+// If local has nothing AND a baked key exists, returns the baked key WITHOUT
+// writing it to local — that way the user always sees the freshest deployment
+// key (operator can rotate by editing _SP_BAKED_KEYS and redeploying; visitors
+// pick up the new key automatically as long as they haven't entered a personal
+// override). A user-entered key in Settings DOES persist locally and takes
+// precedence over the baked key for that browser only.
 function loadKey(primary, backup) {
   let v = '';
   try { v = localStorage.getItem(primary) || ''; } catch (e) {}
@@ -10101,7 +10297,22 @@ function loadKey(primary, backup) {
     // Re-sync backup in case it was wiped
     try { if (localStorage.getItem(backup) !== v) localStorage.setItem(backup, v); } catch (e) {}
   }
+  if (!v) {
+    // Inherit operator-baked global key, if any. Not written to local — keep
+    // the baked source authoritative so operator rotations propagate.
+    v = _bakedKeyFor(primary);
+  }
   return v;
+}
+// Source attribution helper — UI uses this to label whether a key on disk is
+// the user's own override or the operator-baked deployment-wide value.
+function keySourceFor(primary, backup) {
+  try {
+    const local = (localStorage.getItem(primary) || localStorage.getItem(backup) || '').trim();
+    if (local) return 'local';
+  } catch (e) {}
+  if (_bakedKeyFor(primary)) return 'baked';
+  return 'none';
 }
 function persistKey(primary, backup, val) {
   let okPrimary = false, okBackup = false;
@@ -14563,6 +14774,137 @@ function _cockpitMoodLabel(avgScore) {
   return                       { lbl: 'Risk-off',  cls: 'down', desc: 'Watchlist is broadly bearish — sellers in control' };
 }
 
+// Key indices to render in the gauge strip. ETF proxies for the major US
+// benchmarks + a few asset-class signals (VIX, Gold, 20Y Treasuries).
+const _COCKPIT_INDICES = [
+  { ticker: 'SPY', label: 'S&P 500',      role: 'Broad US large-cap',                 tone: 'equity' },
+  { ticker: 'QQQ', label: 'NASDAQ-100',   role: 'US tech-tilted growth',              tone: 'equity' },
+  { ticker: 'DIA', label: 'Dow Jones 30', role: 'Blue-chip industrials',              tone: 'equity' },
+  { ticker: 'IWM', label: 'Russell 2000', role: 'US small-cap breadth',               tone: 'equity' },
+  { ticker: 'VIX', label: 'VIX',          role: 'Volatility (fear) — inverse signal', tone: 'vol' },
+  { ticker: 'GLD', label: 'Gold',         role: 'Safe-haven · inflation hedge',       tone: 'alt' },
+  { ticker: 'TLT', label: '20Y Treasuries', role: 'Long-duration bonds',              tone: 'bond' },
+];
+
+// Build the animated semicircle gauge SVG. dialPct ∈ [-100..+100] where +5%
+// 1-week change maps to +100 (full right swing). The needle CSS transitions
+// from its previous position to the new one (0.9s cubic-bezier).
+function _cockpitGaugeSvg(wkChg, isFear) {
+  // Map wkChg → -100..+100 with a soft clamp at ±5%. For the VIX (fear) we
+  // invert so a SPIKE in vol points the needle LEFT (bad for equity), not right.
+  const cappedRaw = Math.max(-5, Math.min(5, wkChg));
+  const capped = isFear ? -cappedRaw : cappedRaw;
+  const dialPct = (capped / 5) * 100;   // -100..+100
+  // Needle angle: -90deg at -100 (full left), 0deg at 0, +90deg at +100
+  const angle = (dialPct / 100) * 90;
+  // Arc colours — green for right, red for left, amber near zero
+  const isUp   = capped > 0.3;
+  const isDown = capped < -0.3;
+  const arcCol = isUp ? 'var(--bull)' : isDown ? 'var(--bear)' : 'var(--warn)';
+  // Arc geometry: semicircle viewBox 100x50, center (50,50), radius 40
+  // Arc-bg is the full 180° backdrop. Arc-fill is the portion from center
+  // outward in the direction of the needle.
+  const cx = 50, cy = 50, r = 40;
+  const arcLen = Math.PI * r;  // length of full semicircle = πr
+  const fillFrac = Math.abs(dialPct) / 100;
+  // We draw the FULL semicircle as one path and use stroke-dasharray to
+  // animate the fill from center → outward. The dasharray pivot is at the
+  // midpoint of the path; offset shifts the fill toward left or right.
+  const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+  // Tick marks at -5%, 0%, +5% (compact — no text labels at these positions)
+  const tick = (a) => {
+    const rad = (a - 90) * Math.PI / 180;
+    const x1 = cx + (r - 4) * Math.cos(rad);
+    const y1 = cy + (r - 4) * Math.sin(rad);
+    const x2 = cx + (r + 4) * Math.cos(rad);
+    const y2 = cy + (r + 4) * Math.sin(rad);
+    return `<line class="tick" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+  };
+  return `<svg class="cockpit-index-gauge" viewBox="0 -2 100 56" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path class="arc-bg" d="${arcPath}"/>
+    <path class="arc-fill" d="${arcPath}"
+          style="stroke:${arcCol}; stroke-dasharray:${(fillFrac * arcLen).toFixed(2)} ${arcLen.toFixed(2)}; stroke-dashoffset:${dialPct < 0 ? -((arcLen - fillFrac * arcLen) / 2).toFixed(2) : ((arcLen - fillFrac * arcLen) / 2).toFixed(2)}"/>
+    ${tick(0)}${tick(45)}${tick(90)}${tick(135)}${tick(180)}
+    <line class="needle" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - r + 4}"
+          style="transform: rotate(${angle.toFixed(2)}deg);"/>
+    <circle class="pivot" cx="${cx}" cy="${cy}" r="3"/>
+  </svg>`;
+}
+
+// Lazy live-fetch — when LIVE mode is active and an index ticker isn't
+// already in _data, fetch its bundle in the background. Doesn't block render;
+// re-renders the indices section once data arrives.
+let _cockpitIndicesLoadingTickers = new Set();
+async function _cockpitEnsureIndexData() {
+  if (typeof isLive !== 'function' || !isLive()) return;
+  const missing = _COCKPIT_INDICES
+    .map(i => i.ticker)
+    .filter(t => !_cockpitIndicesLoadingTickers.has(t) && !(_data[t] && _data[t].bars && _data[t].bars.length > 100));
+  if (missing.length === 0) return;
+  for (const t of missing) _cockpitIndicesLoadingTickers.add(t);
+  // Fire all fetches in parallel; settle when each completes
+  await Promise.allSettled(missing.map(async (t) => {
+    try {
+      const bundle = await fetchTickerBundle(t);
+      _data[t] = bundle;
+    } catch (e) {
+      // Tolerate — VIX especially is sometimes paywalled or returns no candles
+    } finally {
+      _cockpitIndicesLoadingTickers.delete(t);
+    }
+  }));
+  // Re-render only the indices section (cheap) — avoid full cockpit churn
+  if (document.body.classList.contains('cockpit-mode') ||
+      document.getElementById('cockpit-page') && document.getElementById('cockpit-page').style.display !== 'none') {
+    _cockpitRenderIndices();
+  }
+}
+
+function _cockpitRenderIndices() {
+  const host = document.getElementById('cockpit-indices');
+  if (!host) return;
+  const live = (typeof isLive === 'function') && isLive();
+  host.innerHTML = _COCKPIT_INDICES.map(idx => {
+    const bars = getBars(idx.ticker);
+    const closes = bars.map(b => b.close);
+    const last = closes[closes.length - 1];
+    const wkAgo = closes[closes.length - 2] || last;
+    const wkChg = ((last - wkAgo) / wkAgo) * 100;
+    const moAgoIdx = Math.max(0, closes.length - 5);
+    const moAgo = closes[moAgoIdx] || last;
+    const moChg = ((last - moAgo) / moAgo) * 100;
+    const isFear = idx.ticker === 'VIX';
+    const sparkSamples = sampleSparkPoints(closes.slice(-26), 24);
+    const spark = sparklineSvg(sparkSamples, 100, 16);
+    // For the VIX, an UP move is BAD for equity, so flip the colour semantics
+    // in the headline number. Other indices: up = green, down = red.
+    const dirCls = isFear
+      ? (wkChg > 0.3 ? 'down' : wkChg < -0.3 ? 'up' : 'warn')
+      : (wkChg > 0.3 ? 'up'   : wkChg < -0.3 ? 'down' : 'warn');
+    const cardCls = dirCls === 'up' ? 'up' : dirCls === 'down' ? 'down' : 'warn';
+    const hasLive = !!(_data[idx.ticker] && _data[idx.ticker].bars && _data[idx.ticker].bars.length > 100);
+    const sourceLabel = hasLive ? 'LIVE' : (live ? 'loading…' : 'DEMO');
+    const sourceCls = hasLive ? 'live' : (live ? 'loading' : 'synth');
+    const loadingCls = (live && !hasLive) ? ' loading' : '';
+    const interpretation = isFear
+      ? `${idx.label} 1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}% — ${wkChg > 1.5 ? 'volatility spiking · risk-off shift' : (wkChg < -1.5 ? 'volatility easing · risk-on tone' : 'volatility steady')}`
+      : `${idx.label} 1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}% — ${wkChg > 0.5 ? 'broadly higher' : (wkChg < -0.5 ? 'broadly lower' : 'roughly flat')}`;
+    return `<div class="cockpit-index-card ${cardCls}${loadingCls}"
+      title="${interpretation}\n\n${idx.role}\n\n1M ${moChg >= 0 ? '+' : ''}${moChg.toFixed(2)}%\nLast close $${fmt(last)}\n\nNeedle position: 1-week change scaled to ±5%. ${isFear ? 'INVERTED for VIX — a spike points LEFT because rising volatility is bad for equity.' : ''}\n\nClick to add ${idx.ticker} to your watchlist + open the full ticker dashboard."
+      onclick="(async()=>{ if(!WATCHLIST.includes('${idx.ticker}')){ WATCHLIST.push('${idx.ticker}'); saveWatchlist(); } selectTicker('${idx.ticker}'); showView('watchlist'); })();" tabindex="0">
+      <div class="cockpit-index-label">${idx.label}</div>
+      <div class="cockpit-index-name">${idx.ticker}</div>
+      <div class="cockpit-index-gauge-wrap">
+        ${_cockpitGaugeSvg(wkChg, isFear)}
+        <div class="cockpit-index-val ${dirCls}">${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}%</div>
+      </div>
+      <div class="cockpit-index-price">$${fmt(last)} · 1W</div>
+      <div class="cockpit-index-spark">${spark}</div>
+      <div class="cockpit-index-source ${sourceCls}">${sourceLabel}</div>
+    </div>`;
+  }).join('');
+}
+
 function _cockpitRenderHero(ov) {
   const host = document.getElementById('cockpit-hero');
   if (!host) return;
@@ -14820,6 +15162,10 @@ function renderCockpit() {
   _applyCockpitSidebarState();
   const ov = _cockpitComputeOverview();
   _cockpitRenderHero(ov);
+  _cockpitRenderIndices();
+  // Kick off live-data fetch for index tickers in the background; the section
+  // re-renders when each fetch settles. No-op in DEMO mode.
+  _cockpitEnsureIndexData();
   _cockpitRenderHeatmap(ov);
   _cockpitRenderFavorites(ov);
   _cockpitRenderSectors(ov);
@@ -15619,20 +15965,26 @@ function renderKeyStorageStatus() {
   const host = document.getElementById('settings-key-status');
   if (!host) return;
   const s = keyStorageStatus();
+  const fhSrc = keySourceFor(LS_KEY_API, LS_KEY_API_BACKUP);
+  const tdSrc = keySourceFor(LS_KEY_TD,  LS_KEY_TD_BACKUP);
   const lines = [];
   // Finnhub status
-  if (s.finnhub.has && s.finnhub.hasBackup && s.finnhub.inSync) {
-    lines.push(`<span style="color:var(--bull)">✓ Finnhub key saved (primary + backup, in sync)</span>`);
+  if (fhSrc === 'baked' && !s.finnhub.has) {
+    lines.push(`<span style="color:var(--accent)">⊕ Finnhub key inherited from <b>deployment-wide</b> baked key (operator-provided · shared across all visitors)</span>`);
+  } else if (s.finnhub.has && s.finnhub.hasBackup && s.finnhub.inSync) {
+    lines.push(`<span style="color:var(--bull)">✓ Finnhub key saved on this browser (primary + backup, in sync)${_bakedKeyFor(LS_KEY_API) ? ' — overrides the deployment-wide baked key' : ''}</span>`);
   } else if (s.finnhub.has) {
-    lines.push(`<span style="color:var(--warn)">⚠ Finnhub key saved but backup is out of sync — click Save to re-sync</span>`);
+    lines.push(`<span style="color:var(--warn)">⚠ Finnhub key saved on this browser but backup is out of sync — click Save to re-sync</span>`);
   } else {
     lines.push(`<span style="color:var(--muted)">○ Finnhub key not set (app runs in DEMO mode)</span>`);
   }
   // Twelve Data status
-  if (s.td.has && s.td.hasBackup && s.td.inSync) {
-    lines.push(`<span style="color:var(--bull)">✓ Twelve Data key saved (primary + backup, in sync)</span>`);
+  if (tdSrc === 'baked' && !s.td.has) {
+    lines.push(`<span style="color:var(--accent)">⊕ Twelve Data key inherited from <b>deployment-wide</b> baked key (operator-provided · shared across all visitors)</span>`);
+  } else if (s.td.has && s.td.hasBackup && s.td.inSync) {
+    lines.push(`<span style="color:var(--bull)">✓ Twelve Data key saved on this browser (primary + backup, in sync)${_bakedKeyFor(LS_KEY_TD) ? ' — overrides the deployment-wide baked key' : ''}</span>`);
   } else if (s.td.has) {
-    lines.push(`<span style="color:var(--warn)">⚠ Twelve Data key saved but backup is out of sync — click Save to re-sync</span>`);
+    lines.push(`<span style="color:var(--warn)">⚠ Twelve Data key saved on this browser but backup is out of sync — click Save to re-sync</span>`);
   } else {
     lines.push(`<span style="color:var(--muted)">○ Twelve Data key not set (no cross-check)</span>`);
   }
@@ -15855,6 +16207,23 @@ function updateModeIndicators() {
   $('demo-banner').classList.toggle('hidden', isLive());
 }
 
+// Inject an in-flow disclaimer block as the last child of every tab's
+// content container. Single source of truth — same wording as #sp-footer.
+// Idempotent: re-running is a no-op because each block carries a marker class.
+const _SP_DISCLAIMER_HTML = `<div class="sp-page-disclaimer" data-sp-injected="1">
+  <span class="sp-page-disclaimer-lbl">Disclaimer:</span>
+  This report reflects my personal learning journey in trading, market analysis, and volatility. It is strictly for informational and educational purposes, <b>not investment advice</b>. Please do your own research; all markets involve risk, including risk of loss.
+</div>`;
+function _injectPageDisclaimers() {
+  const containers = ['content', 'cockpit-page', 'sectors-page', 'picks-page', 'whatif-page'];
+  for (const id of containers) {
+    const host = document.getElementById(id);
+    if (!host) continue;
+    if (host.querySelector(':scope > .sp-page-disclaimer[data-sp-injected="1"]')) continue;
+    host.insertAdjacentHTML('beforeend', _SP_DISCLAIMER_HTML);
+  }
+}
+
 async function init() {
   updateModeIndicators();
   // One-time sync: any starred ticker that's not in WATCHLIST gets pulled in
@@ -15862,6 +16231,7 @@ async function init() {
   updateSidebarCounters();
   updateVerdictFilterPills();
   updateTypeFilterPills();
+  _injectPageDisclaimers();
   renderWatchlist();
   _selected = WATCHLIST[0] || null;
   renderMain();
