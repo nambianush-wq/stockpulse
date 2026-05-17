@@ -2,7 +2,7 @@
 
 A single-file dark-themed stock analysis dashboard built in vanilla JavaScript — no server, no build step, no framework. Open `index.html` in a browser and it works.
 
-**Live demo:** https://nambianush-wq.github.io/Stock-Pulse/
+**Live demo:** https://nambianush-wq.github.io/stockpulse/
 
 ---
 
@@ -34,7 +34,7 @@ StockPulse turns the noise of "should I buy / hold / sell?" into a single compos
 ### 1. Open the app
 
 Either:
-- **Public URL** (recommended): https://nambianush-wq.github.io/Stock-Pulse/
+- **Public URL** (recommended): https://nambianush-wq.github.io/stockpulse/
 - **Local clone**: download `index.html` and double-click it to open in your browser.
 
 ### 2. Add a Finnhub API key for live data (optional but recommended)

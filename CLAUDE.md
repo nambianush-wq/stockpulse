@@ -4,18 +4,22 @@ Single-file dark-themed stock analysis dashboard. Vanilla HTML/CSS/JS, no build 
 
 ---
 
-## CRITICAL — Always mirror commits to BOTH remotes (2026-05-16)
+## CRITICAL — Always mirror commits to BOTH remotes (2026-05-16, repo renamed 2026-05-17)
 
 Every git commit MUST be pushed to both:
 - `origin` → `https://github.com/nambianush-wq/Stock-Pulse.git` (development repo)
-- `stocknaut` → `https://github.com/nambianush-wq/Stocknaut.github.io.git` (live-hosting repo, GitHub Pages serves it at https://nambianush-wq.github.io/Stocknaut.github.io/)
+- `stocknaut` → `https://github.com/nambianush-wq/stockpulse.git` (live-hosting repo, GitHub Pages serves it at https://nambianush-wq.github.io/stockpulse/)
 
-**Why:** The Stocknaut repo is the public-facing URL the user shares with others. Falling behind on Stocknaut means viewers see stale code.
+**Live URL:** https://nambianush-wq.github.io/stockpulse/
+
+**Repo history note:** the public-hosting repo was originally `Stocknaut.github.io` (URL was `https://nambianush-wq.github.io/Stocknaut.github.io/` — ugly because GitHub treats it as a project repo and prepends user-namespace). Renamed to `stockpulse` 2026-05-17 to get a cleaner URL. GitHub auto-redirects the old URL for ~6 months, but every reference in the codebase + bookmarks should use the new URL. The git remote NAME stays `stocknaut` (renaming the local alias would require resetting every project doc) — only the URL changed.
+
+**Why:** The public-hosting repo is the URL the user shares with others. Falling behind on it means viewers see stale code.
 
 **How:** After EVERY commit, run BOTH:
 ```bash
 git push                       # pushes to origin (default)
-git push stocknaut main        # mirrors to stocknaut
+git push stocknaut main        # mirrors to stocknaut (URL now points at stockpulse)
 ```
 
 This is a hard rule — never push to only one remote.
