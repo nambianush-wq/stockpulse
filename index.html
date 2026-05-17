@@ -3027,10 +3027,77 @@ body.whatif-mode #sidebar { display: none; }
 .bundle-corrections-math b { color: var(--fg); }
 .bundle-corrections-math .ok { color: var(--bull); }
 .bundle-corrections-math .bad { color: var(--bear); }
+.bundle-corrections-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bundle-corrections-apply-btn {
+  padding: 4px 12px;
+  background: rgba(48,209,88,.12);
+  border: 1px solid rgba(48,209,88,.45);
+  color: var(--bull);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  align-self: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.bundle-corrections-apply-btn:hover {
+  background: var(--bull);
+  color: white;
+  border-color: var(--bull);
+}
+.bundle-corrections-apply-all {
+  padding: 4px 12px;
+  background: rgba(48,209,88,.15);
+  border: 1px solid rgba(48,209,88,.5);
+  color: var(--bull);
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.bundle-corrections-apply-all:hover {
+  background: var(--bull);
+  color: white;
+}
 
 /* Cockpit (real-time dashboard view) */
 #cockpit-page { padding: 24px 28px; display: none; }
-body.cockpit-mode #sidebar { display: none; }
+/* Sidebar is hidden ONLY when the user explicitly collapses it (toggle in
+   the cockpit header). Default: sidebar stays visible so the user can still
+   see the watchlist heat-strip while reading the dashboard. */
+body.cockpit-mode.cockpit-sidebar-collapsed #sidebar { display: none; }
+body.cockpit-mode.cockpit-sidebar-collapsed #main { margin-left: 0; }
+.cockpit-sidebar-btn {
+  padding: 6px 12px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cockpit-sidebar-btn:hover { color: var(--fg); border-color: var(--accent); }
+.cockpit-sidebar-btn .cockpit-sidebar-icon {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1;
+}
 .cockpit-header {
   display: flex;
   justify-content: space-between;
@@ -3811,6 +3878,69 @@ body.cockpit-mode #sidebar { display: none; }
         <span class="muted">Real prices, market caps, P/E ratios, and dividends require a free Finnhub API key (60 calls/min, no credit card).</span>
       </div>
       <button onclick="openSettings()">Add Finnhub key</button>
+    </div>
+    <div id="cockpit-page" role="tabpanel" aria-labelledby="tab-cockpit" style="display:none;">
+      <div class="cockpit-header">
+        <div>
+          <div class="cockpit-title">Market Cockpit</div>
+          <div class="cockpit-sub" id="cockpit-sub">Real-time dashboard for your watchlist + favorites — market mood, breadth, top movers, sector heat, and the alerts you should act on this session. Updates every refresh.</div>
+        </div>
+        <div class="cockpit-meta">
+          <span class="cockpit-live-dot" id="cockpit-live-dot" title="Pulsing green = live data; amber = demo data"></span>
+          <span id="cockpit-meta-text">—</span>
+          <button class="cockpit-sidebar-btn" id="cockpit-sidebar-btn" onclick="toggleCockpitSidebar()" title="Collapse the watchlist sidebar to give the cockpit full width — click again to bring it back. Setting is remembered across sessions.">
+            <span class="cockpit-sidebar-icon" id="cockpit-sidebar-icon">⇤</span>
+            <span id="cockpit-sidebar-label">Collapse sidebar</span>
+          </button>
+          <button class="cockpit-refresh-btn" onclick="refreshAll(true); renderCockpit();" title="Re-fetch live prices for the watchlist and recompute every cockpit metric">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="cockpit-hero-grid" id="cockpit-hero"></div>
+      <div class="cockpit-section" id="cockpit-heatmap-section">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">Watchlist heatmap</div>
+            <div class="cockpit-section-sub">One tile per stock in your watchlist · color = composite heat score (cold blue → hot red) · click any tile to open the full dashboard for that ticker</div>
+          </div>
+        </div>
+        <div class="cockpit-heatmap" id="cockpit-heatmap"></div>
+      </div>
+      <div class="cockpit-section" id="cockpit-favorites-section">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">Favorites performance</div>
+            <div class="cockpit-section-sub">Your starred stocks treated as an equal-weight basket — week, month, and forecast view · best and worst contributors highlighted</div>
+          </div>
+        </div>
+        <div class="cockpit-perf-grid" id="cockpit-favorites"></div>
+      </div>
+      <div class="cockpit-section" id="cockpit-sectors-section">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">Sector mood</div>
+            <div class="cockpit-section-sub">Which corners of the market are running hot vs. cold · computed across the full catalog · bar fill width = average heat score for that sector</div>
+          </div>
+        </div>
+        <div id="cockpit-sectors-host"></div>
+      </div>
+      <div class="cockpit-section" id="cockpit-movers-section">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">Top movers · this week</div>
+            <div class="cockpit-section-sub">Biggest 1-week price changes across your watchlist — both directions</div>
+          </div>
+        </div>
+        <div class="cockpit-perf-grid" id="cockpit-movers"></div>
+      </div>
+      <div class="cockpit-section" id="cockpit-alerts-section">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">What to look at first</div>
+            <div class="cockpit-section-sub">Verdict changes, bundles behind pace, and all-rounders worth a look — ranked by what most likely needs your attention</div>
+          </div>
+        </div>
+        <div class="cockpit-alerts-grid" id="cockpit-alerts"></div>
+      </div>
     </div>
     <div id="content" style="">
     <div id="ticker-head">
@@ -9895,6 +10025,8 @@ const LS_KEY_DATA_SAVED_AT   = 'sp_data_saved_at';
 // refresh / origin migration.
 const LS_KEY_SECTORS_FILTERS        = 'sp_sectors_filters';
 const LS_KEY_SECTORS_FILTERS_BACKUP = 'sp_sectors_filters_backup';
+// Cockpit-page sidebar collapse state.
+const LS_KEY_COCKPIT_SIDEBAR        = 'sp_cockpit_sidebar_collapsed';
 // Primary → backup lookup, used by loadStringSet / persistSet. Defined here
 // (top of script) so initialisation code (`let FAVORITES = loadStringSet(...)`)
 // can reach it without hitting the temporal-dead-zone.
@@ -11769,10 +11901,17 @@ const _DEFAULT_SECTORS_FILTERS = {
 };
 let _sectorsFilters = (function () {
   const stored = loadJsonResilient(LS_KEY_SECTORS_FILTERS, LS_KEY_SECTORS_FILTERS_BACKUP, null);
-  if (stored && typeof stored === 'object') {
-    return { ..._DEFAULT_SECTORS_FILTERS, ...stored };
+  const merged = (stored && typeof stored === 'object')
+    ? { ..._DEFAULT_SECTORS_FILTERS, ...stored }
+    : { ..._DEFAULT_SECTORS_FILTERS };
+  // Coerce numeric groups — pre-2026-05-17 builds wrote string values from
+  // the onclick string arg, which then breaks strict-equality pill lighting.
+  for (const k of Object.keys(_DEFAULT_SECTORS_FILTERS)) {
+    if (typeof _DEFAULT_SECTORS_FILTERS[k] === 'number' && typeof merged[k] !== 'number') {
+      merged[k] = parseFloat(merged[k]) || _DEFAULT_SECTORS_FILTERS[k];
+    }
   }
-  return { ..._DEFAULT_SECTORS_FILTERS };
+  return merged;
 })();
 function _persistSectorsFilters() {
   persistJsonResilient(LS_KEY_SECTORS_FILTERS, LS_KEY_SECTORS_FILTERS_BACKUP, _sectorsFilters);
@@ -11846,8 +11985,14 @@ function _applySectorsFilters(cache) {
 }
 
 function setSectorsFilter(group, value) {
-  // Toggle off if clicking the active value (except for sector "all" which
-  // serves as the off state for that group already).
+  // Coerce numeric groups — onclick string args otherwise arrive as strings
+  // ('10') and fail strict-equality against the numeric option values (10),
+  // so the pill wouldn't light up and the filter logic would compare strings.
+  if (typeof _DEFAULT_SECTORS_FILTERS[group] === 'number') {
+    value = (typeof value === 'number') ? value : (parseFloat(value) || 0);
+  }
+  // Toggle off if clicking the already-active value (except when value already
+  // IS the default — that's a no-op).
   if (_sectorsFilters[group] === value && value !== _DEFAULT_SECTORS_FILTERS[group]) {
     _sectorsFilters[group] = _DEFAULT_SECTORS_FILTERS[group];
   } else {
@@ -11982,13 +12127,17 @@ function showView(view) {
   document.body.classList.toggle('sectors-mode', view === 'sectors');
   document.body.classList.toggle('picks-mode', view === 'picks');
   document.body.classList.toggle('whatif-mode', view === 'whatif');
+  document.body.classList.toggle('cockpit-mode', view === 'cockpit');
   $('content').style.display = view === 'watchlist' ? '' : 'none';
   $('sectors-page').style.display = view === 'sectors' ? 'block' : 'none';
   $('picks-page').style.display = view === 'picks' ? 'block' : 'none';
   $('whatif-page').style.display = view === 'whatif' ? 'block' : 'none';
+  const cock = document.getElementById('cockpit-page');
+  if (cock) cock.style.display = view === 'cockpit' ? 'block' : 'none';
   if (view === 'sectors') renderSectorsPage();
   if (view === 'picks') renderPicksPage();
   if (view === 'whatif') renderWhatIfPage();
+  if (view === 'cockpit') renderCockpit();
 }
 
 // ========================================================================
@@ -12138,8 +12287,10 @@ const STRATEGY_DEFS = {
     label: 'Growth',
     summary: 'Maximise long-run capital appreciation. Heavy stock weight with growth-tilted ETF core.',
     stockWeight: 0.70, etfWeight: 0.30,
-    nStocks: 8,
-    etfTickers: ['QQQ', 'VUG', 'XLK'],
+    nStocks: 8, nEtfs: 3,
+    // Curated POOL of candidate ETFs — at build time, the goal's rank() formula
+    // scores every one and the top nEtfs are selected (no longer a fixed list).
+    etfPool: ['QQQ', 'VUG', 'XLK', 'VOO', 'IWM', 'XLY', 'ARKK', 'VGT', 'SCHG'],
     rankFormula: '55% forecast return + 35% heat score + 10% 1-month momentum',
     rank: m => m.forecast12 * 0.55 + m.score * 0.35 + m.monthChange * 0.10,
     minPct: 4, maxPct: 15,
@@ -12151,8 +12302,8 @@ const STRATEGY_DEFS = {
     label: 'Capital Preservation',
     summary: 'Protect principal while earning modest yield. Low-volatility defensive mix with bond, dividend, and gold ETFs.',
     stockWeight: 0.45, etfWeight: 0.55,
-    nStocks: 8,
-    etfTickers: ['TLT', 'SCHD', 'GLD', 'XLU'],
+    nStocks: 8, nEtfs: 4,
+    etfPool: ['TLT', 'SCHD', 'GLD', 'XLU', 'XLP', 'VYM', 'BND', 'IEF', 'IEI', 'SHY', 'AGG'],
     rankFormula: 'inverse volatility (×−1.8) + capped yield (×2.5) + nonneg heat (×0.4) + positive-forecast bonus',
     rank: m => (-m.volatility * 1.8) + (Math.min(m.divYield || 0, 6) * 2.5) + (Math.max(0, m.score) * 0.4) + (m.forecast12 > 0 ? 8 : -8),
     minPct: 3, maxPct: 12,
@@ -12164,8 +12315,8 @@ const STRATEGY_DEFS = {
     label: 'Income',
     summary: 'Maximise sustainable dividend yield. Income-focused stock selection with high-yield ETF core.',
     stockWeight: 0.55, etfWeight: 0.45,
-    nStocks: 8,
-    etfTickers: ['SCHD', 'JEPI', 'TLT'],
+    nStocks: 8, nEtfs: 3,
+    etfPool: ['SCHD', 'JEPI', 'TLT', 'VYM', 'HDV', 'DVY', 'XLU', 'XLP', 'JEPQ', 'DGRO', 'NOBL'],
     rankFormula: 'capped yield (×8) + trend bonus (+12 if heat > −25) − yield-trap penalty (−15 if yield > 9%)',
     rank: m => (Math.min(m.divYield || 0, 8) * 8) + (m.score > -25 ? 12 : -12) + ((m.divYield || 0) > 9 ? -15 : 0),
     minPct: 4, maxPct: 15,
@@ -12177,8 +12328,8 @@ const STRATEGY_DEFS = {
     label: 'Value',
     summary: 'Buy quality at a discount. Stocks trading below sector P/E with positive trend confirmation.',
     stockWeight: 0.65, etfWeight: 0.35,
-    nStocks: 10,
-    etfTickers: ['VOO', 'XLF', 'XLE'],
+    nStocks: 10, nEtfs: 3,
+    etfPool: ['VOO', 'XLF', 'XLE', 'VTV', 'IWD', 'DIA', 'XLI', 'XLB', 'KRE', 'VYM'],
     rankFormula: 'sector-P/E discount (×55) + nonneg heat (×0.4) + positive-forecast confirmation',
     rank: m => {
       if (!m.pe || m.pe <= 0) return -100;
@@ -12195,8 +12346,8 @@ const STRATEGY_DEFS = {
     label: 'Momentum',
     summary: 'Ride the strongest trends. High-conviction concentration in best recent performers plus growth ETF.',
     stockWeight: 0.80, etfWeight: 0.20,
-    nStocks: 8,
-    etfTickers: ['QQQ'],
+    nStocks: 8, nEtfs: 2,
+    etfPool: ['QQQ', 'XLK', 'IWM', 'XLY', 'ARKK', 'SOXX', 'SMH', 'VGT'],
     rankFormula: '55% 1-month return + 25% 1-week return + 20% heat score',
     rank: m => m.monthChange * 0.55 + m.wkChange * 0.25 + m.score * 0.20,
     minPct: 5, maxPct: 18,
@@ -12205,6 +12356,13 @@ const STRATEGY_DEFS = {
     inclusion: 'Strongest 1M / 3M performers with positive heat',
   },
 };
+// Legacy field name — kept for any caller still reading `etfTickers`. New
+// builds use `etfPool` + rank-based selection. After this commit no caller
+// should read etfTickers; defining it as the pool ensures any straggler
+// still works.
+for (const k of Object.keys(STRATEGY_DEFS)) {
+  if (!STRATEGY_DEFS[k].etfTickers) STRATEGY_DEFS[k].etfTickers = STRATEGY_DEFS[k].etfPool.slice(0, STRATEGY_DEFS[k].nEtfs);
+}
 
 const ETF_ROLES = {
   QQQ:  'Tech/growth large-cap core — broad exposure to the NASDAQ-100',
@@ -12298,8 +12456,14 @@ function buildPortfolio(amount, goalKey, horizon, historyYears) {
   if (ranked.length < def.nStocks) ranked = stocks.map(m => ({ ...m, _w: def.rank(m) })).sort((a, b) => b._w - a._w);
   const topStocks = ranked.slice(0, def.nStocks);
 
-  // ETFs from prescribed list
-  const selectedEtfs = def.etfTickers.map(t => etfPool.find(e => e.ticker === t)).filter(Boolean);
+  // ETFs — rank the curated pool by the same goal formula and pick the top N.
+  // Falls back to the legacy `etfTickers` list if etfPool is somehow missing.
+  // This was previously a fixed list per goal (user feedback 2026-05-17 — they
+  // wanted the ETF mix to also adapt to current conditions, not just the stocks).
+  const candidatePool = (def.etfPool || def.etfTickers || []).map(t => etfPool.find(e => e.ticker === t)).filter(Boolean);
+  let rankedEtfs = candidatePool.map(m => ({ ...m, _w: def.rank(m) })).sort((a, b) => b._w - a._w);
+  const nEtfs = def.nEtfs || Math.min(rankedEtfs.length, 3);
+  const selectedEtfs = rankedEtfs.slice(0, nEtfs);
 
   // Stock weights by score (normalised within stock budget)
   const stockScores = topStocks.map(m => Math.max(5, m._w + 100));
@@ -12308,9 +12472,15 @@ function buildPortfolio(amount, goalKey, horizon, historyYears) {
     ...m, kind: 'stock',
     pct: (stockScores[i] / totalStockScore) * def.stockWeight * 100,
   }));
-  // Equal-weight ETFs within ETF budget
-  const etfPerWeight = selectedEtfs.length > 0 ? def.etfWeight * 100 / selectedEtfs.length : 0;
-  const etfAllocs = selectedEtfs.map(e => ({ ...e, kind: 'etf', pct: etfPerWeight }));
+  // Score-proportional ETFs within ETF budget (no longer equal-weight) —
+  // higher-ranking ETFs under the goal formula get a larger share of the
+  // ETF allocation. Matches how stock weights are distributed.
+  const etfScores = selectedEtfs.map(m => Math.max(5, m._w + 100));
+  const totalEtfScore = etfScores.reduce((s, x) => s + x, 0);
+  const etfAllocs = selectedEtfs.map((e, i) => ({
+    ...e, kind: 'etf',
+    pct: totalEtfScore > 0 ? (etfScores[i] / totalEtfScore) * def.etfWeight * 100 : (def.etfWeight * 100 / Math.max(1, selectedEtfs.length)),
+  }));
 
   let holdings = [...stockAllocs, ...etfAllocs];
   // Clip stock positions to min/max
@@ -12855,20 +13025,47 @@ function computeBundleCorrections(bundle, stats, fwd12) {
   let suggestedExit = exitCandidates.slice(0, 2);
   let suggestedTrim = trimCandidates.slice(0, Math.max(0, 3 - suggestedExit.length));
 
-  // ADD — top-ranked tickers under this bundle's goal that aren't already in the bundle
+  // ADD — top-ranked tickers under this bundle's goal that aren't already in
+  // the bundle. CRITICAL: must honour the same asset-class partition that
+  // buildPortfolio uses, otherwise a defensive ETF like TLT can rank highly
+  // under Growth's heat+forecast formula and get recommended for a Growth
+  // bundle (bug shipped pre-2026-05-17 — TLT suggested for AN_Growth_10K).
+  // Stocks come from the non-ETF catalog; ETFs only from the GOAL'S OWN pool.
   const goalKey = _rankGoalForBundle(bundle);
   const goalDef = GOAL_DEFS[goalKey];
+  const strategyDef = (typeof STRATEGY_DEFS !== 'undefined') ? STRATEGY_DEFS[goalKey] : null;
   const presentTickers = new Set(enriched.map(h => h.ticker));
   let topCandidates = [];
   if (goalDef && typeof STOCK_CATALOG !== 'undefined' && Array.isArray(STOCK_CATALOG)) {
     try {
       const cache = buildSectorsCache();
-      const ranked = cache
-        .filter(m => !presentTickers.has(m.ticker))
+      const isEtfRow = (m) => /^etf/i.test(m.industry || '');
+      // Stock candidates — non-ETF rows ranked by goal formula
+      const stockCands = cache
+        .filter(m => !presentTickers.has(m.ticker) && !isEtfRow(m))
         .map(m => ({ ...m, _w: goalDef.rank(m) }))
-        .sort((a, b) => b._w - a._w)
-        .slice(0, 3);
-      topCandidates = ranked;
+        .sort((a, b) => b._w - a._w);
+      // ETF candidates — only from THIS goal's curated pool (Growth's pool
+      // does NOT include TLT/SCHD/etc; Preservation's does). Falls back to
+      // an empty list if no strategy def is available.
+      const allowedEtfTickers = new Set(strategyDef && Array.isArray(strategyDef.etfPool) ? strategyDef.etfPool : []);
+      const etfCands = cache
+        .filter(m => !presentTickers.has(m.ticker) && isEtfRow(m) && allowedEtfTickers.has(m.ticker))
+        .map(m => ({ ...m, _w: goalDef.rank(m) }))
+        .sort((a, b) => b._w - a._w);
+      // Mix proportionally to the goal's stockWeight/etfWeight ratio.
+      // Default 3 ADD slots: e.g. Growth (70/30) → 2 stocks + 1 ETF;
+      // Preservation (45/55) → 1 stock + 2 ETFs; Momentum (80/20) → 3 stocks.
+      const totalSlots = 3;
+      const stockWeight = strategyDef ? strategyDef.stockWeight : 0.7;
+      const stockSlots = Math.max(1, Math.min(totalSlots, Math.round(totalSlots * stockWeight)));
+      const etfSlots = Math.max(0, totalSlots - stockSlots);
+      const stockPicks = stockCands.slice(0, stockSlots);
+      const etfPicks = etfCands.slice(0, Math.min(etfSlots, etfCands.length));
+      // If the ETF pool produces fewer picks than slots, fill remainder with stocks
+      const shortfall = etfSlots - etfPicks.length;
+      const extraStocks = shortfall > 0 ? stockCands.slice(stockSlots, stockSlots + shortfall) : [];
+      topCandidates = [...stockPicks, ...etfPicks, ...extraStocks];
     } catch (e) { /* tolerate — corrections still useful without ADDs */ }
   }
 
@@ -12881,11 +13078,13 @@ function computeBundleCorrections(bundle, stats, fwd12) {
     if (stars.length) suggestedTilt = stars[0];
   }
 
-  // Assemble move list
+  // Assemble move list — each move carries the structured `op` payload that
+  // applyBundleMove() consumes, plus user-facing detail/rationale strings.
   for (const h of suggestedExit) {
     moves.push({
       kind: 'exit',
       ticker: h.ticker,
+      op: { kind: 'exit', ticker: h.ticker },
       detail: `Exit <b>${h.ticker}</b> (${h.pct.toFixed(1)}% weight, currently ${h.gainPct.toFixed(1)}%)`,
       rationale: `Position is down ${Math.abs(h.gainPct).toFixed(0)}% since entry AND its 12M forward forecast is ${h.fwd12.toFixed(1)}% — the model expects further drag. Free $${fmt(h.curValue)} of capital for redeployment.`,
     });
@@ -12896,6 +13095,7 @@ function computeBundleCorrections(bundle, stats, fwd12) {
     moves.push({
       kind: 'trim',
       ticker: h.ticker,
+      op: { kind: 'trim', ticker: h.ticker, targetPct: +target.toFixed(2) },
       detail: `Trim <b>${h.ticker}</b> from <b>${h.pct.toFixed(1)}%</b> → <b>${target.toFixed(1)}%</b>`,
       rationale: concentration
         ? `Position is ${h.pct.toFixed(1)}% of the bundle — concentration risk. Diversify by reducing weight.`
@@ -12908,30 +13108,38 @@ function computeBundleCorrections(bundle, stats, fwd12) {
     return s + (reduction / 100) * stats.curValue;
   }, 0);
   if (topCandidates.length && (suggestedExit.length || suggestedTrim.length)) {
-    const each = capitalFreed / topCandidates.length;
+    const eachPct = ([...suggestedExit, ...suggestedTrim].reduce((s, h) => {
+      const target = h.pct >= 18 ? Math.max(5, h.pct - 8) : Math.max(2, h.pct - 5);
+      return s + (suggestedExit.indexOf(h) >= 0 ? h.pct : Math.max(0, h.pct - target));
+    }, 0)) / topCandidates.length;
+    const eachDollars = (eachPct / 100) * stats.curValue;
     for (const c of topCandidates) {
       moves.push({
         kind: 'add',
         ticker: c.ticker,
-        detail: `Add <b>${c.ticker}</b> (${c.name}) at ~$${fmt(each)} (${(each / stats.curValue * 100).toFixed(1)}% of bundle)`,
+        op: { kind: 'add', ticker: c.ticker, name: c.name, industry: c.industry, addPct: +eachPct.toFixed(2) },
+        detail: `Add <b>${c.ticker}</b> (${c.name}) at ~$${fmt(eachDollars)} (${eachPct.toFixed(1)}% of bundle)`,
         rationale: `Top-ranked ${_GOAL_LABELS[goalKey] || goalKey} pick: ${c.score.toFixed(0)} heat score, ${c.forecast12 >= 0 ? '+' : ''}${c.forecast12.toFixed(1)}% 12M forecast at ${c.forecastConf}% confidence${c.crossCount >= 3 ? ' · all-rounder across ' + c.crossCount + '/5 goals' : (c.crossCount >= 2 ? ' · strong in ' + c.crossCount + '/5 goals' : '')}.`,
       });
     }
   } else if (topCandidates.length) {
-    // No exit/trim moves — still surface 1 ADD if we're on/behind pace, as discovery
+    // No exit/trim moves — surface 1 ADD as discovery (sized at 3% by default).
     const c = topCandidates[0];
     moves.push({
       kind: 'add',
       ticker: c.ticker,
-      detail: `Consider adding <b>${c.ticker}</b> (${c.name})`,
-      rationale: `Top ${_GOAL_LABELS[goalKey] || goalKey} pick not currently in your bundle: ${c.score.toFixed(0)} heat score, ${c.forecast12 >= 0 ? '+' : ''}${c.forecast12.toFixed(1)}% 12M forecast at ${c.forecastConf}% confidence. Funded by trimming the lowest-conviction current holding.`,
+      op: { kind: 'add', ticker: c.ticker, name: c.name, industry: c.industry, addPct: 3 },
+      detail: `Consider adding <b>${c.ticker}</b> (${c.name}) at 3% of bundle`,
+      rationale: `Top ${_GOAL_LABELS[goalKey] || goalKey} pick not currently in your bundle: ${c.score.toFixed(0)} heat score, ${c.forecast12 >= 0 ? '+' : ''}${c.forecast12.toFixed(1)}% 12M forecast at ${c.forecastConf}% confidence. Other holdings are scaled down proportionally to make room.`,
     });
   }
   if (suggestedTilt) {
+    const boost = 3;
     moves.push({
       kind: 'tilt',
       ticker: suggestedTilt.ticker,
-      detail: `Tilt toward <b>${suggestedTilt.ticker}</b> — increase weight by 2–4%`,
+      op: { kind: 'tilt', ticker: suggestedTilt.ticker, boostPct: boost },
+      detail: `Tilt toward <b>${suggestedTilt.ticker}</b> — increase weight from <b>${suggestedTilt.pct.toFixed(1)}%</b> by <b>+${boost}%</b>`,
       rationale: `${suggestedTilt.ticker} is up ${suggestedTilt.gainPct.toFixed(1)}% since entry with a ${suggestedTilt.fwd12 >= 0 ? '+' : ''}${suggestedTilt.fwd12.toFixed(1)}% forward forecast, but only ${suggestedTilt.pct.toFixed(1)}% of the bundle. Riding a working position is a low-friction way to close the gap.`,
     });
   }
@@ -12972,6 +13180,162 @@ function toggleBundleCorrections(id) {
   renderSavedBundles();
 }
 
+// Apply a single correction move to a bundle. Each op mutates b.holdings,
+// then we renormalise the entire bundle back to exactly 100% so dollar
+// amounts/shares stay consistent. Returns true if the bundle changed.
+function _applyMoveToBundle(b, op) {
+  if (!b || !op || !op.kind) return false;
+  const holdings = b.holdings || [];
+  switch (op.kind) {
+    case 'exit': {
+      const idx = holdings.findIndex(h => h.ticker === op.ticker);
+      if (idx < 0) return false;
+      holdings.splice(idx, 1);
+      return true;
+    }
+    case 'trim': {
+      const h = holdings.find(x => x.ticker === op.ticker);
+      if (!h) return false;
+      const before = h.pct;
+      h.pct = Math.max(0.5, +op.targetPct);
+      return h.pct !== before;
+    }
+    case 'tilt': {
+      const h = holdings.find(x => x.ticker === op.ticker);
+      if (!h) return false;
+      const boost = +op.boostPct || 3;
+      h.pct = Math.min(95, h.pct + boost);
+      return true;
+    }
+    case 'add': {
+      if (holdings.find(x => x.ticker === op.ticker)) return false;
+      // Scale every existing holding down by (1 - addPct/100) to make room
+      const add = Math.max(0.5, Math.min(50, +op.addPct || 3));
+      const scale = (100 - add) / 100;
+      for (const h of holdings) h.pct = h.pct * scale;
+      // Determine asset class — ETF if the suggested industry says so, else stock
+      const kind = /^etf/i.test(op.industry || '') ? 'etf' : 'stock';
+      holdings.push({
+        ticker: op.ticker,
+        kind,
+        name: op.name || op.ticker,
+        industry: op.industry || 'Other',
+        pct: add,
+        // amount/shares will be recomputed in renormalise below
+        amount: 0, shares: 0,
+        // Snapshot the price + 12M forecast at the time of the apply so future
+        // re-pricing in valueBundle uses these as the entry baseline.
+        entryPrice: 0,
+        entryForecast12: 0,
+      });
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+// Renormalise a bundle's holdings to sum to exactly 100% pct + recompute
+// every amount/shares pair using current prices for any NEW holdings (where
+// entryPrice is still 0) and the saved entryPrice for existing holdings.
+// This preserves cumulative P&L for unchanged positions while booking the
+// new ones at today's price.
+function _renormaliseBundle(b) {
+  const holdings = b.holdings || [];
+  if (!holdings.length) return;
+  const total = holdings.reduce((s, h) => s + (+h.pct || 0), 0);
+  if (total <= 0) return;
+  for (const h of holdings) {
+    h.pct = (+h.pct / total) * 100;
+    // Re-derive amount + shares — keep entryPrice intact for positions that
+    // already had one; for newly-added positions (entryPrice 0), book at
+    // today's price.
+    if (!h.entryPrice || h.entryPrice <= 0) {
+      const bars = getBars(h.ticker);
+      const curPrice = bars[bars.length - 1].close;
+      h.entryPrice = curPrice;
+      // Snapshot the forecast at entry too
+      try {
+        const verdict = computeVerdict(bars);
+        const fc = buildForecast(bars, verdict, [12]);
+        const f12 = fc.find(f => f.months === 12) || fc[0];
+        h.entryForecast12 = f12 ? f12.expReturn : 0;
+      } catch (e) { h.entryForecast12 = 0; }
+    }
+    h.amount = (h.pct / 100) * b.amount;
+    h.shares = h.entryPrice > 0 ? (h.amount / h.entryPrice) : 0;
+  }
+}
+
+function applyBundleMove(bundleId, moveIdx) {
+  const b = SAVED_BUNDLES.find(x => x.id === bundleId);
+  if (!b) return;
+  // Recompute corrections so we have the current move list (engine output may
+  // change after each apply because the diagnosis re-evaluates)
+  const stats = valueBundle(b);
+  let fwd12 = 0;
+  for (const h of b.holdings) fwd12 += (h.entryForecast12 || 0) * h.pct;
+  fwd12 /= 100;
+  const corr = computeBundleCorrections(b, stats, fwd12);
+  const move = corr.moves[moveIdx];
+  if (!move || !move.op) return;
+  if (!confirm(`Apply this move to "${b.name}"?\n\n${move.detail.replace(/<[^>]+>/g, '')}\n\nThis updates the bundle's holdings + allocation %. Original entry prices on existing positions are preserved; newly-added positions are booked at today's price.`)) return;
+  const changed = _applyMoveToBundle(b, move.op);
+  if (changed) {
+    _renormaliseBundle(b);
+    // Stamp a history-note so the user can see in the snapshot trail that a
+    // correction was applied (does NOT add a new dollar-value snapshot — the
+    // value should be unchanged at the moment of the rebalance).
+    b.history = b.history || [];
+    b.history.push({
+      date: (new Date()).toISOString().slice(0, 10),
+      value: stats.curValue,
+      note: `Applied ${move.op.kind.toUpperCase()} ${move.op.ticker}`,
+    });
+    if (b.history.length > 730) b.history = b.history.slice(-730);
+    saveBundles();
+    renderSavedBundles();
+    showToast({ title: `${move.op.kind.toUpperCase()} ${move.op.ticker} applied`, body: `"${b.name}" rebalanced. ${b.holdings.length} holdings now sum to 100%.`, type: 'bull' });
+  } else {
+    showToast({ title: 'Move could not be applied', body: 'The target ticker is no longer in the bundle (or the change is a no-op).', type: 'bear' });
+  }
+}
+
+function applyAllBundleMoves(bundleId) {
+  const b = SAVED_BUNDLES.find(x => x.id === bundleId);
+  if (!b) return;
+  const stats = valueBundle(b);
+  let fwd12 = 0;
+  for (const h of b.holdings) fwd12 += (h.entryForecast12 || 0) * h.pct;
+  fwd12 /= 100;
+  const corr = computeBundleCorrections(b, stats, fwd12);
+  if (!corr.moves.length) {
+    showToast({ title: 'No moves to apply', body: 'The corrections engine has no high-impact suggestions for this bundle right now.', type: '' });
+    return;
+  }
+  const summary = corr.moves.map(mv => `• ${mv.op.kind.toUpperCase()} ${mv.op.ticker}`).join('\n');
+  if (!confirm(`Apply ALL ${corr.moves.length} corrections to "${b.name}"?\n\n${summary}\n\nThis updates the bundle's holdings + allocation % in one operation. Existing positions keep their entry prices; new positions are booked at today's price.`)) return;
+  let applied = 0;
+  for (const mv of corr.moves) {
+    if (mv && mv.op && _applyMoveToBundle(b, mv.op)) applied++;
+  }
+  if (applied > 0) {
+    _renormaliseBundle(b);
+    b.history = b.history || [];
+    b.history.push({
+      date: (new Date()).toISOString().slice(0, 10),
+      value: stats.curValue,
+      note: `Applied ${applied} corrections in batch`,
+    });
+    if (b.history.length > 730) b.history = b.history.slice(-730);
+    saveBundles();
+    renderSavedBundles();
+    showToast({ title: `${applied} correction${applied === 1 ? '' : 's'} applied`, body: `"${b.name}" rebalanced. ${b.holdings.length} holdings sum to 100%.`, type: 'bull' });
+  } else {
+    showToast({ title: 'No changes applied', body: 'None of the suggested moves matched the current bundle state.', type: 'bear' });
+  }
+}
+
 function _renderBundleCorrectionsPanel(b, stats, fwd12) {
   const isOpen = _correctionsExpanded.has(b.id);
   const corr = computeBundleCorrections(b, stats, fwd12);
@@ -12983,14 +13347,18 @@ function _renderBundleCorrectionsPanel(b, stats, fwd12) {
   }
   const movesHtml = corr.moves.length === 0
     ? `<div class="bundle-corrections-sub" style="font-style:italic;">No high-impact corrections detected — every holding is roughly tracking its expected contribution.</div>`
-    : `<div class="bundle-corrections-move-list">${corr.moves.map(mv => `
+    : `<div class="bundle-corrections-move-list">${corr.moves.map((mv, idx) => `
         <div class="bundle-corrections-move">
           <span class="move-kind ${mv.kind}">${mv.kind.toUpperCase()}</span>
           <div class="move-body">${mv.detail}
             <span class="move-rationale">${_escapeHtml(mv.rationale)}</span>
           </div>
+          ${mv.op ? `<button class="bundle-corrections-apply-btn" onclick="applyBundleMove('${b.id}', ${idx})" title="Apply just this move — updates the bundle holdings + allocation %. Confirmation prompt before any write.">Apply</button>` : ''}
         </div>
       `).join('')}</div>`;
+  const applyAllHtml = corr.moves.length > 0
+    ? `<button class="bundle-corrections-apply-all" onclick="applyAllBundleMoves('${b.id}')" title="Apply every suggested move in one batch — TRIM, EXIT, ADD, TILT — and renormalise the bundle to 100%. Confirmation prompt shows the full list before any write.">⚡ Apply all ${corr.moves.length}</button>`
+    : '';
   return `<button class="bundle-corrections-toggle ${cls}" onclick="toggleBundleCorrections('${b.id}')" title="Collapse the corrections panel">${icon} Hide corrections</button>
     <div class="bundle-corrections-panel ${cls}">
       <div class="bundle-corrections-section">
@@ -12999,7 +13367,10 @@ function _renderBundleCorrectionsPanel(b, stats, fwd12) {
         <div class="bundle-corrections-sub">${corr.summary}</div>
       </div>
       <div class="bundle-corrections-section">
-        <div class="bundle-corrections-title">Suggested moves (${corr.moves.length})</div>
+        <div class="bundle-corrections-title">
+          <span>Suggested moves (${corr.moves.length})</span>
+          ${applyAllHtml}
+        </div>
         ${movesHtml}
       </div>
       <div class="bundle-corrections-section">
@@ -14062,6 +14433,378 @@ function renderSectorsPage() {
   renderSectorsLoading();
   // Defer compute to next frame so the skeleton paints first
   requestAnimationFrame(() => requestAnimationFrame(renderTilesFromCache));
+}
+
+// ========================================================================
+// Cockpit — real-time dashboard for the watchlist + favorites + market.
+// Single entry point: renderCockpit(). Computes everything from the data
+// already loaded for the watchlist (no extra API calls), so it works in
+// both LIVE and DEMO modes identically.
+// ========================================================================
+function _cockpitComputeOverview() {
+  const tickers = WATCHLIST.slice();
+  if (tickers.length === 0) {
+    return { empty: true, count: 0 };
+  }
+  const rows = tickers.map(t => {
+    const bars = getBars(t);
+    const closes = bars.map(b => b.close);
+    const last = closes[closes.length - 1];
+    const prev = closes[closes.length - 2] || last;
+    const wkAgo = closes[closes.length - 2] || last;
+    const monthAgoIdx = Math.max(0, closes.length - 5);
+    const monthAgo = closes[monthAgoIdx] || last;
+    const wkChg = ((last - wkAgo) / wkAgo) * 100;
+    const moChg = ((last - monthAgo) / monthAgo) * 100;
+    const verdict = (_data[t] && _data[t].verdict) || computeVerdict(bars);
+    const ma40Series = sma(closes, 40);
+    const ma40 = ma40Series[ma40Series.length - 1];
+    const aboveMa40 = ma40 != null && last > ma40;
+    let f12 = 0, conf12 = 0;
+    try {
+      const fc = buildForecast(bars, verdict, [12]);
+      const f = fc.find(x => x.months === 12) || fc[0];
+      if (f) { f12 = f.expReturn; conf12 = f.confidence; }
+    } catch (e) {}
+    const profile = (_data[t] && _data[t].profile) || demoProfile(t);
+    return {
+      ticker: t,
+      name: profile.name || t,
+      industry: profile.finnhubIndustry || 'Other',
+      last, wkChg, moChg, score: verdict.score, verdict: verdict.label,
+      f12, conf12, aboveMa40,
+      isFav: FAVORITES.has(t),
+    };
+  });
+  // Aggregate
+  const avgScore = rows.reduce((s, r) => s + r.score, 0) / rows.length;
+  const breadthUp = rows.filter(r => r.aboveMa40).length;
+  const breadthPct = (breadthUp / rows.length) * 100;
+  const wkWinners = rows.filter(r => r.wkChg > 0).length;
+  const wkWinnersPct = (wkWinners / rows.length) * 100;
+  const avgF12 = rows.reduce((s, r) => s + r.f12, 0) / rows.length;
+  const verdictMix = { buy: 0, hold: 0, sell: 0 };
+  for (const r of rows) {
+    if (r.verdict === 'STRONG BUY' || r.verdict === 'BUY') verdictMix.buy++;
+    else if (r.verdict === 'HOLD') verdictMix.hold++;
+    else if (r.verdict === 'SELL' || r.verdict === 'STRONG SELL') verdictMix.sell++;
+  }
+  const sorted = [...rows].sort((a, b) => b.wkChg - a.wkChg);
+  const topMover = sorted[0];
+  const worstMover = sorted[sorted.length - 1];
+  const favRows = rows.filter(r => r.isFav);
+  let favEqWkChg = 0, favEqMoChg = 0, favBest = null, favWorst = null, favAvgF12 = 0;
+  if (favRows.length > 0) {
+    favEqWkChg = favRows.reduce((s, r) => s + r.wkChg, 0) / favRows.length;
+    favEqMoChg = favRows.reduce((s, r) => s + r.moChg, 0) / favRows.length;
+    favAvgF12 = favRows.reduce((s, r) => s + r.f12, 0) / favRows.length;
+    const fs = [...favRows].sort((a, b) => b.wkChg - a.wkChg);
+    favBest = fs[0]; favWorst = fs[fs.length - 1];
+  }
+  return {
+    rows, avgScore, breadthUp, breadthPct, wkWinnersPct, avgF12,
+    verdictMix, topMover, worstMover,
+    favRows, favEqWkChg, favEqMoChg, favBest, favWorst, favAvgF12,
+    count: rows.length,
+  };
+}
+
+function _cockpitMoodLabel(avgScore) {
+  if (avgScore >= 40)  return { lbl: 'Risk-on',   cls: 'up',   desc: 'Watchlist is broadly bullish — buyers in control' };
+  if (avgScore >= 15)  return { lbl: 'Bullish',   cls: 'up',   desc: 'More green than red — uptrend with cautious confidence' };
+  if (avgScore >= -15) return { lbl: 'Neutral',   cls: 'warn', desc: 'Mixed signals — no clear directional edge' };
+  if (avgScore >= -40) return { lbl: 'Bearish',   cls: 'down', desc: 'More red than green — caution warranted' };
+  return                       { lbl: 'Risk-off',  cls: 'down', desc: 'Watchlist is broadly bearish — sellers in control' };
+}
+
+function _cockpitRenderHero(ov) {
+  const host = document.getElementById('cockpit-hero');
+  if (!host) return;
+  if (ov.empty) {
+    host.innerHTML = `<div class="cockpit-empty" style="grid-column:1/-1;">Your watchlist is empty. Click <b>+ Add Stock</b> in the top bar to start tracking — the cockpit will populate as soon as one ticker is in.</div>`;
+    return;
+  }
+  const mood = _cockpitMoodLabel(ov.avgScore);
+  const card = (cls, lbl, val, sub, tip) => `
+    <div class="cockpit-hero-card ${cls}" title="${tip.replace(/"/g,'&quot;')}" style="cursor:help">
+      <div class="cockpit-hero-lbl">${lbl}</div>
+      <div class="cockpit-hero-val ${cls}">${val}</div>
+      <div class="cockpit-hero-sub">${sub}</div>
+    </div>`;
+  const breadthCls = ov.breadthPct >= 60 ? 'up' : (ov.breadthPct >= 40 ? 'warn' : 'down');
+  const winnersCls = ov.wkWinnersPct >= 60 ? 'up' : (ov.wkWinnersPct >= 40 ? 'warn' : 'down');
+  const f12Cls = ov.avgF12 >= 5 ? 'up' : (ov.avgF12 >= 0 ? 'warn' : 'down');
+  const favWkCls = ov.favRows.length === 0 ? 'warn' : (ov.favEqWkChg >= 0 ? 'up' : 'down');
+  host.innerHTML = [
+    card(mood.cls, 'Market mood',
+      mood.lbl,
+      `Composite heat ${ov.avgScore >= 0 ? '+' : ''}${ov.avgScore.toFixed(0)} across ${ov.count} stocks`,
+      `Market mood — composite heat score across every ticker in your watchlist.\n\n${mood.desc}.\n\nHow to read: Risk-on / Bullish = green light. Neutral = wait. Bearish / Risk-off = de-risk or sit out.`),
+    card(breadthCls, 'Breadth (in uptrend)',
+      `${ov.breadthUp}/${ov.count}`,
+      `${ov.breadthPct.toFixed(0)}% trading above their MA40 (long-term trend line)`,
+      `Breadth — how many of your stocks are in confirmed uptrends right now.\n\nWhat this means: Above the MA40 = the stock has been trending up for at least 6-9 months. When most of your watchlist is above MA40, the rally has participation (healthier). When few are, the rally is narrow (riskier).`),
+    card(winnersCls, 'Up this week',
+      `${ov.wkWinnersPct.toFixed(0)}%`,
+      `${ov.rows.filter(r => r.wkChg > 0).length} of ${ov.count} green over the last 7 days`,
+      `Short-term breadth — what % of your stocks closed up over the past week.\n\nWhat this means: Above 60% = momentum is broad and constructive. Below 40% = the tape is heavy; even the winners are fighting headwinds.`),
+    card(f12Cls, 'Avg 12M forecast',
+      `${ov.avgF12 >= 0 ? '+' : ''}${ov.avgF12.toFixed(1)}%`,
+      `${ov.verdictMix.buy} Buy · ${ov.verdictMix.hold} Hold · ${ov.verdictMix.sell} Sell`,
+      `Average expected 12-month return across your watchlist, computed from the same forecast engine the Sectors and Top Picks tabs use.\n\nWhat this means: Forecasts are heuristic — directional, not a price target. Compare across days/weeks to spot regime shifts.`),
+    card(favWkCls, 'Favorites · 1W',
+      ov.favRows.length === 0 ? '—' : `${ov.favEqWkChg >= 0 ? '+' : ''}${ov.favEqWkChg.toFixed(2)}%`,
+      ov.favRows.length === 0 ? 'No starred stocks yet' : `Equal-weight basket · ${ov.favRows.length} starred · 1M ${ov.favEqMoChg >= 0 ? '+' : ''}${ov.favEqMoChg.toFixed(2)}%`,
+      ov.favRows.length === 0
+        ? `Your starred favorites would be tracked as an equal-weight basket here.\n\nStar any ticker (★ button on Watchlist / Sectors / Top Picks) to add it to your favorites.`
+        : `Your starred favorites tracked as an equal-weight basket. Equal-weight means every starred stock contributes equally to the change number regardless of price.\n\nWhat this means: A simple way to gauge whether the stocks you cared about most actually outperformed. Compare to the 'Up this week' card to see if your picks beat the average.`),
+    card(ov.topMover.wkChg >= 0 ? 'up' : 'down', 'Top mover · 1W',
+      `${ov.topMover.ticker} ${ov.topMover.wkChg >= 0 ? '+' : ''}${ov.topMover.wkChg.toFixed(2)}%`,
+      `Worst: ${ov.worstMover.ticker} ${ov.worstMover.wkChg >= 0 ? '+' : ''}${ov.worstMover.wkChg.toFixed(2)}%`,
+      `Biggest single-stock 1-week winner and loser in your watchlist.\n\nWhat this means: The poles of the week. The top mover is often where momentum chasers pile in next; the worst mover is where bottom-fishers look — neither is necessarily the right next move, but they're where attention concentrates.`),
+  ].join('');
+}
+
+function _cockpitRenderHeatmap(ov) {
+  const host = document.getElementById('cockpit-heatmap');
+  if (!host) return;
+  if (ov.empty) { host.innerHTML = ''; return; }
+  const sorted = [...ov.rows].sort((a, b) => b.score - a.score);
+  host.innerHTML = sorted.map(r => {
+    const heat = heatRgb(r.score);
+    const dir = r.wkChg >= 0 ? 'up' : 'down';
+    return `<div class="cockpit-heat-cell" style="background:${heat};" onclick="selectTicker('${r.ticker}'); showView('watchlist');" tabindex="0" title="${r.ticker} · ${r.name.replace(/"/g,'&quot;')}\nScore ${r.score >= 0 ? '+' : ''}${r.score.toFixed(0)} · ${r.verdict}\n1W ${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(2)}% · 1M ${r.moChg >= 0 ? '+' : ''}${r.moChg.toFixed(2)}%\n12M forecast ${r.f12 >= 0 ? '+' : ''}${r.f12.toFixed(1)}% at ${r.conf12}% conf\n\nClick to open in Watchlist">
+      <div style="font-weight:800;font-size:12px;color:#0a0a14;">${r.ticker}${r.isFav ? ' ★' : ''}</div>
+      <div style="font-size:10px;color:rgba(0,0,0,.72);font-weight:600;">${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+}
+
+function _cockpitRenderPerfCards(host, rows) {
+  if (!host) return;
+  if (!rows || rows.length === 0) {
+    host.innerHTML = `<div class="cockpit-empty" style="grid-column:1/-1;">No data yet.</div>`;
+    return;
+  }
+  host.innerHTML = rows.map(r => {
+    const bars = getBars(r.ticker);
+    const closes = bars.slice(-26).map(b => b.close);
+    const spark = sparklineSvg(sampleSparkPoints(closes, 24), 120, 24);
+    const dir = r.wkChg >= 0 ? 'up' : 'down';
+    return `<div class="cockpit-perf-card" onclick="selectTicker('${r.ticker}'); showView('watchlist');" style="cursor:pointer;" title="Click to open ${r.ticker} in the Watchlist for the full analysis">
+      <div class="cockpit-perf-head">
+        <div>
+          <div class="cockpit-perf-sym">${r.ticker}${r.isFav ? ' ★' : ''}</div>
+          <div class="cockpit-perf-price">$${fmt(r.last)} · ${r.verdict}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="cockpit-hero-val ${dir}" style="font-size:14px;">${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(2)}%</div>
+          <div class="cockpit-perf-price">1W</div>
+        </div>
+      </div>
+      <div class="cockpit-perf-spark">${spark}</div>
+      <div class="cockpit-perf-stats">
+        <span title="1-month price change">1M <b class="${r.moChg >= 0 ? 'up' : 'down'}">${r.moChg >= 0 ? '+' : ''}${r.moChg.toFixed(1)}%</b></span>
+        <span title="12-month expected return at ${r.conf12}% confidence">12M fcst <b class="${r.f12 >= 0 ? 'up' : 'down'}">${r.f12 >= 0 ? '+' : ''}${r.f12.toFixed(1)}%</b></span>
+        <span title="Composite heat score across trend, momentum, and forecast">Heat <b class="${r.score >= 0 ? 'up' : 'down'}">${r.score >= 0 ? '+' : ''}${r.score.toFixed(0)}</b></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _cockpitRenderFavorites(ov) {
+  const host = document.getElementById('cockpit-favorites');
+  if (!host) return;
+  if (ov.empty || ov.favRows.length === 0) {
+    host.innerHTML = `<div class="cockpit-empty" style="grid-column:1/-1;">No favorites yet. Tap the ★ button next to any ticker (on Watchlist, Sectors, or Top Picks) to star it — favorites will show up here as an equal-weight performance basket.</div>`;
+    return;
+  }
+  const sorted = [...ov.favRows].sort((a, b) => b.wkChg - a.wkChg);
+  _cockpitRenderPerfCards(host, sorted.slice(0, 8));
+}
+
+function _cockpitRenderSectors(ov) {
+  const host = document.getElementById('cockpit-sectors-host');
+  if (!host) return;
+  if (ov.empty) { host.innerHTML = ''; return; }
+  // Aggregate the FULL catalog by sector — gives a market-wide sector mood view,
+  // not just the watchlist's sectors. Falls back to watchlist-only if catalog
+  // not available for some reason.
+  let universe = [];
+  try { universe = buildSectorsCache(); } catch (e) { universe = []; }
+  if (!Array.isArray(universe) || universe.length === 0) universe = ov.rows.map(r => ({ ticker: r.ticker, industry: r.industry, score: r.score, forecast12: r.f12 }));
+  const buckets = {};
+  for (const m of universe) {
+    const s = _industryToSector(m.industry);
+    if (!buckets[s]) buckets[s] = { count: 0, scoreSum: 0, f12Sum: 0 };
+    buckets[s].count++;
+    buckets[s].scoreSum += (m.score || 0);
+    buckets[s].f12Sum   += (m.forecast12 != null ? m.forecast12 : 0);
+  }
+  const labels = { tech:'Technology', fin:'Financial', hc:'Healthcare', consumer:'Consumer', ind:'Industrial / Energy', etf:'ETFs', other:'Other' };
+  const order = ['tech','fin','hc','consumer','ind','etf','other'];
+  const rows = order
+    .filter(k => buckets[k] && buckets[k].count > 0)
+    .map(k => ({
+      key: k,
+      label: labels[k],
+      count: buckets[k].count,
+      avgScore: buckets[k].scoreSum / buckets[k].count,
+      avgF12:   buckets[k].f12Sum   / buckets[k].count,
+    }))
+    .sort((a, b) => b.avgScore - a.avgScore);
+  host.innerHTML = rows.map(r => {
+    // Map avgScore (-100..+100) to a bar width 0..100%
+    const w = Math.max(4, Math.min(100, (r.avgScore + 100) / 2));
+    const heat = heatRgb(r.avgScore);
+    const moodLbl = _cockpitMoodLabel(r.avgScore).lbl;
+    return `<div class="cockpit-sector-row" title="${r.label} · ${r.count} stocks · avg score ${r.avgScore >= 0 ? '+' : ''}${r.avgScore.toFixed(0)} (${moodLbl}) · avg 12M forecast ${r.avgF12 >= 0 ? '+' : ''}${r.avgF12.toFixed(1)}%">
+      <div class="cockpit-sector-name">${r.label} <span style="color:var(--dim);font-weight:400;">· ${r.count}</span></div>
+      <div class="cockpit-sector-bar"><div class="cockpit-sector-fill" style="width:${w}%; background:${heat};"></div></div>
+      <div class="cockpit-sector-pct ${r.avgScore >= 0 ? 'up' : 'down'}">${r.avgScore >= 0 ? '+' : ''}${r.avgScore.toFixed(0)}</div>
+    </div>`;
+  }).join('');
+}
+
+function _cockpitRenderMovers(ov) {
+  const host = document.getElementById('cockpit-movers');
+  if (!host) return;
+  if (ov.empty) { host.innerHTML = ''; return; }
+  const sorted = [...ov.rows].sort((a, b) => b.wkChg - a.wkChg);
+  // Top 3 + bottom 3
+  const top = sorted.slice(0, 3);
+  const bot = sorted.slice(-3).reverse();
+  const seen = new Set();
+  const merged = [...top, ...bot].filter(r => { if (seen.has(r.ticker)) return false; seen.add(r.ticker); return true; });
+  _cockpitRenderPerfCards(host, merged.slice(0, 6));
+}
+
+function _cockpitRenderAlerts(ov) {
+  const host = document.getElementById('cockpit-alerts');
+  if (!host) return;
+  const alerts = [];
+  // 1. Verdict changes since last save
+  for (const r of (ov.rows || [])) {
+    const prev = LAST_VERDICTS[r.ticker];
+    if (prev && prev !== r.verdict) {
+      const tier = (label) => (label === 'STRONG BUY' || label === 'BUY') ? 'buy' : (label === 'STRONG SELL' || label === 'SELL') ? 'sell' : 'hold';
+      const before = tier(prev), after = tier(r.verdict);
+      let cls = 'info';
+      if (after === 'buy' && before !== 'buy') cls = 'bull';
+      else if (after === 'sell' && before !== 'sell') cls = 'bear';
+      else if (after === 'hold' && before !== 'hold') cls = 'warn';
+      alerts.push({
+        cls,
+        icon: cls === 'bull' ? '▲' : cls === 'bear' ? '▼' : '●',
+        title: `<b>${r.ticker}</b> flipped from <b>${prev}</b> to <b>${r.verdict}</b>`,
+        sub: `1W ${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(2)}% · price $${fmt(r.last)} · click to open the full dashboard`,
+        ticker: r.ticker,
+        priority: cls === 'bull' || cls === 'bear' ? 1 : 2,
+      });
+    }
+  }
+  // 2. Bundles behind pace — link to corrections
+  if (Array.isArray(SAVED_BUNDLES)) {
+    for (const b of SAVED_BUNDLES) {
+      try {
+        const stats = valueBundle(b);
+        let fwd12 = 0;
+        for (const h of b.holdings) fwd12 += (h.entryForecast12 || 0) * h.pct;
+        fwd12 /= 100;
+        const corr = computeBundleCorrections(b, stats, fwd12);
+        if (corr.paceStatus === 'behind') {
+          alerts.push({
+            cls: 'warn',
+            icon: '⚠',
+            title: `Bundle <b>${_escapeHtml(b.name)}</b> is behind pace`,
+            sub: `${corr.paceDelta.toFixed(2)}% behind expected · ${corr.moves.length} suggested move${corr.moves.length === 1 ? '' : 's'} · open What If → expand corrections to act`,
+            priority: 3,
+          });
+        }
+      } catch (e) { /* tolerate per-bundle compute failure */ }
+    }
+  }
+  // 3. Cross-goal all-rounders not in the watchlist — discovery prompt
+  try {
+    const cache = buildSectorsCache();
+    _attachCrossGoalIndex(cache);
+    const wlSet = new Set(WATCHLIST);
+    const allRounders = cache
+      .filter(m => m.crossCount >= 3 && !wlSet.has(m.ticker))
+      .sort((a, b) => b.crossCount - a.crossCount || b.score - a.score)
+      .slice(0, 3);
+    for (const m of allRounders) {
+      alerts.push({
+        cls: 'info',
+        icon: '★',
+        title: `Discovery: <b>${m.ticker}</b> ranks top-20 in <b>${m.crossCount}/5</b> goals`,
+        sub: `${m.name} · ${shortIndustry(m.industry)} · heat ${m.score >= 0 ? '+' : ''}${m.score.toFixed(0)} · 12M forecast ${m.forecast12 >= 0 ? '+' : ''}${m.forecast12.toFixed(1)}% · click to add and analyse`,
+        ticker: m.ticker,
+        priority: 4,
+      });
+    }
+  } catch (e) {}
+  if (alerts.length === 0) {
+    host.innerHTML = `<div class="cockpit-empty" style="grid-column:1/-1;">No alerts right now — watchlist is steady, bundles are on pace, and you already own the strongest all-rounders.</div>`;
+    return;
+  }
+  alerts.sort((a, b) => a.priority - b.priority);
+  host.innerHTML = alerts.slice(0, 8).map(a => {
+    const click = a.ticker ? ` onclick="selectTicker('${a.ticker}'); showView('watchlist');" style="cursor:pointer;"` : '';
+    return `<div class="cockpit-alert ${a.cls}"${click}>
+      <div class="cockpit-alert-icon">${a.icon}</div>
+      <div class="cockpit-alert-body">
+        <div>${a.title}</div>
+        <div class="cockpit-alert-sub">${a.sub}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCockpit() {
+  // Meta — LIVE/DEMO + last refresh time
+  const dot = document.getElementById('cockpit-live-dot');
+  const meta = document.getElementById('cockpit-meta-text');
+  if (dot && meta) {
+    const live = (typeof isLive === 'function') && isLive();
+    dot.style.background = live ? 'var(--bull)' : 'var(--warn)';
+    dot.style.boxShadow  = live ? '0 0 8px var(--bull)' : '0 0 8px var(--warn)';
+    meta.textContent = live ? `LIVE · ${WATCHLIST.length} tracked` : `DEMO · ${WATCHLIST.length} tracked`;
+  }
+  _applyCockpitSidebarState();
+  const ov = _cockpitComputeOverview();
+  _cockpitRenderHero(ov);
+  _cockpitRenderHeatmap(ov);
+  _cockpitRenderFavorites(ov);
+  _cockpitRenderSectors(ov);
+  _cockpitRenderMovers(ov);
+  _cockpitRenderAlerts(ov);
+}
+
+// Read the persisted collapse state and apply it to the body class +
+// toggle-button label. Called on every cockpit render so the state is
+// authoritative even after a project switch / refresh.
+function _isCockpitSidebarCollapsed() {
+  try { return localStorage.getItem(LS_KEY_COCKPIT_SIDEBAR) === 'true'; }
+  catch (e) { return false; }
+}
+function _applyCockpitSidebarState() {
+  const collapsed = _isCockpitSidebarCollapsed();
+  document.body.classList.toggle('cockpit-sidebar-collapsed', collapsed);
+  const icon = document.getElementById('cockpit-sidebar-icon');
+  const label = document.getElementById('cockpit-sidebar-label');
+  const btn = document.getElementById('cockpit-sidebar-btn');
+  if (icon)  icon.textContent  = collapsed ? '⇥' : '⇤';
+  if (label) label.textContent = collapsed ? 'Show sidebar' : 'Collapse sidebar';
+  if (btn)   btn.title = collapsed
+    ? 'Bring the watchlist sidebar back. Setting is remembered across sessions.'
+    : 'Collapse the watchlist sidebar to give the cockpit full width — click again to bring it back. Setting is remembered across sessions.';
+}
+
+function toggleCockpitSidebar() {
+  const next = !_isCockpitSidebarCollapsed();
+  try { localStorage.setItem(LS_KEY_COCKPIT_SIDEBAR, String(next)); } catch (e) {}
+  _applyCockpitSidebarState();
 }
 
 async function tileClick(ticker) {
