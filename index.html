@@ -15681,7 +15681,7 @@ function renderWhatIfResults(p) {
   $('whatif-results').innerHTML = `
     <div class="wi-save-row">
       <div class="wi-save-lbl">Save this simulation:</div>
-      <input id="wi-save-name" type="text" placeholder="${_escapeHtml(defaultBundleName)}" value="" maxlength="80" autocomplete="off">
+      <input id="wi-save-name" type="text" value="${_escapeHtml(defaultBundleName)}" placeholder="${_escapeHtml(defaultBundleName)}" maxlength="80" autocomplete="off" title="Pre-filled with a sensible default — click to edit, or hit Save as bundle as-is. Saved bundle names appear in the saved-bundles list below + on the Cockpit alerts when behind pace.">
       <button class="btn btn-primary" onclick="saveCurrentBundle()">💾 Save as bundle</button>
     </div>
     <div class="wi-summary-grid">
