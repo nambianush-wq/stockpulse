@@ -18267,6 +18267,11 @@ async function init() {
   requestNotificationPermission();
   await refreshAll(true);
   startRefreshTimer();
+  // Land on Cockpit by default — it's the highest-signal page when the user
+  // returns to the app (market mood / breadth / movers / alerts at a glance).
+  // The watchlist + ticker dashboard are still pre-rendered above so they
+  // paint instantly when the user clicks the Watchlist tab.
+  showView('cockpit');
   if (synced > 0) showToast({ title: `${synced} favorite${synced === 1 ? '' : 's'} synced to watchlist`, body: 'Starred stocks are now tracked.', type: 'bull' });
 }
 
