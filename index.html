@@ -3277,7 +3277,7 @@ body.cockpit-mode.cockpit-sidebar-collapsed #main { margin-left: 0; }
   gap: 6px;
 }
 .cockpit-heat-cell {
-  padding: 10px 6px;
+  padding: 8px 6px;
   border-radius: 8px;
   cursor: pointer;
   transition: transform .15s, box-shadow .15s, filter .15s;
@@ -3285,12 +3285,12 @@ body.cockpit-mode.cockpit-sidebar-collapsed #main { margin-left: 0; }
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.08);
-  min-height: 60px;
+  min-height: 72px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 .cockpit-heat-cell:hover {
   transform: translateY(-2px);
@@ -16677,6 +16677,14 @@ function _cockpitComputeOverview() {
       if (f) { f12 = f.expReturn; conf12 = f.confidence; }
     } catch (e) {}
     const profile = (_data[t] && _data[t].profile) || demoProfile(t);
+    // Live quote — present in LIVE mode, null in DEMO. Prefer quote.price for
+    // the displayed price (it's the most-recent live tick); fall back to the
+    // last bar close otherwise. dayChange / dayChangePct are change-from-
+    // previous-close, the universal definition of "today's move".
+    const q = _data[t] && _data[t].quote;
+    const livePrice = (q && q.price > 0) ? q.price : last;
+    const dayChange = (q && typeof q.change === 'number') ? q.change : null;
+    const dayChangePct = (q && typeof q.changePct === 'number') ? q.changePct : null;
     return {
       ticker: t,
       name: profile.name || t,
@@ -16684,6 +16692,7 @@ function _cockpitComputeOverview() {
       last, wkChg, moChg, score: verdict.score, verdict: verdict.label,
       f12, conf12, aboveMa40,
       isFav: FAVORITES.has(t),
+      livePrice, dayChange, dayChangePct,
     };
   });
   // Aggregate
@@ -16913,10 +16922,25 @@ function _cockpitRenderHeatmap(ov) {
   const sorted = [...ov.rows].sort((a, b) => b.score - a.score);
   host.innerHTML = sorted.map(r => {
     const heat = heatRgb(r.score);
-    const dir = r.wkChg >= 0 ? 'up' : 'down';
-    return `<div class="cockpit-heat-cell" style="background:${heat};" onclick="selectTicker('${r.ticker}'); showView('watchlist');" tabindex="0" title="${r.ticker} · ${r.name.replace(/"/g,'&quot;')}\nScore ${r.score >= 0 ? '+' : ''}${r.score.toFixed(0)} · ${r.verdict}\n1W ${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(2)}% · 1M ${r.moChg >= 0 ? '+' : ''}${r.moChg.toFixed(2)}%\n12M forecast ${r.f12 >= 0 ? '+' : ''}${r.f12.toFixed(1)}% at ${r.conf12}% conf\n\nClick to open in Watchlist">
-      <div style="font-weight:800;font-size:12px;color:#0a0a14;">${r.ticker}${r.isFav ? ' ★' : ''}</div>
-      <div style="font-size:10px;color:rgba(0,0,0,.72);font-weight:600;">${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(1)}%</div>
+    const priceStr = `$${fmt(r.livePrice)}`;
+    // Day change is only meaningful when we have a live quote with a previous
+    // close (LIVE mode). In DEMO mode r.dayChangePct is null — show the weekly
+    // change as a clearly-labeled fallback so the tile still carries a signal.
+    const hasDay = typeof r.dayChangePct === 'number';
+    const dayPct = hasDay ? r.dayChangePct : r.wkChg;
+    const daySign = dayPct >= 0 ? '+' : '';
+    const dayLabel = hasDay ? 'today' : '1W';
+    const dayLine = `${daySign}${dayPct.toFixed(2)}% ${dayLabel}`;
+    const dayDollarStr = hasDay && typeof r.dayChange === 'number'
+      ? ` (${r.dayChange >= 0 ? '+' : '−'}$${fmt(Math.abs(r.dayChange))})`
+      : '';
+    const dayTitle = hasDay
+      ? `Today ${r.dayChange >= 0 ? '+' : '−'}$${fmt(Math.abs(r.dayChange))} (${daySign}${r.dayChangePct.toFixed(2)}%) from previous close`
+      : `1W ${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(2)}% (DEMO — no live day change)`;
+    return `<div class="cockpit-heat-cell" style="background:${heat};" onclick="selectTicker('${r.ticker}'); showView('watchlist');" tabindex="0" title="${r.ticker} · ${r.name.replace(/"/g,'&quot;')}\nPrice ${priceStr}${dayDollarStr}\n${dayTitle}\nScore ${r.score >= 0 ? '+' : ''}${r.score.toFixed(0)} · ${r.verdict}\n1W ${r.wkChg >= 0 ? '+' : ''}${r.wkChg.toFixed(2)}% · 1M ${r.moChg >= 0 ? '+' : ''}${r.moChg.toFixed(2)}%\n12M forecast ${r.f12 >= 0 ? '+' : ''}${r.f12.toFixed(1)}% at ${r.conf12}% conf\n\nClick to open in Watchlist">
+      <div style="font-weight:800;font-size:12px;color:#0a0a14;line-height:1.1;">${r.ticker}${r.isFav ? ' ★' : ''}</div>
+      <div style="font-size:11px;color:#0a0a14;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15;">${priceStr}</div>
+      <div style="font-size:9.5px;color:rgba(0,0,0,.72);font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;">${dayLine}</div>
     </div>`;
   }).join('');
 }
@@ -17862,10 +17886,17 @@ function requestNotificationPermission() {
 // Refresh loop
 // ========================================================================
 async function fetchTickerBundle(t) {
-  const [barsResult, profile, metrics] = await Promise.all([
+  // Live /quote is the only source of today's change-from-previous-close (d / dp).
+  // Bars are weekly, so bar-over-bar = week-over-week, not day-over-day. Fetched
+  // in parallel with the other LIVE requests so it adds no wall-clock latency
+  // (Finnhub free tier is 60/min — for a typical 16-stock watchlist this is
+  // 16 quote + 16 candle + 16 profile + 16 metrics = 64 calls/refresh, still
+  // under quota since refreshAll runs them sequentially in LIVE mode).
+  const [barsResult, profile, metrics, quote] = await Promise.all([
     fetchBars(t),
     isLive() ? fetchFinnhubProfile(t) : Promise.resolve(null),
     isLive() ? fetchFinnhubMetrics(t) : Promise.resolve(null),
+    isLive() ? fetchQuote(t) : Promise.resolve(null),
   ]);
   const bars = barsResult.bars;
   return {
@@ -17874,6 +17905,9 @@ async function fetchTickerBundle(t) {
     barsNote: barsResult.note || '',
     profile: profile || demoProfile(t),
     metrics: metrics || demoMetrics(t, bars),
+    // quote shape: { price, change, changePct, high, low, prevClose, open }.
+    // null in DEMO mode and when /quote fails — every consumer must guard.
+    quote: quote || null,
     verdict: computeVerdict(bars),
     ts: Date.now(),
   };

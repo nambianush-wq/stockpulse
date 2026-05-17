@@ -128,6 +128,10 @@ function loadApp() {
     'saveCurrentBundle', '_lastBuiltPortfolio', 'SAVED_BUNDLES',
     // Sim Set
     'SIM_SET',
+    // Cockpit + live data
+    '_cockpitRenderHeatmap', '_cockpitComputeOverview',
+    'fetchTickerBundle', 'fetchBars', 'fetchQuote', 'fetchFinnhubProfile', 'fetchFinnhubMetrics',
+    'isLive', 'fmt',
   ];
   const exportTrailer = ';(' + exported.map(n =>
     `(typeof ${n} !== 'undefined') && (globalThis.${n} = ${n})`
