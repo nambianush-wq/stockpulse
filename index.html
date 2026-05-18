@@ -3582,11 +3582,40 @@ body { padding-bottom: 44px; }
 .cockpit-index-val.down { color: var(--bear); }
 .cockpit-index-val.warn { color: var(--warn); }
 .cockpit-index-price {
-  font-size: 10px;
-  color: var(--muted);
+  font-size: 11px;
+  color: var(--text);
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
+.cockpit-index-price b { color: white; font-weight: 700; font-size: 12px; }
+/* Stats row under the price — 1W / 1M history + 12M forecast, in one
+   compact line so the gauge card carries the full live/history/forecast
+   trio without growing taller. */
+.cockpit-index-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.cockpit-idx-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 9.5px;
+  flex: 1;
+}
+.cockpit-idx-stat .lbl {
+  color: var(--dim);
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.cockpit-idx-stat b { font-size: 10.5px; font-weight: 700; }
+.cockpit-idx-stat b.up   { color: var(--bull); }
+.cockpit-idx-stat b.down { color: var(--bear); }
 .cockpit-index-spark {
   margin-top: 4px;
   height: 16px;
@@ -17747,6 +17776,20 @@ function _cockpitRenderIndices() {
     const moChg = ((endPrice - moAgo) / moAgo) * 100;
     const sparkSamples = sampleSparkPoints(closes.slice(-26), 24);
     const spark = sparklineSvg(sparkSamples, 100, 16);
+    // 12-month forecast for the index — same forecast engine as Watchlist /
+    // Sectors / Top Picks (user feedback 2026-05-18: gauge cards should show
+    // history AND forecast, not just 1W).
+    let f12 = 0, conf12 = 0;
+    let verdictLbl = 'HOLD';
+    try {
+      const v = computeVerdict(bars);
+      verdictLbl = v.label;
+      const fc = buildForecast(bars, v, [12]);
+      const f = fc.find(x => x.months === 12) || fc[0];
+      if (f) { f12 = f.expReturn; conf12 = f.confidence; }
+    } catch (e) {}
+    // For VIX the forecast direction reads opposite — rising vol = market risk.
+    // We still show the number but the colour follows the equity-friendly convention.
     // Headline % — prefer today's live change over 1W (user feedback
     // 2026-05-18: live %age should be the prominent number on each card).
     const hasToday = (typeof dayChangePct === 'number') && !vixImplausible;
@@ -17757,11 +17800,6 @@ function _cockpitRenderIndices() {
     const dirCls = isFear
       ? (headlinePct > 0.3 ? 'down' : headlinePct < -0.3 ? 'up' : 'warn')
       : (headlinePct > 0.3 ? 'up'   : headlinePct < -0.3 ? 'down' : 'warn');
-    // Gauge needle is 1W-based regardless (the gauge represents weekly
-    // momentum scaled to ±5%); only the headline number swaps to today.
-    const gaugeDirCls = isFear
-      ? (wkChg > 0.3 ? 'down' : wkChg < -0.3 ? 'up' : 'warn')
-      : (wkChg > 0.3 ? 'up'   : wkChg < -0.3 ? 'down' : 'warn');
     const cardCls = dirCls === 'up' ? 'up' : dirCls === 'down' ? 'down' : 'warn';
     const hasLiveBars = !!(_data[idx.ticker] && _data[idx.ticker].bars && _data[idx.ticker].bars.length > 100);
     const sourceLabel = vixImplausible ? 'N/A' : (isLivePrice ? 'LIVE' : (hasLiveBars ? 'LIVE' : (live ? 'loading…' : 'DEMO')));
@@ -17772,7 +17810,7 @@ function _cockpitRenderIndices() {
       : `${idx.label} ${headlineLabel} ${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}% — ${headlinePct > 0.5 ? 'higher' : (headlinePct < -0.5 ? 'lower' : 'roughly flat')}`;
     const tipBase = vixImplausible
       ? `VIX index isn't quoted by Finnhub's stock-quote endpoint (it's a CBOE index, not an equity). Price shown is suppressed to avoid the stale anchor leaking. For the actual VIX, see cboe.com/tradable_products/vix. The 1W direction shown is still informative.\n\n${idx.role}`
-      : `${interpretation}\n\n${idx.role}\n\n1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}% · 1M ${moChg >= 0 ? '+' : ''}${moChg.toFixed(2)}%\nPrice ${displayPrice}\n\nNeedle = 1-week change scaled to ±5%. ${isFear ? 'INVERTED for VIX — a spike points LEFT because rising volatility is bad for equity.' : ''}\n\nClick to add ${idx.ticker} to your watchlist + open the full ticker dashboard.`;
+      : `${interpretation}\n\n${idx.role}\n\nPrice ${displayPrice}\nHistory: 1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}% · 1M ${moChg >= 0 ? '+' : ''}${moChg.toFixed(2)}%\nForecast: 12M ${f12 >= 0 ? '+' : ''}${f12.toFixed(1)}% at ${conf12}% confidence\n\nNeedle = 1-week change scaled to ±5%. ${isFear ? 'INVERTED for VIX — a spike points LEFT because rising volatility is bad for equity.' : ''}\n\nClick to add ${idx.ticker} to your watchlist + open the full ticker dashboard.`;
     return `<div class="cockpit-index-card ${cardCls}${loadingCls}"
       title="${tipBase}"
       onclick="(async()=>{ if(!WATCHLIST.includes('${idx.ticker}')){ WATCHLIST.push('${idx.ticker}'); saveWatchlist(); } selectTicker('${idx.ticker}'); showView('watchlist'); })();" tabindex="0">
@@ -17782,7 +17820,12 @@ function _cockpitRenderIndices() {
         ${_cockpitGaugeSvg(wkChg, isFear)}
         <div class="cockpit-index-val ${dirCls}">${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}%</div>
       </div>
-      <div class="cockpit-index-price">${displayPrice} · ${headlineLabel}${hasToday ? ` · 1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}%` : ''}</div>
+      <div class="cockpit-index-price"><b>${displayPrice}</b> · ${headlineLabel}</div>
+      <div class="cockpit-index-stats">
+        <span class="cockpit-idx-stat" title="1-week change vs same time last week"><span class="lbl">1W</span><b class="${wkChg >= 0 ? 'up' : 'down'}">${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}%</b></span>
+        <span class="cockpit-idx-stat" title="1-month change vs same time last month"><span class="lbl">1M</span><b class="${moChg >= 0 ? 'up' : 'down'}">${moChg >= 0 ? '+' : ''}${moChg.toFixed(2)}%</b></span>
+        <span class="cockpit-idx-stat" title="12-month forecast at ${conf12}% confidence — heuristic, directional only"><span class="lbl">12M fcst</span><b class="${f12 >= 0 ? 'up' : 'down'}">${f12 >= 0 ? '+' : ''}${f12.toFixed(1)}%</b></span>
+      </div>
       <div class="cockpit-index-spark">${spark}</div>
       <div class="cockpit-index-source ${sourceCls}">${sourceLabel}</div>
     </div>`;
