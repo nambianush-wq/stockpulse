@@ -11287,7 +11287,7 @@ function dataStorageStatus() {
 // Layman-friendly explanations for every indicator. All include a 'What this means'
 // section so non-finance users know how to act on the number.
 const TIP = {
-  rsi: "RSI (Relative Strength Index) — a 0-to-100 momentum gauge.\n\nWhat this means: Above 70 = stretched (often pulls back). Below 30 = oversold (sometimes bounces, but in a downtrend it usually keeps falling). 50 = neutral. Always pair RSI with the trend — never act on it alone.",
+  rsi: "RSI(14W) — Relative Strength Index over 14 WEEKLY bars (~3.5 months), a 0-to-100 momentum gauge.\n\nWhat this means: Above 70 = stretched (often pulls back). Below 30 = oversold (sometimes bounces, but in a downtrend it usually keeps falling). 50 = neutral.\n\nWhy weekly: StockPulse uses weekly bars throughout (Finnhub's free /candle endpoint is paywalled for daily, so we standardise on weekly). This means RSI(14W) is SLOWER and SMOOTHER than the 14-day RSI you see on Yahoo Finance or TradingView's daily charts — a strong multi-month uptrend can pin it in the 80s for weeks. Use it for trend-momentum confirmation, not for daily swing-trade timing.\n\nAlways pair RSI with the trend — never act on it alone.",
   ma15: "MA15 — the average closing price of the last 15 weeks (~3 months).\n\nWhat this means: When today's price is above MA15, short-term momentum is positive. Stocks in uptrends often pull back to MA15 and bounce.",
   ma40: "MA40 — the average closing price of the last 40 weeks (~1 year).\n\nWhat this means: The most-watched trend line on Wall Street. Above MA40 = the stock is in a confirmed uptrend. Below MA40 = downtrend. Crossing it is usually a regime change.",
   ma100: "MA100 — the average closing price of the last 100 weeks (~2 years).\n\nWhat this means: The long-term trend line. Crossing this usually signals a multi-year structural shift in the stock.",
@@ -11943,8 +11943,8 @@ function buildExecutiveSummary(ticker, bars, v, profile, metrics) {
       text: `Price <b>$${last.toFixed(2)}</b> vs short-term avg <b>$${v.ma15.toFixed(2)}</b> (last few months), medium-term avg <b>$${v.ma40.toFixed(2)}</b> (last year), long-term avg <b>$${v.ma100.toFixed(2)}</b> (last two years). ${trendBull ? 'All three averages support the price — textbook uptrend.' : trendBear ? 'All three averages overhead — every level is acting as resistance.' : 'Mixed — averages give competing signals.'}` },
     { pane: 'Fibonacci',
       text: `100-week range: $${v.fibLo.toFixed(2)} to $${v.fibHi.toFixed(2)}. Currently <b>${fibPosPct.toFixed(0)}%</b> retraced from the low. ${(fibPosPct < 38) ? 'Below the 38.2% retracement — bias is to retest the swing low.' : (fibPosPct > 62) ? 'Above the 61.8% retracement — bias is to challenge the swing high.' : 'In the middle of the range — no edge from Fib alone.'}` },
-    { pane: `RSI(14) = ${v.lastRsi.toFixed(1)}`,
-      text: v.lastRsi < 30 ? `Oversold. In an uptrend this often marks a buyable pullback; in a downtrend it usually marks a pause before another leg lower — <b>not a buy signal on its own</b>.` : v.lastRsi > 70 ? `Overbought. Can persist for weeks in strong uptrends; in weakening structures it's an early exhaustion signal.` : v.lastRsi > 50 ? `Bull-zone reading — momentum positive, neither stretched nor weak. Most reliable zone for sustained moves.` : `Bear-zone reading — momentum negative but not yet washed out. Room to fall before reaching any extreme.` },
+    { pane: `RSI(14W) = ${v.lastRsi.toFixed(1)}`,
+      text: `<i>Computed on 14 weekly bars (~3.5 months) — slower than the 14-day RSI on standard daily charts. Strong multi-month uptrends can pin this in the 80s for weeks.</i><br>` + (v.lastRsi < 30 ? `Oversold. In an uptrend this often marks a buyable pullback; in a downtrend it usually marks a pause before another leg lower — <b>not a buy signal on its own</b>.` : v.lastRsi > 70 ? `Overbought. Can persist for weeks in strong uptrends; in weakening structures it's an early exhaustion signal.` : v.lastRsi > 50 ? `Bull-zone reading — momentum positive, neither stretched nor weak. Most reliable zone for sustained moves.` : `Bear-zone reading — momentum negative but not yet washed out. Room to fall before reaching any extreme.`) },
     { pane: 'Volume',
       text: `Last 10 bars: up-day volume <b>${(upVol/1e6).toFixed(1)}M</b> vs down-day volume <b>${(dnVol/1e6).toFixed(1)}M</b>. ${upVol > dnVol * 1.4 ? 'Buyers are stepping in on rallies — institutional accumulation pattern.' : dnVol > upVol * 1.4 ? 'Sellers are stepping in on declines — institutional distribution pattern.' : 'No clear bias — light or balanced flow.'}` },
   ];
@@ -18627,7 +18627,7 @@ function renderMain() {
     </div>
 
     <div id="stats-strip">
-      <div class="stat" title="${tip('rsi')}" style="cursor:help"><div class="stat-lbl">RSI(14)</div><div class="stat-val ${v.lastRsi > 70 ? 'down' : v.lastRsi < 30 ? 'up' : ''}">${v.lastRsi.toFixed(1)}</div></div>
+      <div class="stat" title="${tip('rsi')}" style="cursor:help"><div class="stat-lbl">RSI(14W)</div><div class="stat-val ${v.lastRsi > 70 ? 'down' : v.lastRsi < 30 ? 'up' : ''}">${v.lastRsi.toFixed(1)}</div></div>
       <div class="stat" title="${tip('ma15')}" style="cursor:help"><div class="stat-lbl">MA15</div><div class="stat-val">$${fmt(v.ma15)}</div></div>
       <div class="stat" title="${tip('ma40')}" style="cursor:help"><div class="stat-lbl">MA40</div><div class="stat-val">$${fmt(v.ma40)}</div></div>
       <div class="stat" title="${tip('ma100')}" style="cursor:help"><div class="stat-lbl">MA100</div><div class="stat-val">$${fmt(v.ma100)}</div></div>
@@ -18649,7 +18649,7 @@ function renderMain() {
 
     <div class="chart-panel">
       <div class="chart-head">
-        <div class="chart-title">RSI(14) · Overbought 70 / Oversold 30</div>
+        <div class="chart-title" title="${tip('rsi').replace(/"/g,'&quot;')}">RSI(14W) · Overbought 70 / Oversold 30 · weekly bars</div>
         <div class="legend"><div class="legend-item"><div class="legend-swatch" style="background:#bf5af2"></div>RSI</div></div>
       </div>
       <div class="chart-body"><div id="rsi-chart" style="height:140px"></div></div>
