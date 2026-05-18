@@ -3889,6 +3889,76 @@ body { padding-bottom: 44px; }
   transform: translateY(-1px);
 }
 
+/* What If sub-mode bar — segmented control that flips between "Lab" (build new
+   simulations) and "My Bundles" (track saved portfolios). Sits in the page
+   header below the title. Persists last-selected mode in localStorage. */
+.wi-modebar {
+  display: flex;
+  gap: 0;
+  margin: 14px 0 6px;
+  background: rgba(30,30,38,.55);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+}
+.wi-modebar-btn {
+  background: transparent;
+  border: 0;
+  padding: 8px 18px 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: background .15s, color .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  line-height: 1.2;
+  min-width: 150px;
+  text-align: left;
+}
+.wi-modebar-btn:hover { color: var(--text); }
+.wi-modebar-btn.active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 0 0 1px var(--line) inset;
+}
+.wi-modebar-lbl {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wi-modebar-sub {
+  font-size: 10.5px;
+  color: var(--dim);
+  font-weight: 500;
+}
+.wi-modebar-btn.active .wi-modebar-sub { color: var(--muted); }
+.wi-modebar-count {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: rgba(0,113,227,.18);
+  color: var(--accent);
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.wi-modebar-btn.active .wi-modebar-count {
+  background: rgba(0,113,227,.28);
+  color: white;
+}
+.wi-mode-section { /* the two sub-mode panels */ }
+.wi-mode-section.hidden { display: none; }
+
 /* Pick-stocks-and-optimise section — sibling of the investor strip, lets
    users hand-pick tickers and build a goal-optimised mix from them. */
 .wi-picker-section {
@@ -10195,10 +10265,23 @@ body { padding-bottom: 44px; }
       <div class="sectors-head">
         <div class="sectors-title-row">
           <div>
-            <div class="sectors-title">What If — investment portfolio builder</div>
-            <div class="sectors-sub">Enter an amount and pick a goal. We'll allocate it across a curated mix of stocks and ETFs optimized for that goal, then show every parameter that drove the selection.</div>
+            <div class="sectors-title">What If</div>
+            <div class="sectors-sub" id="whatif-sub-lab">Build new simulations: enter an amount, pick a goal, and choose how to source your stocks — from the catalog, your picks, your Sim Set, or by cloning a top 13F manager.</div>
+            <div class="sectors-sub" id="whatif-sub-bundles" style="display:none;">Track and manage your saved simulation bundles — daily &amp; cumulative P&amp;L, behind-pace alerts, and one-click corrections.</div>
           </div>
         </div>
+        <div class="wi-modebar" role="tablist" aria-label="What If mode">
+          <button class="wi-modebar-btn active" data-mode="lab" role="tab" aria-selected="true" onclick="selectWhatIfMode('lab')" title="Build new simulations — try different goals, amounts, and ticker sets.">
+            <span class="wi-modebar-lbl">Lab</span>
+            <span class="wi-modebar-sub">Build &amp; simulate</span>
+          </button>
+          <button class="wi-modebar-btn" data-mode="bundles" role="tab" aria-selected="false" onclick="selectWhatIfMode('bundles')" title="Open your saved simulation bundles — P&amp;L, corrections, alerts.">
+            <span class="wi-modebar-lbl">My Bundles <span class="wi-modebar-count" id="wi-modebar-count">0</span></span>
+            <span class="wi-modebar-sub">Track &amp; monitor</span>
+          </button>
+        </div>
+      </div>
+      <div id="whatif-lab" class="wi-mode-section">
         <div class="whatif-form" style="grid-template-columns: 1fr 1.1fr 0.85fr 0.9fr auto;">
           <div class="wi-field">
             <label for="wi-amount">Investment amount</label>
@@ -10259,9 +10342,7 @@ body { padding-bottom: 44px; }
           </div>
           <div class="wi-picker-chips" id="wi-picker-chips"></div>
         </div>
-      </div>
-      <div id="saved-bundles-container"></div>
-      <div id="whatif-results">
+        <div id="whatif-results">
     <div class="wi-summary-grid">
       <div class="wi-summary-card">
         <div class="wi-sc-lbl">Total Invested</div>
@@ -10836,6 +10917,10 @@ body { padding-bottom: 44px; }
       </div>
     </div>
   </div>
+      </div>
+      <div id="whatif-bundles" class="wi-mode-section hidden">
+        <div id="saved-bundles-container"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -14120,6 +14205,50 @@ function stockRationale(h, goalKey) {
 }
 function etfRationale(h) { return ETF_ROLES[h.ticker] || 'Diversified market exposure'; }
 
+// ========================================================================
+// What If sub-mode router — segmented Lab / My Bundles toggle.
+// Persists last-used sub-mode in localStorage so the user lands where they
+// left. Defaults to 'lab' for first-time users.
+// ========================================================================
+const LS_KEY_WHATIF_MODE = 'sp_whatif_submode_v1';
+let _whatIfSubMode = (() => {
+  try {
+    const stored = localStorage.getItem(LS_KEY_WHATIF_MODE);
+    return stored === 'bundles' ? 'bundles' : 'lab';
+  } catch (e) { return 'lab'; }
+})();
+
+function selectWhatIfMode(mode) {
+  if (mode !== 'lab' && mode !== 'bundles') return;
+  _whatIfSubMode = mode;
+  try { localStorage.setItem(LS_KEY_WHATIF_MODE, mode); } catch (e) {}
+  applyWhatIfMode();
+  // Scroll to top of the new sub-section so the user sees its header,
+  // not whatever scroll position they had in the previous sub-mode.
+  const section = document.getElementById(mode === 'lab' ? 'whatif-lab' : 'whatif-bundles');
+  if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function applyWhatIfMode() {
+  const lab = document.getElementById('whatif-lab');
+  const bun = document.getElementById('whatif-bundles');
+  if (lab) lab.classList.toggle('hidden', _whatIfSubMode !== 'lab');
+  if (bun) bun.classList.toggle('hidden', _whatIfSubMode !== 'bundles');
+  document.querySelectorAll('.wi-modebar-btn').forEach(b => {
+    const isActive = b.dataset && b.dataset.mode === _whatIfSubMode;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  // Update the title sub-line so it matches the active mode
+  const subLab = document.getElementById('whatif-sub-lab');
+  const subBun = document.getElementById('whatif-sub-bundles');
+  if (subLab) subLab.style.display = _whatIfSubMode === 'lab' ? '' : 'none';
+  if (subBun) subBun.style.display = _whatIfSubMode === 'bundles' ? '' : 'none';
+  // Refresh the bundle count badge
+  const countEl = document.getElementById('wi-modebar-count');
+  if (countEl) countEl.textContent = (typeof SAVED_BUNDLES !== 'undefined' && SAVED_BUNDLES.length) || 0;
+}
+
 function renderWhatIfPage() {
   $('whatif-results').innerHTML = `
     <div class="wi-empty">
@@ -14129,6 +14258,7 @@ function renderWhatIfPage() {
   renderInvestorCloneStrip();
   renderPickerChips();
   renderSavedBundles();
+  applyWhatIfMode();
 }
 
 // ========================================================================
@@ -15959,12 +16089,14 @@ function compareAllClonesClick() {
   }
   const historyYears = parseInt(($('wi-history') && $('wi-history').value) || '5', 10);
   $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg">Building all ${_TOP_13F_INVESTORS.length} manager clones and computing overlap…</div></div>`;
+  _scrollToWhatIfResults();
   requestAnimationFrame(() => requestAnimationFrame(() => {
     try {
       const cmp = computeCloneComparison(amount, historyYears);
       renderCloneComparison(cmp);
     } catch (e) {
-      $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg">Could not run comparison: ${e.message}</div></div>`;
+      showToast({ title: 'Could not run comparison', body: e.message, type: 'bear' });
+      $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg" style="color:var(--bear)">Could not run comparison: ${_escapeHtml(e.message)}</div></div>`;
     }
   }));
 }
@@ -16004,6 +16136,19 @@ function renderInvestorCloneStrip() {
   refreshAll13FFreshness();
 }
 
+// Smoothly bring the #whatif-results panel into view. Used by every build-
+// click handler so the user immediately sees the loading message + results,
+// even when the page is scrolled to the picker / investor / form section
+// above. Without this, on a tall What If page the click appears to "do
+// nothing" because results render off-screen below.
+function _scrollToWhatIfResults() {
+  const el = document.getElementById('whatif-results');
+  if (el && el.scrollIntoView) {
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    catch (e) { el.scrollIntoView(); }
+  }
+}
+
 function buildPortfolioClick() {
   const raw = ($('wi-amount').value || '').replace(/[$,\s]/g, '');
   const amount = parseFloat(raw);
@@ -16019,12 +16164,14 @@ function buildPortfolioClick() {
   const horizon = parseInt($('wi-horizon').value, 10);
   const historyYears = parseInt(($('wi-history') && $('wi-history').value) || '5', 10);
   $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg">Computing optimal allocation, grounding risk on last ${historyYears} year${historyYears===1?'':'s'} of weekly data…</div></div>`;
+  _scrollToWhatIfResults();
   requestAnimationFrame(() => requestAnimationFrame(() => {
     try {
       const p = buildPortfolio(amount, goal, horizon, historyYears);
       renderWhatIfResults(p);
     } catch (e) {
-      $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg">Could not build portfolio: ${e.message}</div></div>`;
+      showToast({ title: 'Could not build portfolio', body: e.message, type: 'bear' });
+      $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg" style="color:var(--bear)">Could not build portfolio: ${_escapeHtml(e.message)}</div></div>`;
     }
   }));
 }
@@ -16276,11 +16423,13 @@ function buildPortfolioFromPickerClick() {
   const horizon = parseInt($('wi-horizon').value, 10);
   const historyYears = parseInt(($('wi-history') && $('wi-history').value) || '5', 10);
   $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg">Optimising your <b>${_PICKED_TICKERS.size}</b> picked stock${_PICKED_TICKERS.size===1?'':'s'} for <b>${STRATEGY_DEFS[goal].label}</b>, grounded on last ${historyYears} year${historyYears===1?'':'s'}…</div></div>`;
+  _scrollToWhatIfResults();
   requestAnimationFrame(() => requestAnimationFrame(() => {
     try {
       const p = buildPortfolioFromPicker(amount, goal, horizon, historyYears);
       renderWhatIfResults(p);
     } catch (e) {
+      showToast({ title: 'Could not build portfolio', body: e.message, type: 'bear' });
       $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg" style="color:var(--bear)">Could not build portfolio: ${_escapeHtml(e.message)}</div></div>`;
     }
   }));
@@ -16301,11 +16450,13 @@ function buildPortfolioFromSimSetClick() {
   const horizon = parseInt($('wi-horizon').value, 10);
   const historyYears = parseInt(($('wi-history') && $('wi-history').value) || '5', 10);
   $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg">Building portfolio from your <b>Sim Set</b> (${SIM_SET.size} ticker${SIM_SET.size === 1 ? '' : 's'}), grounded on last ${historyYears} year${historyYears===1?'':'s'}…</div></div>`;
+  _scrollToWhatIfResults();
   requestAnimationFrame(() => requestAnimationFrame(() => {
     try {
       const p = buildPortfolioFromSimSet(amount, goal, horizon, historyYears);
       renderWhatIfResults(p);
     } catch (e) {
+      showToast({ title: 'Could not build portfolio', body: e.message, type: 'bear' });
       $('whatif-results').innerHTML = `<div class="wi-empty"><div class="wi-empty-msg" style="color:var(--bear)">Could not build portfolio: ${_escapeHtml(e.message)}</div></div>`;
     }
   }));
