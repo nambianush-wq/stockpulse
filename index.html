@@ -11684,6 +11684,31 @@ function fibLevels(high, low) {
   };
 }
 
+// Build a tooltip-friendly trace of how a verdict was reached. Used on
+// every surface that shows the verdict label (watchlist rows, top picks
+// rows, cockpit cards) so users can hover to see the full grounding —
+// score, every signal that fired, and the thresholds — without needing
+// to drill into the ticker dashboard. User feedback 2026-05-18:
+// "ensure recommendations are grounded on stock facts such as MA, RSI".
+function _verdictTooltip(v) {
+  if (!v || typeof v !== 'object') return '';
+  const score = (typeof v.score === 'number') ? v.score : 0;
+  const sign = score >= 0 ? '+' : '';
+  const lines = [`Verdict: ${v.label || 'HOLD'}  ·  Score ${sign}${score} / 100`, ''];
+  const sigs = Array.isArray(v.signals) ? v.signals : [];
+  if (sigs.length) {
+    lines.push('Active signals (in scoring order — MA stack, MA slope, RSI level, RSI slope, distance from MA15, volume, Fib):');
+    for (const s of sigs) {
+      const sym = s && s.type === 'bull' ? '↑' : s && s.type === 'bear' ? '↓' : '•';
+      lines.push(`  ${sym} ${(s && s.text) || ''}`);
+    }
+    lines.push('');
+  }
+  lines.push('Thresholds: ≥+50 STRONG BUY · ≥+20 BUY · ±20 HOLD · ≤-20 SELL · ≤-50 STRONG SELL');
+  lines.push('All scoring is rule-based and auditable — no opaque ML scoring.');
+  return lines.join('\n');
+}
+
 // ========================================================================
 // Verdict engine — direct translation of the ACN chart analysis rules
 // ========================================================================
@@ -17257,6 +17282,12 @@ function renderPickRow(m, rank) {
   const f12 = m.forecasts.find(f => f.months === 12);
   const overallDir = (f12 && f12.expReturn < 0) ? 'fc-down' : 'fc-up';
   const pn = posNegFor({ score: m.score, forecast12: f12 ? f12.expReturn : 0 });
+  // Full verdict tooltip — prefer the cached _data entry which carries the
+  // full signals array; fall back to a score+thresholds tip otherwise.
+  const fullVerdict = (typeof _data !== 'undefined' && _data[m.ticker] && _data[m.ticker].verdict)
+    ? _data[m.ticker].verdict
+    : { label: m.verdict, score: m.score, signals: [] };
+  const verdictTip = _verdictTooltip(fullVerdict);
   return `<div class="pick-row ${overallDir}" tabindex="0" onclick="tileClick('${m.ticker}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();tileClick('${m.ticker}')}" title="${m.name.replace(/"/g, '&quot;')}">
     <div class="pick-heat" style="--heat-color:${heat}"></div>
     <div class="pick-main">
@@ -17264,7 +17295,7 @@ function renderPickRow(m, rank) {
         <span class="pick-rank">#${rank}</span>
         <span class="pick-sym">${m.ticker}</span>
         <span class="pick-name">${m.name}</span>
-        <span class="pick-verdict ${verdictClass}">${m.verdict}</span>
+        <span class="pick-verdict ${verdictClass}" title="${verdictTip.replace(/"/g, '&quot;')}" style="cursor:help">${m.verdict}</span>
         <span class="pos-neg-pill ${pn.cls}"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
         ${m._timingFull ? renderTimingChip(m._timingFull, true) : ''}
         ${render13FBadge(m.ticker, true)}
@@ -18365,6 +18396,7 @@ function renderWatchlist(filter = '') {
       const wlTiming    = computeBuyTiming(d.bars, d.verdict, wlForecasts);
       timingChipHtml = renderTimingChip(wlTiming, true);
     } catch (e) { /* tolerate per-row compute failure */ }
+    const verdictTip = _verdictTooltip(d.verdict);
     return `<div class="wl-item heat-${tier} ${isActive ? 'active' : ''} ${isAlert ? 'alert' : ''}" data-ticker="${t}" onclick="selectTicker('${t}')" title="Heat score: ${score >= 0 ? '+' : ''}${score}">
       <div class="wl-heat" style="--heat-color: ${heat}"></div>
       <button class="wl-remove" onclick="event.stopPropagation(); removeStock('${t}')" title="Remove">✕</button>
@@ -18374,7 +18406,7 @@ function renderWatchlist(filter = '') {
       </div>
       <div class="wl-row2">
         <div class="wl-change ${direction}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
-        <div class="wl-verdict ${verdictClass}">${d.verdict.label}</div>
+        <div class="wl-verdict ${verdictClass}" title="${verdictTip.replace(/"/g, '&quot;')}" style="cursor:help">${d.verdict.label}</div>
         ${timingChipHtml}
         ${render13FBadge(t, true)}
         ${rowActionsHtml(t)}
@@ -18486,7 +18518,7 @@ function renderMain() {
           <div class="t-change ${dir}">${change >= 0 ? '+' : ''}${fmt(change)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)<span class="t-change-period" title="Change is week-over-week — our bar resolution is weekly">1W</span></div>
         </div>
       </div>
-      <div id="verdict-card" class="${verdictPolarity}" style="color:${meterColor}; cursor:help" title="${tip('verdict')}">
+      <div id="verdict-card" class="${verdictPolarity}" style="color:${meterColor}; cursor:help" title="${_verdictTooltip(v).replace(/"/g,'&quot;')}">
         <div id="verdict-label">${v.label}</div>
         <div id="verdict-score" title="${tip('score')}">Score ${v.score >= 0 ? '+' : ''}${v.score} / 100</div>
         <div id="verdict-meter">
@@ -18620,8 +18652,8 @@ function renderMain() {
         <div class="cd-cell" title="${tip('eps')}" style="cursor:help"><div class="cd-lbl">EPS (TTM)</div><div class="cd-val">$${fmtNum(metrics.epsBasicExclExtraItemsTTM)}</div></div>
         <div class="cd-cell" title="${tip('divYield')}" style="cursor:help"><div class="cd-lbl">Div Yield</div><div class="cd-val">${fmtPct(metrics.dividendYieldIndicatedAnnual)}</div></div>
         <div class="cd-cell" title="${tip('divAnnual')}" style="cursor:help"><div class="cd-lbl">Ann. Dividend</div><div class="cd-val">$${fmtNum(metrics.dividendPerShareAnnual)}</div></div>
-        <div class="cd-cell" title="${tip('hi52')}" style="cursor:help"><div class="cd-lbl">52W High</div><div class="cd-val">$${fmtNum(metrics['52WeekHigh'])}</div></div>
-        <div class="cd-cell" title="${tip('lo52')}" style="cursor:help"><div class="cd-lbl">52W Low</div><div class="cd-val">$${fmtNum(metrics['52WeekLow'])}</div></div>
+        <div class="cd-cell" title="${tip('hi52')}\n\nSource priority: Finnhub /stock/metric (intraday daily extremes) → fallback to bar-computed (weekly closes only — may miss intra-week wicks)." style="cursor:help"><div class="cd-lbl">52W High</div><div class="cd-val">$${fmtNum((metrics['52WeekHigh'] && metrics['52WeekHigh'] > 0) ? metrics['52WeekHigh'] : w52hi)}</div></div>
+        <div class="cd-cell" title="${tip('lo52')}\n\nSource priority: Finnhub /stock/metric (intraday daily extremes) → fallback to bar-computed (weekly closes only — may miss intra-week wicks)." style="cursor:help"><div class="cd-lbl">52W Low</div><div class="cd-val">$${fmtNum((metrics['52WeekLow'] && metrics['52WeekLow'] > 0) ? metrics['52WeekLow'] : w52lo)}</div></div>
         <div class="cd-cell" title="${tip('beta')}" style="cursor:help"><div class="cd-lbl">Beta</div><div class="cd-val">${fmtNum(metrics.beta)}</div></div>
       </div>
     </div>
@@ -18631,8 +18663,6 @@ function renderMain() {
       <div class="stat" title="${tip('ma15')}" style="cursor:help"><div class="stat-lbl">MA15</div><div class="stat-val">$${fmt(v.ma15)}</div></div>
       <div class="stat" title="${tip('ma40')}" style="cursor:help"><div class="stat-lbl">MA40</div><div class="stat-val">$${fmt(v.ma40)}</div></div>
       <div class="stat" title="${tip('ma100')}" style="cursor:help"><div class="stat-lbl">MA100</div><div class="stat-val">$${fmt(v.ma100)}</div></div>
-      <div class="stat" title="${tip('hi52')}" style="cursor:help"><div class="stat-lbl">52W High</div><div class="stat-val">$${fmt(w52hi)}</div></div>
-      <div class="stat" title="${tip('lo52')}" style="cursor:help"><div class="stat-lbl">52W Low</div><div class="stat-val">$${fmt(w52lo)}</div></div>
     </div>
 
     <div class="chart-panel">
