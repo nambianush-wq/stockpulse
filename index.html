@@ -13774,12 +13774,21 @@ async function fetchBars(ticker) {
   return { bars: generateDemoBars(ticker), source: 'demo' };
 }
 
+// CRITICAL CONTRACT — bar shape across ALL sources (synthetic, Yahoo, TD,
+// Finnhub) MUST be: { time (SECONDS since epoch, UTCTimestamp), open, high,
+// low, close, volume }. The chart consumer (renderPriceChart / renderRsiChart
+// / renderVolChart) reads `b.time` and passes it directly to LightweightCharts
+// setData, which expects UTCTimestamp in SECONDS. The executive summary
+// timestamp does `new Date(last.time * 1000)` — also expects seconds.
+// Returning `t` (instead of `time`) or milliseconds (instead of seconds)
+// produces empty charts + "Invalid Date" — the regression shape from
+// 2026-05-18 RCA on page rendering.
+//
 // Fetch real weekly OHLCV bars from Twelve Data's /time_series endpoint.
 // Free tier: 800 calls/day, 8/min (the same TD_API_KEY that feeds the
 // cross-check chip — operator-baked, CORS-clean from any origin). Used as
 // the secondary real-bars source when Yahoo CORS-blocks (common from
-// github.io). Returns bars in the same shape as fetchFinnhubWeekly:
-// [{ t (ms), open, high, low, close, volume }, ...] in ASCENDING time order.
+// github.io). Returns bars in canonical shape with `time` in SECONDS.
 //
 // Twelve Data response shape:
 //   { meta: {...}, values: [{datetime, open, high, low, close, volume}, ...], status: 'ok' }
@@ -13804,13 +13813,14 @@ async function fetchTwelveDataWeekly(ticker) {
     if (!v || !v.datetime) continue;
     const close = parseFloat(v.close);
     if (!isFinite(close) || close <= 0) continue;
-    const t = new Date(v.datetime + 'T00:00:00Z').getTime();
+    // SECONDS since epoch (UTCTimestamp) — NOT ms. Critical contract.
+    const time = Math.floor(new Date(v.datetime + 'T00:00:00Z').getTime() / 1000);
     const open  = parseFloat(v.open);
     const high  = parseFloat(v.high);
     const low   = parseFloat(v.low);
     const vol   = parseFloat(v.volume);
     out.push({
-      t,
+      time,
       open: isFinite(open) && open > 0 ? open : close,
       high: isFinite(high) && high > 0 ? high : close,
       low:  isFinite(low)  && low  > 0 ? low  : close,
@@ -13824,8 +13834,8 @@ async function fetchTwelveDataWeekly(ticker) {
 // Fetch real weekly OHLCV bars from Yahoo Finance's chart endpoint. Free,
 // no API key required. CORS-friendly from most browser contexts (query1
 // host sends Access-Control-Allow-Origin: *) — when it doesn't, we fall
-// through to the Twelve Data path. Returns bars in the same shape as
-// fetchFinnhubWeekly: [{ t (ms), open, high, low, close, volume }, ...].
+// through to the Twelve Data path. Returns bars in canonical shape with
+// `time` in SECONDS (matches the contract documented above).
 async function fetchYahooWeekly(ticker) {
   // 5y of weekly bars matches what the rest of the app expects (260 bars).
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1wk&range=5y`;
@@ -13846,7 +13856,9 @@ async function fetchYahooWeekly(ticker) {
     const h = (q.high && q.high[i] != null && isFinite(q.high[i])) ? q.high[i] : c;
     const l = (q.low  && q.low[i]  != null && isFinite(q.low[i]))  ? q.low[i]  : c;
     const v = (q.volume && q.volume[i] != null && isFinite(q.volume[i])) ? q.volume[i] : 0;
-    bars.push({ t: ts[i] * 1000, open: o, high: h, low: l, close: c, volume: v });
+    // Yahoo timestamps are already in SECONDS. Use directly. Field name
+    // MUST be `time` (not `t`) to match the canonical contract.
+    bars.push({ time: ts[i], open: o, high: h, low: l, close: c, volume: v });
   }
   return bars;
 }
