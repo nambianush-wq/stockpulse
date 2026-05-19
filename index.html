@@ -5670,12 +5670,7 @@ body.menu-open #mobile-menu-backdrop { display: block; }
           <div class="cockpit-last-refresh" id="cockpit-last-refresh" title="Wall-clock time the cockpit data was last refreshed. Auto-refresh setting controls how often a new refresh fires while you're on this tab.">Last refreshed —</div>
         </div>
         <div class="cockpit-meta">
-          <span class="cockpit-live-dot" id="cockpit-live-dot" title="Pulsing green = live data; amber = demo data"></span>
-          <span id="cockpit-meta-text">—</span>
-          <button class="cockpit-sidebar-btn" id="cockpit-sidebar-btn" onclick="toggleCockpitSidebar()" title="Collapse the watchlist sidebar to give the cockpit full width — click again to bring it back. Setting is remembered across sessions.">
-            <span class="cockpit-sidebar-icon" id="cockpit-sidebar-icon">⇤</span>
-            <span id="cockpit-sidebar-label">Collapse sidebar</span>
-          </button>
+          <span id="cockpit-meta-text" title="Number of tickers currently tracked in your watchlist. Mode (LIVE/DEMO) shown in the top bar.">—</span>
           <select class="cockpit-auto-select" id="cockpit-auto-select" onchange="setCockpitAutoRefresh(this.value)" title="Auto-refresh the cockpit on a fixed interval. Re-fetches live prices + recomputes every metric. Skips when you're on a different tab so it doesn't burn API quota in the background.">
             <option value="0">Auto-refresh: Off</option>
             <option value="1">Auto-refresh: 1m</option>
@@ -19156,6 +19151,20 @@ function renderTilesFromCache() {
         <div class="tile-chg ${dir}">${m.wkChange >= 0 ? '+' : ''}${m.wkChange.toFixed(2)}% 1W</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:-4px;flex-wrap:wrap;">
+        ${(() => {
+          // Verdict pill — same class + colour scheme as Watchlist (.wl-verdict)
+          // and Top Picks (.pick-verdict) so the same heat tier reads identically
+          // across every surface that shows a ticker (cross-page consistency
+          // doctrine in CLAUDE.md). Added 2026-05-19 RCA: verdict filter at the
+          // top of the Sectors page was gating records that didn't display
+          // their verdict — visually un-verifiable.
+          const vClass = 'verdict-' + (m.verdict || 'HOLD').replace(/\s+/g, '-');
+          const fullV = (typeof _data !== 'undefined' && _data[m.ticker] && _data[m.ticker].verdict)
+            ? _data[m.ticker].verdict
+            : { label: m.verdict, score: m.score, signals: [] };
+          const vTip = (typeof _verdictTooltip === 'function') ? _verdictTooltip(fullV) : '';
+          return `<span class="pick-verdict ${vClass}" title="${vTip.replace(/"/g, '&quot;')}" style="cursor:help">${m.verdict}</span>`;
+        })()}
         <span class="pos-neg-pill ${pn.cls}" title="${tip('posNeg')}" style="cursor:help"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
         ${(() => {
           const action = _classifyTimingFromCache(m);
@@ -19810,14 +19819,10 @@ function _cockpitRenderAlerts(ov) {
 }
 
 function renderCockpit() {
-  // Meta — LIVE/DEMO + last refresh time
-  const dot = document.getElementById('cockpit-live-dot');
+  // Meta — tracked count (LIVE/DEMO mode shown via topbar pill, not duplicated here)
   const meta = document.getElementById('cockpit-meta-text');
-  if (dot && meta) {
-    const live = (typeof isLive === 'function') && isLive();
-    dot.style.background = live ? 'var(--bull)' : 'var(--warn)';
-    dot.style.boxShadow  = live ? '0 0 8px var(--bull)' : '0 0 8px var(--warn)';
-    meta.textContent = live ? `LIVE · ${WATCHLIST.length} tracked` : `DEMO · ${WATCHLIST.length} tracked`;
+  if (meta) {
+    meta.textContent = `${WATCHLIST.length} tracked`;
   }
   _cockpitLastRefreshAt = Date.now();
   _applyCockpitSidebarState();

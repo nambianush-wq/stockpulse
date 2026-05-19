@@ -134,6 +134,9 @@ function loadApp() {
     'buildPortfolioFromPicker', 'computeAndStashBuildAlternatives',
     'computeSegmentAlternativesForHolding',
     '_applyMoveToBundle', '_renormaliseBundle', 'computeBundleCorrections',
+    // Sectors page tile rendering + filter state
+    'renderTilesFromCache', 'selectGoal', '_sectorsFilters', '_currentGoal',
+    'buildSectorsCache', '_applySectorsFilters', '_verdictTooltip',
     // Cockpit + live data
     '_cockpitRenderHeatmap', '_cockpitComputeOverview',
     'fetchTickerBundle', 'fetchBars', 'fetchQuote', 'fetchFinnhubProfile', 'fetchFinnhubMetrics',
