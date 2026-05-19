@@ -60,6 +60,83 @@ OneDrive is sync-managed. The folder previously had an underscore name (`STOCK_P
 
 ---
 
+## UI/UX discipline — apply on every visual change
+
+Invoke `/ui-ux-pro-max` (skill base: `C:\Users\anush.nambi\.claude\skills\ui-ux-pro-max`) **before** building or restructuring any visual surface, and **after** any UI change before claiming "done". The skill enforces ten principles + an anti-pattern audit and produces a structured report. Summary of the contract below — full text lives in the skill.
+
+### Ten principles (cite by number when flagging issues)
+
+1. **One job per surface** — a tab / panel / card serves one user goal. Mixing "configure" with "consume" splits attention.
+2. **One primary action per surface** — exactly one visually dominant CTA. Squint test: can you spot the "next step" in ≤1 second?
+3. **Progressive disclosure** — show the 80% case; hide the 20% behind "Advanced" / chevron / sub-tab.
+4. **Information scent** — labels telegraph what's behind them. No "Misc". A new user should predict each label's destination in one guess.
+5. **Hierarchy via type, weight, spacing** — borders and shaded backgrounds are last-resort. Strip them; let typography do the work.
+6. **No emoji as functional icon** — SVG, Unicode (★ ⚠ ✓ ↑ ↓ →), or text. Emoji-as-icon is the single biggest tell of LLM-generated UI.
+7. **Tooltip discipline** — every metric / abbreviation / technical control has a `title=` with plain-language explanation (not the formula). StockPulse routes these through the central `TIP` dictionary.
+8. **Empty states are first-class** — every list / table / panel has a designed empty state with one-sentence explanation + primary action. Test by clearing localStorage.
+9. **Copy is design** — buttons are verbs ("Save bundle", not "Submit"). Errors say what broke AND what to do. Read every string aloud.
+10. **Density appropriate to task** — dashboards earn density; settings / wizards / marketing surfaces do not. Don't apply landing-page whitespace to a power-user tool.
+
+### Anti-patterns (blocking — do not ship)
+
+1. Emoji-as-icon on buttons / nav / status
+2. Two primary buttons fighting on one surface
+3. Mystery icons (no `title=`, no adjacent text)
+4. Compartment soup — 3+ nested bordered boxes
+5. Jargon copy without a plain-language tooltip (P/E, HHI, Sharpe, etc.)
+6. Animations >200ms that delay first interaction
+7. Modal stacking modals
+8. Save / Delete adjacent with similar visual weight
+9. Lists / tables with `—` or "0 results" and no next-action
+10. Mixed creation + consumption on one surface
+11. Color as the only status signal (always pair with glyph or text)
+12. Buttons that lie ("Submit" / "OK" / "Done" with no hint of outcome)
+
+### Required output after any UI change
+
+When working on a visual surface, end the response with the skill's report block (see §5 of the skill file). It documents user-job, primary action, per-principle ✓/⚠/✗ scoring, anti-patterns flagged, and P0/P1/P2 fix list. The report is the proof-of-rigour the user uses to verify the skill actually ran rather than producing a generic "looks good!" pass.
+
+### StockPulse-specific application
+
+- **Target user is a retail investor**, not an analyst. Lead tooltips with the layman explanation; the formula is secondary.
+- **Cockpit, Watchlist, Sectors, Top Picks, What If** each have a distinct job (principle 1). Do not blur them — new functionality goes in the tab whose job it serves.
+- **The TIP dictionary is the canonical home** for tooltip copy (principle 7). Add new entries there rather than inlining `title=` strings at call sites.
+- **The thermal palette already carries status semantics**; pair it with a glyph / number / label whenever it's the only status signal (anti-pattern 11).
+- **Empty states matter** for first-run users with no watchlist, no sim set, no saved bundles. Test by clearing localStorage in DevTools.
+
+### Cross-page UI consistency — MANDATORY (2026-05-19)
+
+When a filter / pill / chip / signal exists on **any** page, it MUST exist on **every** page that surfaces the same domain concept. The Top Picks page added a new "Ahead of rally" pill on 2026-05-19; the user immediately reported that the Sectors page didn't have it. This kind of one-page-only rollout is a doctrine failure — the user shouldn't have to discover that the same filter exists with a different name (or not at all) per tab.
+
+**The four filter surfaces that share the same timing taxonomy:**
+
+| Surface | Filter location | Identifier |
+|---|---|---|
+| Watchlist sidebar | `#timing-filter` pills | `updateTimingFilterPills()` |
+| Sectors discovery | `#sectors-discovery-filters` "Buy timing" row | `renderSectorsFilterPills()` |
+| Top Picks | `#picks-timing-pills` | `_renderPicksTimingPills()` |
+| Ticker dashboard | inline `renderTimingChip(timing)` | (display only, no filter) |
+
+**Rule:** every value emitted by `computeBuyTiming().action` (currently `BUY_NOW`, `EARLY_RALLY`, `BUY_ON_DIP`, `DCA`, `WAIT`, `CONFLICT`, `SELL`, `AVOID`) MUST appear as a filter option in **all four** surfaces above (those with filters). The same applies to:
+
+- Verdict pills (`STRONG BUY` / `BUY` / `HOLD` / `SELL` / `STRONG SELL`) — Watchlist, Sectors, Top Picks, Ticker dashboard
+- Type pills (`Div` / `Hi-Yld` / `ETF` / `Stocks`) — Watchlist, Sectors (the "Dividend" filter row)
+- 13F pills (`≥1 / ≥2 / ≥3`) — Watchlist, Sectors, Top Picks
+- Heat tier colours / icons — every surface that shows a ticker
+
+**Test before shipping:** when adding any new pill / chip / signal, search the codebase for the other three surfaces and add the same option there too. If you can't — leave a `TODO(consistency)` comment with the date so it's not forgotten.
+
+### Filter density discipline (2026-05-19)
+
+Sidebar filters were simplified from 5 always-visible rows to 1 visible row + "More filters ▾" toggle after user feedback. Rules going forward:
+
+- **Drop explicit "All" pills.** Active pill click deselects it. That's the modern toggle pattern.
+- **Hide zero-count pills.** If a filter dimension has zero matches, don't render the pill — it's noise.
+- **Primary filters always visible.** Verdict (Buy/Hold/Sell) and list (Fav/SimSet) are primary. Type / Timing / 13F are secondary — collapsed behind "More filters ▾" by default.
+- **Persist the toggle state.** Power users who open "More filters" once shouldn't have to re-open every session — store in localStorage.
+
+---
+
 ## Commit message style
 
 Pattern: short imperative subject line + multi-line body explaining the WHY, the WHAT, and the LAYERS touched (CSS / HTML / JS / state / persistence).

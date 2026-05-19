@@ -2780,6 +2780,41 @@ body.whatif-mode #sidebar { display: none; }
   margin-top: 10px;
   flex-wrap: wrap;
 }
+/* "More filters ▾" toggle — collapses Type / Timing / 13F filter rows
+   behind a single button by default. State persists in localStorage. */
+.more-filters-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--line);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.more-filters-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(0,113,227,.06);
+}
+.more-filters-toggle #more-filters-chevron {
+  font-size: 11px;
+  color: var(--dim);
+  transition: transform .15s;
+}
+.more-filters {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed transparent;
+}
+.more-filters.hidden { display: none; }
 .vf-pill {
   flex: 1 1 0;
   min-width: 0;
@@ -5193,17 +5228,17 @@ body.menu-open #mobile-menu-backdrop { display: block; }
   <aside id="sidebar">
     <div id="sidebar-head">
       <input id="search" placeholder="Filter watchlist…" oninput="filterWatchlist(this.value)">
-      <div id="heat-legend">
-        <div class="heat-legend-bar"></div>
-        <div class="heat-legend-labels">
-          <span>COLD</span><span>NEUTRAL</span><span>HOT</span>
-        </div>
-      </div>
       <div id="sidebar-counters" class="sidebar-counters"></div>
       <div id="verdict-filter" class="verdict-filter"></div>
-      <div id="type-filter" class="verdict-filter" style="margin-top:6px"></div>
-      <div id="timing-filter" class="verdict-filter" style="margin-top:6px" title="Filter by buy-timing recommendation (Buy now / On dip / DCA / Wait / Avoid)"></div>
-      <div id="inst-filter" class="verdict-filter" style="margin-top:6px" title="Filter by 13F institutional ownership — how many top active managers hold this stock"></div>
+      <button id="more-filters-toggle" class="more-filters-toggle" onclick="toggleMoreFilters()" title="Show / hide secondary filters (type · timing · 13F ownership). Setting persists across sessions.">
+        <span id="more-filters-label">More filters</span>
+        <span id="more-filters-chevron">▾</span>
+      </button>
+      <div id="more-filters" class="more-filters hidden">
+        <div id="type-filter" class="verdict-filter"></div>
+        <div id="timing-filter" class="verdict-filter" style="margin-top:6px" title="Filter by buy-timing recommendation (Buy now / On dip / DCA / Wait / Avoid)"></div>
+        <div id="inst-filter" class="verdict-filter" style="margin-top:6px" title="Filter by 13F institutional ownership — how many top active managers hold this stock"></div>
+      </div>
     </div>
     <div id="watchlist"><div class="wl-item heat-hot  " data-ticker="AMAT" onclick="selectTicker(&#39;AMAT&#39;)" title="Heat score: +70">
       <div class="wl-heat" style="--heat-color: rgb(255, 150, 0)"></div>
@@ -11892,12 +11927,38 @@ function updateInstFilterPills() {
   if (!host) return;
   const c = countByInstBucket();
   const mode = _watchlistInstFilter;
+  // Drop "13F-Any" pill (active pill click deselects) + hide zero-count
+  // pills (simplification 2026-05-19).
+  const pill = (key, label, count, tip) => count === 0 ? '' :
+    `<button class="vf-pill ${mode === key ? 'active' : ''}" onclick="setInstFilter(${mode === key ? 'null' : `'${key}'`})" title="${tip}">${label} <b>${count}</b></button>`;
   host.innerHTML = `
-    <button class="vf-pill ${mode === null ? 'active' : ''}" onclick="setInstFilter(null)" title="Show all tickers regardless of 13F ownership">13F-Any <b>${c.total}</b></button>
-    <button class="vf-pill ${mode === 'inst1' ? 'active' : ''}" onclick="setInstFilter('inst1')" title="Show only stocks held by 1+ of the top active 13F managers">≥1 <b>${c.inst1}</b></button>
-    <button class="vf-pill ${mode === 'inst2' ? 'active' : ''}" onclick="setInstFilter('inst2')" title="Show only stocks held by 2+ top managers — shared conviction">≥2 <b>${c.inst2}</b></button>
-    <button class="vf-pill ${mode === 'inst3' ? 'active' : ''}" onclick="setInstFilter('inst3')" title="Show only stocks held by 3+ top managers — strong consensus">≥3 <b>${c.inst3}</b></button>
+    ${pill('inst1', '13F ≥1', c.inst1, 'Show only stocks held by 1+ of the top active 13F managers. Click again to clear.')}
+    ${pill('inst2', '13F ≥2', c.inst2, 'Show only stocks held by 2+ top managers — shared conviction. Click again to clear.')}
+    ${pill('inst3', '13F ≥3', c.inst3, 'Show only stocks held by 3+ top managers — strong consensus. Click again to clear.')}
   `;
+}
+
+// Sidebar "More filters ▾" toggle — collapses Type / Timing / 13F filters
+// behind a single button to reduce default visual density. Persisted across
+// sessions so power users get their dense view automatically.
+// (Simplification 2026-05-19 — was 5 always-visible filter rows.)
+const LS_KEY_MORE_FILTERS = 'sp_more_filters_open_v1';
+let _moreFiltersOpen = (() => {
+  try { return localStorage.getItem(LS_KEY_MORE_FILTERS) === '1'; }
+  catch (e) { return false; }
+})();
+function toggleMoreFilters() {
+  _moreFiltersOpen = !_moreFiltersOpen;
+  try { localStorage.setItem(LS_KEY_MORE_FILTERS, _moreFiltersOpen ? '1' : '0'); } catch (e) {}
+  applyMoreFiltersState();
+}
+function applyMoreFiltersState() {
+  const panel = document.getElementById('more-filters');
+  const chev = document.getElementById('more-filters-chevron');
+  const lbl  = document.getElementById('more-filters-label');
+  if (panel) panel.classList.toggle('hidden', !_moreFiltersOpen);
+  if (chev)  chev.textContent = _moreFiltersOpen ? '▴' : '▾';
+  if (lbl)   lbl.textContent = _moreFiltersOpen ? 'Hide secondary filters' : 'More filters';
 }
 
 // Buy-timing filter — also a separate dimension (composes with verdict + type).
@@ -11934,17 +11995,19 @@ function updateTimingFilterPills() {
   if (!host) return;
   const c = countByTimingBucket();
   const mode = _watchlistTimingFilter;
-  const pill = (key, label, full) => `<button class="vf-pill ${mode === key ? 'active' : ''}" onclick="setTimingFilter('${key}')" title="${full.replace(/"/g,'&quot;')}">${label} <b>${c[key]}</b></button>`;
+  // Drop the explicit "All" pill + hide zero-count pills (simplification
+  // 2026-05-19). Clicking the active pill again deselects it.
+  const pill = (key, label, full) => (c[key] || 0) === 0 ? '' :
+    `<button class="vf-pill ${mode === key ? 'active' : ''}" onclick="setTimingFilter(${mode === key ? 'null' : `'${key}'`})" title="${full.replace(/"/g,'&quot;')}">${label} <b>${c[key]}</b></button>`;
   host.innerHTML = `
-    <button class="vf-pill ${mode === null ? 'active' : ''}" onclick="setTimingFilter(null)" title="Show all tickers regardless of buy timing">All <b>${c.total}</b></button>
-    ${pill('BUY_NOW',     'Buy',   'Model expects positive 12M return AND trend is intact (price above MA40, not overbought)')}
-    ${pill('EARLY_RALLY', 'Early', 'Ahead-of-rally setup — model forecasts a positive 12M return BUT price is still at/below MA40 and RSI < 65. Entry near trend support rather than chasing a breakout.')}
-    ${pill('BUY_ON_DIP',  'Dip',   'Strong forecast but the stock is overbought / stretched — wait for 5–10% pullback')}
-    ${pill('DCA',        'DCA',  'Positive forecast but high volatility — average in over 4–8 weeks')}
-    ${pill('WAIT',       'Wait', 'Flat forecast / mixed signals — no clear trigger yet')}
-    ${pill('CONFLICT',   'Cnflct', 'Verdict BUY-tier but forecast bearish — two engines disagree, speculative only')}
-    ${pill('SELL',       'Sell', 'Verdict SELL — trend bearish; if holding, consider trimming; do not enter on forecast alone')}
-    ${pill('AVOID',      'Avoid','Negative forecast OR Strong Sell verdict — capital better deployed elsewhere')}
+    ${pill('BUY_NOW',     'Buy',    'Model expects positive 12M return AND trend is intact (price above MA40, not overbought). Click again to clear.')}
+    ${pill('EARLY_RALLY', 'Early',  'Ahead-of-rally setup — model forecasts a positive 12M return BUT price is still at/below MA40 and RSI < 65. Entry near trend support rather than chasing a breakout. Click again to clear.')}
+    ${pill('BUY_ON_DIP',  'Dip',    'Strong forecast but the stock is overbought / stretched — wait for 5–10% pullback. Click again to clear.')}
+    ${pill('DCA',         'DCA',    'Positive forecast but high volatility — average in over 4–8 weeks. Click again to clear.')}
+    ${pill('WAIT',        'Wait',   'Flat forecast / mixed signals — no clear trigger yet. Click again to clear.')}
+    ${pill('CONFLICT',    'Cnflct', 'Verdict BUY-tier but forecast bearish — two engines disagree, speculative only. Click again to clear.')}
+    ${pill('SELL',        'Sell',   'Verdict SELL — trend bearish; if holding, consider trimming; do not enter on forecast alone. Click again to clear.')}
+    ${pill('AVOID',       'Avoid',  'Negative forecast OR Strong Sell verdict — capital better deployed elsewhere. Click again to clear.')}
   `;
 }
 function getStockTypeInfo(ticker) {
@@ -11970,11 +12033,13 @@ function updateTypeFilterPills() {
   if (!host) return;
   const c = countByType();
   const mode = _watchlistTypeFilter;
+  const pill = (key, label, count, tip) => count === 0 ? '' :
+    `<button class="vf-pill ${mode === key ? 'active' : ''}" onclick="setTypeFilter(${mode === key ? 'null' : `'${key}'`})" title="${tip.replace(/"/g,'&quot;')}">${label} <b>${count}</b></button>`;
   host.innerHTML = `
-    <button class="vf-pill ${mode === 'dividend' ? 'active' : ''}" onclick="setTypeFilter('dividend')" title="Show only stocks that pay any dividend (yield > 0).\n\nDividends = cash payments to shareholders, usually quarterly. Sign of a mature, profitable company.">Div <b>${c.div}</b></button>
-    <button class="vf-pill ${mode === 'hi_yield' ? 'active' : ''}" onclick="setTypeFilter('hi_yield')" title="Show only stocks with dividend yield ≥ 4%.\n\nHigh yield = bigger income but often signals: (a) mature/slow-growth company, (b) recently fallen price, or (c) sustainability concern. Check the trend before buying.">Hi-Yld <b>${c.hi}</b></button>
-    <button class="vf-pill ${mode === 'etf' ? 'active' : ''}" onclick="setTypeFilter('etf')" title="Show only ETFs (basket funds).\n\nETFs hold dozens or hundreds of stocks in one ticker. Lower risk than single stocks; lower max upside too.">ETF <b>${c.etf}</b></button>
-    <button class="vf-pill ${mode === 'stock' ? 'active' : ''}" onclick="setTypeFilter('stock')" title="Show only individual stocks (no ETFs / funds).\n\nDirect ownership in one company. Higher potential return AND higher risk than ETFs.">Stocks <b>${c.stk}</b></button>
+    ${pill('dividend', 'Div',    c.div, 'Show only stocks that pay any dividend (yield > 0). Click again to clear.\n\nDividends = cash payments to shareholders, usually quarterly. Sign of a mature, profitable company.')}
+    ${pill('hi_yield', 'Hi-Yld', c.hi,  'Show only stocks with dividend yield ≥ 4%. Click again to clear.\n\nHigh yield = bigger income but often signals: (a) mature/slow-growth company, (b) recently fallen price, or (c) sustainability concern. Check the trend before buying.')}
+    ${pill('etf',      'ETF',    c.etf, 'Show only ETFs (basket funds). Click again to clear.\n\nETFs hold dozens or hundreds of stocks in one ticker. Lower risk than single stocks; lower max upside too.')}
+    ${pill('stock',    'Stocks', c.stk, 'Show only individual stocks (no ETFs / funds). Click again to clear.\n\nDirect ownership in one company. Higher potential return AND higher risk than ETFs.')}
   `;
 }
 
@@ -11994,11 +12059,15 @@ function updateVerdictFilterPills() {
   if (!host) return;
   const c = countByVerdictBucket();
   const mode = _watchlistVerdictFilter;
+  // User feedback 2026-05-19 "simplify the UI and filters": dropped the
+  // explicit "All" pill — clicking the active pill again deselects it
+  // (modern toggle pattern). Zero-count pills are hidden to reduce noise.
+  const pill = (key, label, cls, count, tip) => count === 0 ? '' :
+    `<button class="vf-pill ${cls} ${mode === key ? 'active' : ''}" onclick="setVerdictFilter(${mode === key ? 'null' : `'${key}'`})" title="${tip}">${label} <b>${count}</b></button>`;
   host.innerHTML = `
-    <button class="vf-pill ${mode === null ? 'active' : ''}" onclick="setVerdictFilter(null)" title="Show all tickers regardless of verdict">All <b>${c.all}</b></button>
-    <button class="vf-pill vf-buy ${mode === 'buy' ? 'active' : ''}" onclick="setVerdictFilter('buy')" title="Show only BUY or STRONG BUY tickers">Buy <b>${c.buy}</b></button>
-    <button class="vf-pill vf-hold ${mode === 'hold' ? 'active' : ''}" onclick="setVerdictFilter('hold')" title="Show only HOLD tickers">Hold <b>${c.hold}</b></button>
-    <button class="vf-pill vf-sell ${mode === 'sell' ? 'active' : ''}" onclick="setVerdictFilter('sell')" title="Show only SELL or STRONG SELL tickers">Sell <b>${c.sell}</b></button>
+    ${pill('buy',  'Buy',  'vf-buy',  c.buy,  'Show only BUY or STRONG BUY tickers (click again to clear)')}
+    ${pill('hold', 'Hold', 'vf-hold', c.hold, 'Show only HOLD tickers (click again to clear)')}
+    ${pill('sell', 'Sell', 'vf-sell', c.sell, 'Show only SELL or STRONG SELL tickers (click again to clear)')}
   `;
 }
 function toggleSimSet(t) {
@@ -14938,9 +15007,10 @@ function renderSectorsFilterPills() {
       { v:'cross3', l:'All-rounders (≥ 3 goals)',  t:'Stocks that rank in the top 20 across at least 3 of the 5 goals — strongest cross-style picks' },
     ])}
     ${row('Buy timing', 'timing', [
-      { v:'all',        l:'Any',        t:'No timing filter — show all stocks regardless of buy-now / wait recommendation' },
-      { v:'BUY_NOW',    l:'Buy now',    t:'Stocks where the model expects a positive 12M return AND conditions favour an immediate entry' },
-      { v:'BUY_ON_DIP', l:'Buy on dip', t:'Strong forecast but the stock is overbought / stretched above MA40 — wait for a 5–10% pullback' },
+      { v:'all',         l:'Any',            t:'No timing filter — show all stocks regardless of buy-now / wait recommendation' },
+      { v:'BUY_NOW',     l:'Buy now',        t:'Stocks where the model expects a positive 12M return AND trend is intact (price above MA40, not overbought)' },
+      { v:'EARLY_RALLY', l:'Ahead of rally', t:'Model forecasts a positive 12M return BUT price is still at/below MA40 and RSI < 65 — entry near trend support, not chasing a breakout' },
+      { v:'BUY_ON_DIP',  l:'Buy on dip',     t:'Strong forecast but the stock is overbought / stretched above MA40 — wait for a 5–10% pullback' },
       { v:'DCA',        l:'DCA',        t:'Positive forecast but high volatility — dollar-cost-average over 4–8 weeks rather than lump-sum' },
       { v:'WAIT',       l:'Wait',       t:'Flat forecast with mixed signals — no clear entry trigger yet, watch for a break' },
       { v:'CONFLICT',   l:'Conflict',   t:'Verdict bullish (BUY or STRONG BUY) BUT forecast bearish (12M < -3%). The two engines disagree — recent technicals favour entry, long-term regression expects mean-reversion downside. Speculative only.' },
@@ -19560,6 +19630,7 @@ function renderWatchlist(filter = '') {
   updateTypeFilterPills();
   updateTimingFilterPills();
   updateInstFilterPills();
+  applyMoreFiltersState();
 
   host.innerHTML = visible.map(t => {
     const d = _data[t];
