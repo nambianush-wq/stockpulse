@@ -87,7 +87,21 @@ function loadApp() {
     performance,
     fetch: () => Promise.reject(new Error('fetch stub — tests must stub fetch per-case')),
     console,
-    LightweightCharts: { createChart: () => ({ remove() {}, addSeries() {}, applyOptions() {} }) },
+    LightweightCharts: {
+      createChart: () => ({
+        remove() {}, applyOptions() {},
+        addSeries: () => ({ setData() {}, createPriceLine() {}, applyOptions() {} }),
+        addCandlestickSeries: () => ({ setData() {}, createPriceLine() {}, applyOptions() {} }),
+        addLineSeries: () => ({ setData() {}, createPriceLine() {}, applyOptions() {} }),
+        addHistogramSeries: () => ({ setData() {}, applyOptions() {} }),
+        timeScale: () => ({ fitContent() {}, applyOptions() {} }),
+        priceScale: () => ({ applyOptions() {} }),
+        subscribeCrosshairMove() {}, unsubscribeCrosshairMove() {},
+      }),
+      CrosshairMode: { Normal: 1, Magnet: 2, Hidden: 3 },
+      LineStyle: { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3, SparseDotted: 4 },
+      PriceLineSource: { LastBar: 0, LastVisible: 1 },
+    },
   };
   sandbox.localStorage = ls;
   sandbox.location = sandbox.window.location;
@@ -95,6 +109,8 @@ function loadApp() {
   sandbox.requestAnimationFrame = sandbox.window.requestAnimationFrame;
   sandbox.cancelAnimationFrame = sandbox.window.cancelAnimationFrame;
   sandbox.matchMedia = sandbox.window.matchMedia;
+  // ResizeObserver stub — used by chart panes after createChart() lands.
+  sandbox.ResizeObserver = function () { return { observe() {}, unobserve() {}, disconnect() {} }; };
   sandbox.fetch = sandbox.window.fetch;
   sandbox.LightweightCharts = sandbox.window.LightweightCharts;
   sandbox.HTMLElement = function () {};
@@ -143,6 +159,8 @@ function loadApp() {
     // Sidebar toggle (topbar)
     '_applyTopbarSidebarToggle', 'toggleSidebar', '_isCockpitSidebarCollapsed',
     'LS_KEY_COCKPIT_SIDEBAR',
+    // Ticker dashboard
+    'renderMain', 'selectTicker', '_selected', '_data',
     // Cockpit + live data
     '_cockpitRenderHeatmap', '_cockpitComputeOverview',
     'fetchTickerBundle', 'fetchBars', 'fetchQuote', 'fetchFinnhubProfile', 'fetchFinnhubMetrics',

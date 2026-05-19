@@ -4191,6 +4191,36 @@ body { padding-bottom: 44px; }
   line-height: 1.55;
   color: var(--text);
 }
+/* Approximate-bars marker — appears when barsSource is hybrid/fallback. The
+   MA40 dollar target in the window text is computed from synthetic-scaled
+   history; this badge + note warns users not to act on the number as if it
+   were a real market support level. (2026-05-19 RCA.) */
+.timing-card-approx {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background: rgba(255,159,10,.16);
+  border: 1px solid rgba(255,159,10,.4);
+  color: var(--warn);
+  cursor: help;
+  vertical-align: middle;
+}
+.timing-card-approx-note {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--warn);
+  background: rgba(255,159,10,.06);
+  border-left: 2px solid rgba(255,159,10,.5);
+  border-radius: 4px;
+}
+.timing-card.approx-bars { /* card-level marker — used by tests + future styling */ }
 .timing-card-conf {
   display: inline-flex;
   align-items: center;
@@ -20744,16 +20774,34 @@ function renderMain() {
 
     <div id="ai-verdict-slot" class="ai-slot"></div>
 
-    <div class="timing-card action-${timing.action}" title="${timing.rationale.replace(/"/g, '&quot;')}">
+    ${(() => {
+      // Data-quality marker — when bars come from the synthetic-scaled hybrid
+      // or full-synthetic fallback path, the MA40-based timing window (e.g.
+      // "Wait for pullback toward MA40 ($160.07)") is computed against a
+      // synthetic baseline scaled to today's live price. The specific dollar
+      // target is NOT a market-real number. Tag the window so users don't
+      // act on the figure as if it were a real support level.
+      // User feedback 2026-05-19 RCA — CVX showed "Buy on a dip · MA40
+      // ($160.07)" while current was $197, derived from synthetic bars.
+      const isApproxBars = d.barsSource === 'hybrid' || d.barsSource === 'fallback';
+      const approxBadge = isApproxBars
+        ? `<span class="timing-card-approx" title="The dollar target is derived from synthetic-scaled history, not real bars (Yahoo + Twelve Data + Finnhub /candle all unavailable for this ticker right now). Use the direction as guidance, not the specific number.">approximate</span>`
+        : '';
+      const approxNote = isApproxBars
+        ? `<div class="timing-card-approx-note">⚠ The MA40 target above is computed from synthetic-shape history scaled to today's live price. Treat the dollar number as approximate; the verdict + 12M forecast remain useful signals.</div>`
+        : '';
+      return `<div class="timing-card action-${timing.action}${isApproxBars ? ' approx-bars' : ''}" title="${timing.rationale.replace(/"/g, '&quot;')}">
       <div class="timing-card-head">
         <div class="timing-card-eyebrow">When to act</div>
         <div class="timing-card-conf" title="How confident the model is in this timing call. Based on the 12-month forecast signal vs noise, plus whether 1Y/3Y trends agree and whether RSI / MA40 confirm.">Confidence ${timing.confidence}%</div>
       </div>
       <div class="timing-card-headline">${timing.label}</div>
-      <div class="timing-card-window">Window: <b style="color:var(--text)">${timing.window}</b></div>
+      <div class="timing-card-window">Window: <b style="color:var(--text)">${timing.window}</b> ${approxBadge}</div>
       <div class="timing-card-rationale">${timing.rationale}</div>
+      ${approxNote}
       ${(timing.action === 'CONFLICT' && hasLLM()) ? `<button class="ai-btn" style="margin-top:10px;" onclick="resolveConflict('${_selected}')" title="${tip('resolveConflict')}"><span class="ai-btn-spark">✦</span> Resolve this conflict</button>` : ''}
-    </div>
+    </div>`;
+    })()}
     <div id="ai-conflict-slot" class="ai-slot"></div>
 
     <div class="ticker-signal-row">
