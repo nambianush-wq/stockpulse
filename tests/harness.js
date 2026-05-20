@@ -111,6 +111,53 @@ function loadApp() {
   sandbox.matchMedia = sandbox.window.matchMedia;
   // ResizeObserver stub — used by chart panes after createChart() lands.
   sandbox.ResizeObserver = function () { return { observe() {}, unobserve() {}, disconnect() {} }; };
+  // Minimal in-memory IndexedDB stub — drives the safety-net C restore-on-load
+  // path so the helper can be exercised headlessly. Only implements open +
+  // transaction + objectStore.get/put with a single 'kv' store.
+  (function () {
+    const dbState = { stores: new Map(), version: 0 };
+    const dbHandle = {
+      objectStoreNames: { contains: (n) => dbState.stores.has(n) },
+      createObjectStore: (name) => { dbState.stores.set(name, new Map()); return {}; },
+      transaction: (storeName) => {
+        const tx = { oncomplete: null, onerror: null, onabort: null };
+        tx.objectStore = () => ({
+          put: (val, key) => {
+            if (!dbState.stores.has(storeName)) dbState.stores.set(storeName, new Map());
+            dbState.stores.get(storeName).set(key, val);
+            setImmediate(() => { if (tx.oncomplete) tx.oncomplete({ target: tx }); });
+            return {};
+          },
+          get: (key) => {
+            const req = { result: undefined, onsuccess: null, onerror: null };
+            setImmediate(() => {
+              const store = dbState.stores.get(storeName);
+              req.result = store ? store.get(key) : undefined;
+              if (req.onsuccess) req.onsuccess({ target: req });
+            });
+            return req;
+          },
+        });
+        return tx;
+      },
+    };
+    sandbox.indexedDB = {
+      open: (/* name, version */) => {
+        const req = { result: dbHandle, onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null };
+        setImmediate(() => {
+          if (dbState.version === 0) {
+            dbState.version = 1;
+            if (req.onupgradeneeded) req.onupgradeneeded({ target: req });
+          }
+          if (req.onsuccess) req.onsuccess({ target: req });
+        });
+        return req;
+      },
+      // Helper for tests to wipe the in-memory IDB between cases
+      _reset: () => { dbState.stores = new Map(); dbState.version = 0; },
+    };
+  })();
+  sandbox.window.indexedDB = sandbox.indexedDB;
   sandbox.fetch = sandbox.window.fetch;
   sandbox.LightweightCharts = sandbox.window.LightweightCharts;
   sandbox.HTMLElement = function () {};
@@ -164,11 +211,25 @@ function loadApp() {
     // Bars cache (RCA 2026-05-19)
     '_readCachedBars', '_writeCachedBars',
     'fetchTwelveDataPrice', 'renderCrossCheckChip', '_lastTdError',
+    // Storage safety nets — IDB backup + recovery banner + export nudge (2026-05-19)
+    '_idbOpen', '_idbPut', '_idbGet', '_IDB_BACKED_KEYS', 'IDB_DB_NAME', 'IDB_STORE',
+    '_restoreFromIdbValue', 'restoreFromIdbOnBoot',
+    '_isFreshDefaultState', '_DEFAULT_WL_FRESH',
+    'showRecoveryBanner', 'LS_KEY_RECOVERY_DISMISSED',
+    'stampLastExport', 'maybeShowExportNudge', '_shouldShowExportNudge',
+    'LS_KEY_LAST_EXPORT', 'LS_KEY_EXPORT_NUDGE_DISMISSED',
+    'LS_KEY_WL', 'LS_KEY_FAVS', 'LS_KEY_SIMSET', 'LS_KEY_BUNDLES',
+    'LS_KEY_WL_BACKUP', 'LS_KEY_FAVS_BACKUP', 'LS_KEY_SIMSET_BACKUP', 'LS_KEY_BUNDLES_BACKUP',
+    'WATCHLIST', 'FAVORITES', 'SIM_SET',
+    'importKeysFromFile', 'exportKeys',
     // Cockpit + live data
     '_cockpitRenderHeatmap', '_cockpitComputeOverview',
     'fetchTickerBundle', 'fetchBars', 'fetchQuote', 'fetchFinnhubProfile', 'fetchFinnhubMetrics',
     'fetchYahooWeekly', 'fetchTwelveDataWeekly',
     'isLive', 'fmt', 'API_KEY', 'TD_API_KEY',
+    // AI / LLM helpers (2026-05-19 leaked-key RCA — smoke needs to invoke
+    // callLLM with a stubbed fetch to exercise the error classifier)
+    'callLLM', 'hasLLM', 'GEMINI_API_KEY', 'LS_KEY_GEMINI',
   ];
   const exportTrailer = ';(' + exported.map(n =>
     `(typeof ${n} !== 'undefined') && (globalThis.${n} = ${n})`

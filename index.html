@@ -12062,7 +12062,7 @@ body.menu-open #mobile-menu-backdrop { display: block; }
 const _SP_BAKED_KEYS = {
   finnhub:    'd84c6e1r01qutij8lm7gd84c6e1r01qutij8lm80',   // operator-baked, Finnhub free tier (60/min)
   twelvedata: 'd10a8e6ee9324f76b507c9a33f87c66a',           // operator-baked, Twelve Data free tier (cross-check)
-  gemini:     'AIzaSyAgLPrdNQvduzwbdyVxxxLwCsftdauvw3o',     // operator-baked, Google Gemini free tier (AI features · ~15 RPM / 1M tokens/day, shared across all visitors)
+  gemini:     '',  // DO NOT BAKE — Google's secret-scanner revoked the prior baked key within ~30 min of public push (2026-05-19 RCA). Google actively scans public GitHub + Pages URLs and revokes leaked keys, returning 403 "API key reported as leaked" or 429 "limit: 0". The bake-in-source pattern that works for Finnhub / Twelve Data does NOT work for Gemini. Personal keys pasted into Settings stay local to the user's browser only and are safe. See CLAUDE.md "Why Gemini cannot be baked publicly" section.
 };
 function _bakedKeyFor(primarySlot) {
   if (primarySlot === LS_KEY_API)    return (_SP_BAKED_KEYS.finnhub    || '').trim();
@@ -12310,6 +12310,188 @@ async function _idbGet(key) {
       req.onerror = () => resolve(null);
     } catch (e) { resolve(null); }
   });
+}
+
+// Per-key writer that targets the right in-memory binding when IDB returns a
+// value the synchronous startup load couldn't see. We mutate in place (no
+// reassign) so `let`-bound module variables stay in sync with anything that
+// already captured a reference.
+function _restoreFromIdbValue(key, val) {
+  if (!val) return false;
+  if (key === LS_KEY_WL && Array.isArray(val) && val.length) {
+    WATCHLIST.length = 0;
+    for (const t of val) if (typeof t === 'string') WATCHLIST.push(t);
+    persistJsonResilient(LS_KEY_WL, LS_KEY_WL_BACKUP, WATCHLIST);
+    return true;
+  }
+  if (key === LS_KEY_FAVS && Array.isArray(val)) {
+    FAVORITES.clear();
+    for (const t of val) if (typeof t === 'string') FAVORITES.add(t);
+    persistSet(LS_KEY_FAVS, FAVORITES);
+    return val.length > 0;
+  }
+  if (key === LS_KEY_SIMSET && Array.isArray(val)) {
+    SIM_SET.clear();
+    for (const t of val) if (typeof t === 'string') SIM_SET.add(t);
+    persistSet(LS_KEY_SIMSET, SIM_SET);
+    return val.length > 0;
+  }
+  if (key === LS_KEY_BUNDLES && Array.isArray(val) && val.length) {
+    SAVED_BUNDLES.length = 0;
+    for (const b of val) SAVED_BUNDLES.push(b);
+    saveBundles();
+    return true;
+  }
+  return false;
+}
+
+// Restore-on-load: for any of the four critical lists that's missing from BOTH
+// localStorage slots, look it up in IDB. Returns { restored: [keys actually
+// replaced], attempted: number of lookups }. Async — callers re-render after
+// the promise resolves; init does not block on it.
+async function restoreFromIdbOnBoot() {
+  const result = { restored: [], attempted: 0 };
+  const pairs = [
+    [LS_KEY_WL, LS_KEY_WL_BACKUP],
+    [LS_KEY_FAVS, LS_KEY_FAVS_BACKUP],
+    [LS_KEY_SIMSET, LS_KEY_SIMSET_BACKUP],
+    [LS_KEY_BUNDLES, LS_KEY_BUNDLES_BACKUP],
+  ];
+  for (const [primary, backup] of pairs) {
+    let pv = '', bv = '';
+    try { pv = localStorage.getItem(primary) || ''; } catch (e) {}
+    try { bv = localStorage.getItem(backup) || ''; } catch (e) {}
+    if (pv || bv) continue;  // localStorage authoritative when present
+    result.attempted++;
+    try {
+      const val = await _idbGet(primary);
+      if (_restoreFromIdbValue(primary, val)) result.restored.push(primary);
+    } catch (e) {}
+  }
+  return result;
+}
+
+// "Wiped or first-load" detection: WATCHLIST is the hardcoded 4-ticker
+// default, FAVORITES + SIM_SET are empty, AND localStorage has nothing in
+// either watchlist slot. State that a returning user lands in after their
+// storage was cleared — the trigger for the recovery banner.
+const _DEFAULT_WL_FRESH = ['ACN', 'AAPL', 'MSFT', 'NVDA'];
+function _isFreshDefaultState() {
+  let lsHasWl = false;
+  try {
+    lsHasWl = !!((localStorage.getItem(LS_KEY_WL) || '').trim()
+              || (localStorage.getItem(LS_KEY_WL_BACKUP) || '').trim());
+  } catch (e) {}
+  if (lsHasWl) return false;
+  if (!Array.isArray(WATCHLIST) || WATCHLIST.length !== _DEFAULT_WL_FRESH.length) return false;
+  for (const t of _DEFAULT_WL_FRESH) if (!WATCHLIST.includes(t)) return false;
+  if (FAVORITES.size > 0) return false;
+  if (SIM_SET.size > 0) return false;
+  return true;
+}
+
+// Recovery banner — safety net A. Shown ONCE per fresh-state detection
+// (dismiss is sticky via LS_KEY_RECOVERY_DISMISSED for 30 days). Routes into
+// the existing importKeysFromFile() flow.
+const LS_KEY_RECOVERY_DISMISSED = 'sp_recovery_banner_dismissed';
+let _recoveryBannerMounted = false;
+function showRecoveryBanner() {
+  if (_recoveryBannerMounted) return false;
+  let dismissedAt = 0;
+  try { dismissedAt = parseInt(localStorage.getItem(LS_KEY_RECOVERY_DISMISSED) || '0', 10); } catch (e) {}
+  if (dismissedAt && (Date.now() - dismissedAt) < (30 * 24 * 60 * 60 * 1000)) return false;
+  const el = document.createElement('div');
+  el.id = 'sp-recovery-banner';
+  el.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);' +
+    'z-index:10000;max-width:560px;background:#1c2333;border:1px solid #3a4664;' +
+    'border-radius:10px;padding:14px 16px;color:#e6ecff;font:13px/1.45 Inter,system-ui,sans-serif;' +
+    'box-shadow:0 8px 30px rgba(0,0,0,0.45);';
+  el.innerHTML =
+    '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Looks like first-load or wiped storage</div>' +
+    '<div style="color:#9aa6c2;margin-bottom:10px">Your watchlist is the default 4 tickers with no favorites or sim set. ' +
+    'If you have a previous backup file, import it now.</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+      '<button id="sp-recovery-dismiss" type="button" style="background:transparent;border:1px solid #3a4664;color:#9aa6c2;padding:6px 12px;border-radius:6px;cursor:pointer">Dismiss</button>' +
+      '<button id="sp-recovery-import" type="button" style="background:#6366f1;border:0;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600">Import backup</button>' +
+    '</div>';
+  document.body.appendChild(el);
+  _recoveryBannerMounted = true;
+  const dismissBtn = document.getElementById('sp-recovery-dismiss');
+  const importBtn = document.getElementById('sp-recovery-import');
+  const tearDown = () => { _recoveryBannerMounted = false; el.remove(); };
+  if (dismissBtn) dismissBtn.addEventListener('click', () => {
+    try { localStorage.setItem(LS_KEY_RECOVERY_DISMISSED, String(Date.now())); } catch (e) {}
+    tearDown();
+  });
+  if (importBtn) importBtn.addEventListener('click', () => {
+    tearDown();
+    try { localStorage.setItem(LS_KEY_RECOVERY_DISMISSED, String(Date.now())); } catch (e) {}
+    if (typeof importKeysFromFile === 'function') importKeysFromFile();
+  });
+  return true;
+}
+
+// Periodic export reminder — safety net B. Once the watchlist passes 5 tickers
+// AND no export has happened in the last 14 days, surface a small nudge.
+// Tracking lives in LS_KEY_LAST_EXPORT (timestamp ms).
+const LS_KEY_LAST_EXPORT = 'sp_last_export_at';
+const LS_KEY_EXPORT_NUDGE_DISMISSED = 'sp_export_nudge_dismissed_at';
+let _exportNudgeMounted = false;
+function stampLastExport() {
+  try { localStorage.setItem(LS_KEY_LAST_EXPORT, String(Date.now())); } catch (e) {}
+  try { localStorage.removeItem(LS_KEY_EXPORT_NUDGE_DISMISSED); } catch (e) {}
+  if (_exportNudgeMounted) {
+    const el = document.getElementById('sp-export-nudge');
+    if (el && typeof el.remove === 'function') el.remove();
+    _exportNudgeMounted = false;
+  }
+}
+function _shouldShowExportNudge() {
+  if (!Array.isArray(WATCHLIST) || WATCHLIST.length <= 5) return false;
+  let lastExport = 0;
+  try { lastExport = parseInt(localStorage.getItem(LS_KEY_LAST_EXPORT) || '0', 10); } catch (e) {}
+  const now = Date.now();
+  if (lastExport && (now - lastExport) < (14 * 24 * 60 * 60 * 1000)) return false;
+  let dismissed = 0;
+  try { dismissed = parseInt(localStorage.getItem(LS_KEY_EXPORT_NUDGE_DISMISSED) || '0', 10); } catch (e) {}
+  if (dismissed && (now - dismissed) < (7 * 24 * 60 * 60 * 1000)) return false;
+  return true;
+}
+function maybeShowExportNudge() {
+  if (!_shouldShowExportNudge()) return false;
+  if (_exportNudgeMounted) return false;
+  let lastExport = 0;
+  try { lastExport = parseInt(localStorage.getItem(LS_KEY_LAST_EXPORT) || '0', 10); } catch (e) {}
+  const label = lastExport
+    ? `Last backup: ${Math.floor((Date.now() - lastExport) / (24 * 60 * 60 * 1000))}d ago`
+    : 'Last backup: never';
+  const el = document.createElement('div');
+  el.id = 'sp-export-nudge';
+  el.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;max-width:320px;' +
+    'background:#1c2333;border:1px solid #3a4664;border-radius:10px;padding:12px 14px;' +
+    'color:#e6ecff;font:12px/1.45 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+  el.innerHTML =
+    `<div style="font-weight:600;margin-bottom:2px">${label}</div>` +
+    `<div style="color:#9aa6c2;margin-bottom:8px">Protect your ${WATCHLIST.length}-ticker watchlist + favorites + bundles. ` +
+    `Export now in case storage gets wiped.</div>` +
+    '<div style="display:flex;gap:6px;justify-content:flex-end">' +
+      '<button id="sp-nudge-dismiss" type="button" style="background:transparent;border:1px solid #3a4664;color:#9aa6c2;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px">Later</button>' +
+      '<button id="sp-nudge-export" type="button" style="background:#6366f1;border:0;color:white;padding:4px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">Export now</button>' +
+    '</div>';
+  document.body.appendChild(el);
+  _exportNudgeMounted = true;
+  const dismissBtn = document.getElementById('sp-nudge-dismiss');
+  const exportBtn = document.getElementById('sp-nudge-export');
+  const tearDown = () => { _exportNudgeMounted = false; el.remove(); };
+  if (dismissBtn) dismissBtn.addEventListener('click', () => {
+    try { localStorage.setItem(LS_KEY_EXPORT_NUDGE_DISMISSED, String(Date.now())); } catch (e) {}
+    tearDown();
+  });
+  if (exportBtn) exportBtn.addEventListener('click', () => {
+    tearDown();
+    if (typeof exportKeys === 'function') exportKeys();
+  });
+  return true;
 }
 
 // Storage-health snapshot covering EVERY user-data list. Used by the Settings
@@ -14683,6 +14865,20 @@ async function callLLM(prompt, opts) {
       });
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
+        // Google has TWO distinct "key permanently dead" signals that the
+        // prior coarse classifier conflated with a transient rate-limit:
+        //   • 403 + "API key ... reported as leaked"  →  scanner-revoked
+        //   • 429 + "limit: 0"                        →  quota allocation = 0
+        // Both are TERMINAL for this key — surface as 'leaked' so the UI
+        // tells the user to paste a NEW key in Settings, not "wait a minute
+        // and try again" (which won't help — the key is disabled).
+        const detailLc = (detail || '').toLowerCase();
+        const leakedShape = detailLc.includes('reported as leaked')
+                         || detailLc.includes('api_key_invalid')
+                         || (res.status === 429 && detailLc.includes('limit: 0'));
+        if (leakedShape) {
+          return { ok: false, error: 'leaked', text: '', detail };
+        }
         if (res.status === 401 || res.status === 403) {
           return { ok: false, error: 'auth', text: '', detail };
         }
@@ -15034,6 +15230,7 @@ async function resolveConflict(ticker) {
 function _aiErrorMsg(out) {
   const link = `<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>`;
   if (out.error === 'no_key')     return `Add a Gemini key in <b>⚙ Settings</b> to enable this. Free at ${link}.`;
+  if (out.error === 'leaked')     return `<b style="color:var(--bear)">This Gemini key is disabled.</b> Google's secret-scanner revokes API keys it finds in public source code or quota is set to zero, so the response says <i>"reported as leaked"</i> or <i>"limit: 0"</i>. Waiting will not fix it — open <b>⚙ Settings</b> and paste your own Gemini key from ${link} (free, no card, 2-minute setup). Your personal key stays in this browser only and is safe.`;
   if (out.error === 'auth')       return `<b style="color:var(--bear)">Gemini key rejected (HTTP 401/403).</b> Open <b>⚙ Settings</b> and paste a fresh key from ${link}.`;
   if (out.error === 'rate_limit') return `Gemini free-tier rate limit hit (~15/min). Wait a minute and click again — cached answers stay free.`;
   if (out.error === 'blocked')    return `Gemini's safety filter blocked the response${out.detail ? ` (${_escapeHtml(out.detail)})` : ''}. Try again — usually transient on financial prompts.`;
@@ -21791,6 +21988,9 @@ function exportKeys() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  // Safety-net B — stamp the timestamp so the export-reminder nudge stops
+  // firing for the next 14 days.
+  stampLastExport();
   const counts = `${WATCHLIST.length} watchlist · ${FAVORITES.size} favorites · ${SIM_SET.size} sim · ${SAVED_BUNDLES.length} bundles`;
   showToast({ title: 'Backup exported', body: `Keys + ${counts}. Saved to Downloads. Keep this file private.`, type: 'bull' });
 }
@@ -22025,15 +22225,41 @@ async function init() {
   if (_currentView === 'cockpit') renderCockpit();
   // Re-pick the initial ticker now that _data has loaded — the sidebar sort
   // by heat score may put a different ticker at the top than WATCHLIST[0].
-  // Only swap if the user hasn't navigated away from the initial selection.
+  // Always re-render the main pane (even when the user is currently on
+  // Cockpit) — #content is hidden behind display:none, so the work is
+  // invisible, but the stale ACN HTML from the pre-refreshAll renderMain()
+  // would otherwise surface the moment the user clicks the Watchlist tab.
   const heatTop = pickInitialSelected();
   if (heatTop && heatTop !== _selected && _data[heatTop]) {
     _selected = heatTop;
     renderWatchlist();
-    if (_currentView === 'watchlist') renderMain();
+    renderMain();
   }
   startRefreshTimer();
   if (synced > 0) showToast({ title: `${synced} favorite${synced === 1 ? '' : 's'} synced to watchlist`, body: 'Starred stocks are now tracked.', type: 'bull' });
+  // Safety nets A + B + C — kick off AFTER the main paint so they don't delay
+  // first interaction. IDB restore is async; if it succeeds we re-render and
+  // skip the banner. If nothing was restored AND we're still in fresh-state,
+  // show the recovery banner. The export-reminder nudge is independent.
+  try {
+    const idb = await restoreFromIdbOnBoot();
+    if (idb.restored.length > 0) {
+      // Refresh every surface that reads the restored lists
+      updateSidebarCounters();
+      renderWatchlist();
+      if (_currentView === 'cockpit' && typeof renderCockpit === 'function') renderCockpit();
+      showToast({
+        title: `Restored from backup`,
+        body: `Recovered ${idb.restored.length} list${idb.restored.length === 1 ? '' : 's'} from IndexedDB backup. Export to a file as a second safety net.`,
+        type: 'bull',
+      });
+    } else if (_isFreshDefaultState()) {
+      showRecoveryBanner();
+    }
+  } catch (e) { /* IDB unavailable — tolerate silently */ }
+  // Export-reminder nudge — fires once per session if the watchlist is big
+  // enough and no recent export exists.
+  try { maybeShowExportNudge(); } catch (e) {}
 }
 
 document.addEventListener('DOMContentLoaded', init);
