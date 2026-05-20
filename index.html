@@ -12672,8 +12672,8 @@ const TIP = {
   crossGoal: "Cross-Goal Strength — the small G · P · I · V · M letters on each tile.\n\nWhat this means: G=Growth, P=Preservation, I=Income, V=Value, M=Momentum. Filled letters mean this ticker is in the top-20 for that goal. More filled letters = stronger across multiple investment styles.",
   moodScale: "Sector mood — overall health rating from STRONG (deep green) to WEAK (deep red).\n\nWhat this means: Aggregates the verdicts and forecasts of every stock in the sector. STRONG = broad bullish read. HEALTHY = mostly bullish. MIXED = no clear direction. SOFT = leaning bearish. WEAK = broad bearish read.",
   pace: "Pace vs Forecast — how the bundle is tracking against the 12-month forecast prorated for elapsed days.\n\nWhat this means: 'Ahead of pace' = doing BETTER than the forecast predicted at this point. 'Behind pace' = doing WORSE than predicted. The forecast was set the day you saved the bundle; pace tells you if reality is beating or missing the plan.",
-  whyVerdict: "Asks Google Gemini (the free LLM) to explain the verdict in plain English.\n\nWhat this does: Sends the verdict score + driving signals + recent news headlines + 12M forecast to Gemini 2.5 Flash and gets back a 3-4 sentence explanation of WHY the model rates this stock the way it does — including any disagreement between the chart and the news.\n\nWhy this matters: The heat score is a number. The signals list is technical jargon. This turns both into a sentence that says \"the chart is bullish BUT the company just guided down — consider waiting.\" It's the human read on top of the math.\n\nRequires a free Gemini key (Settings → Google Gemini API key). Without one, this button is hidden. Free tier: ~15 requests/minute, 1M tokens/day — no credit card. Answers are cached for 24h per ticker so re-clicking is instant and free.\n\nIMPORTANT: AI-generated explanations are advisory, not investment advice. Always cross-check with the signal table.",
-  resolveConflict: "Asks Google Gemini (the free LLM) how to handle a CONFLICT timing signal.\n\nWhat this does: CONFLICT means the chart says one thing (e.g. bullish technicals) and the forecast says another (e.g. bearish 12M return). The timing engine refuses to commit. This button asks Gemini to (1) name which side is pulling each way in plain English, (2) say which side has more current evidence, and (3) propose ONE concrete action — e.g. \"half-size DCA over 3 buys\", \"wait for next earnings\", \"skip entirely\".\n\nWhy this matters: Without this, a CONFLICT chip leaves you stuck with no next step. The model can read the recent news and weigh which side is more credible right now.\n\nRequires a free Gemini key (Settings). Cached for 24h. AI-suggested posture, not investment advice — size to your own risk tolerance.",
+  whyVerdict: "Asks a free LLM to explain the verdict in plain English.\n\nWhat this does: Sends the verdict score + driving signals + recent news headlines + 12M forecast to Groq (Llama 3.3 70B) and streams back a 3-4 sentence explanation of WHY the model rates this stock the way it does — including any disagreement between the chart and the news.\n\nWhy this matters: The heat score is a number. The signals list is technical jargon. This turns both into a sentence like \"the chart is bullish BUT the company just guided down — consider waiting.\" It's the human read on top of the math.\n\nProvider: Groq (free) by default. If no Groq key is set, falls back to an in-browser Qwen2.5-0.5B model (~400 MB one-time download, then runs offline). Either way, no card required. Answers are cached for 24h per ticker so re-clicking is instant and free.\n\nIMPORTANT: AI-generated explanations are advisory, not investment advice. Always cross-check with the signal table.",
+  resolveConflict: "Asks a free LLM how to handle a CONFLICT timing signal.\n\nWhat this does: CONFLICT means the chart says one thing (e.g. bullish technicals) and the forecast says another (e.g. bearish 12M return). The timing engine refuses to commit. This button asks Groq (or the in-browser fallback) to (1) name which side is pulling each way in plain English, (2) say which side has more current evidence, and (3) propose ONE concrete action — e.g. \"half-size DCA over 3 buys\", \"wait for next earnings\", \"skip entirely\".\n\nWhy this matters: Without this, a CONFLICT chip leaves you stuck with no next step. The model can read the recent news and weigh which side is more credible right now.\n\nProvider: Groq by default, in-browser fallback when no key. Cached for 24h. AI-suggested posture, not investment advice — size to your own risk tolerance.",
 };
 function tip(key) { return (TIP[key] || '').replace(/"/g, '&quot;'); }
 
@@ -15092,7 +15092,7 @@ async function callLocalLLM(prompt, opts) {
 }
 
 // ============================================================
-// AI features — Google Gemini Flash (free tier) explainability
+// AI features — Groq Llama 3.3 70B (free tier) explainability
 // ============================================================
 // Powers two on-demand surfaces on the ticker dashboard:
 //
@@ -15516,7 +15516,7 @@ async function whyVerdict(ticker) {
   try { console.log('[StockPulse] whyVerdict click:', ticker, 'hasLLM=', hasLLM()); } catch (e) {}
   if (!hasLLM()) {
     _aiModalShow('AI explanations require a key',
-      `<div class="ai-empty">Add a Google Gemini key in <b>⚙ Settings</b> to unlock AI explanations. Free tier — no credit card required at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.<br><br>Alternatively, enable the <b>in-browser LLM fallback</b> in Settings — runs entirely on your device, no key required (~400 MB one-time download).</div>`,
+      `<div class="ai-empty">Add a free <b>Groq</b> key in <b>⚙ Settings</b> to unlock AI explanations. No credit card required at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>.<br><br>Alternatively, enable the <b>in-browser LLM fallback</b> in Settings — runs entirely on your device, no key required (~400 MB one-time download).</div>`,
       '');
     return;
   }
@@ -15580,7 +15580,7 @@ async function resolveConflict(ticker) {
   try { console.log('[StockPulse] resolveConflict click:', ticker, 'hasLLM=', hasLLM()); } catch (e) {}
   if (!hasLLM()) {
     _aiModalShow('AI explanations require a key',
-      `<div class="ai-empty">Add a Google Gemini key in <b>⚙ Settings</b> to get a concrete conflict-resolution suggestion.<br><br>Alternatively, enable the <b>in-browser LLM fallback</b> in Settings — runs entirely on your device, no key required.</div>`,
+      `<div class="ai-empty">Add a free <b>Groq</b> key in <b>⚙ Settings</b> to get a concrete conflict-resolution suggestion.<br><br>Alternatively, enable the <b>in-browser LLM fallback</b> in Settings — runs entirely on your device, no key required.</div>`,
       '');
     return;
   }
@@ -15744,7 +15744,7 @@ function _aiErrorMsg(out) {
   if (out.error === 'empty')             return `${out.source === 'local' ? 'Local model' : 'Groq'} returned no answer. Try again.`;
   if (out.error === 'network')           return `Network error reaching Groq: <code>${_escapeHtml(out.detail || '')}</code>. Check connectivity and retry. (Tip: enable the in-browser LLM fallback in Settings to keep working offline.)`;
   if (out.error === 'local_unavailable') return `<b style="color:var(--bear)">In-browser model couldn't load.</b> ${_escapeHtml(out.detail || 'unknown')}. Most common causes: (1) the CDN at <code>cdn.jsdelivr.net/npm/@huggingface/transformers</code> is blocked, (2) the browser doesn't support WebAssembly + WebGPU/WASM SIMD (need Chrome 113+ / Edge / Safari 18+ / Firefox 121+), or (3) IndexedDB quota is too small to cache the 400 MB model. Open Settings and either add a Gemini key OR untick the in-browser fallback.`;
-  if (out.error === 'local_error')       return `<b style="color:var(--bear)">In-browser model failed to generate:</b> <code>${_escapeHtml(out.detail || 'unknown')}</code>. The model loaded but inference crashed (typically WebGPU memory exhaustion on a small GPU). Try refreshing or fall back to a Gemini key in Settings.`;
+  if (out.error === 'local_error')       return `<b style="color:var(--bear)">In-browser model failed to generate:</b> <code>${_escapeHtml(out.detail || 'unknown')}</code>. The model loaded but inference crashed (typically WebGPU memory exhaustion on a small GPU). Try refreshing or paste a Groq key in Settings.`;
   return `AI call failed: ${_escapeHtml(out.error || 'unknown')}${out.detail ? ` — ${_escapeHtml(out.detail).slice(0, 200)}` : ''}.`;
 }
 
