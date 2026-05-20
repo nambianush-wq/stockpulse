@@ -92,9 +92,24 @@ const SCENARIOS = [
   // app.GEMINI_API_KEY directly doesn't update what hasLLM() sees. We have
   // to mutate the binding by running a one-liner inside the same vm context.
   vm.runInContext('GEMINI_API_KEY = "fake-test-key"', app);
+  // Scenarios 1-5 test the Gemini classifier in isolation. The 2026-05-20
+  // "seamless" change auto-promotes LOCAL_LLM_ENABLED on terminal errors —
+  // which is the BEHAVIOUR we want in production but masks the underlying
+  // classifier verdict in this harness. Force the flag OFF for 1-5 so the
+  // raw Gemini error is what reaches the assertion. Scenarios 6+7 below
+  // explicitly test the auto-promote path with their own setup.
+  vm.runInContext('LOCAL_LLM_ENABLED = false; localStorage.setItem("sp_local_llm_enabled", "0");', app);
+  // Clear any dead-key cache between scenarios so each one re-exercises
+  // the Gemini classifier instead of being short-circuited by a prior
+  // scenario's _markGeminiKeyDead.
+  const resetBetweenScenarios = () => {
+    app.localStorage.removeItem('sp_gemini_dead_keys');
+    vm.runInContext('LOCAL_LLM_ENABLED = false', app);
+  };
 
   const results = [];
   for (const s of SCENARIOS) {
+    resetBetweenScenarios();
     // Per-scenario fetch stub. `fetch` is a sandbox property (not a let-
     // bound lexical), so writing it on the sandbox object IS picked up by
     // the inline script's `fetch(...)` calls.
@@ -119,13 +134,65 @@ const SCENARIOS = [
     });
   }
 
+  // ---- Additional 2026-05-20 scenarios for the "seamless" pass ----
+  //
+  // 6. Dead-key short-circuit: once 'leaked' is detected, the SAME key's
+  //    fingerprint is cached in LS so the NEXT call skips Gemini entirely
+  //    and routes to local. We assert fetch is NOT invoked on the second
+  //    call when LOCAL_LLM_ENABLED was auto-promoted by the first call.
+  //
+  // 7. Auto-enable of LOCAL_LLM_ENABLED: after a 'leaked' response and
+  //    when the user has NOT explicitly set LS_KEY_LOCAL_LLM to '0', the
+  //    flag flips to true in memory and in LS — proving the seamless
+  //    fallback fired without any user action.
+
+  // Reset for scenario 6+7
+  app.localStorage.removeItem('sp_gemini_dead_keys');
+  app.localStorage.removeItem('sp_local_llm_enabled');
+  // Make LOCAL_LLM_ENABLED false at the binding level — would otherwise
+  // be set by earlier scenarios.
+  vm.runInContext('LOCAL_LLM_ENABLED = false', app);
+  // Trap _loadLocalLLM so the fallback call doesn't actually try to
+  // import @huggingface/transformers (no CDN reach from Node).
+  vm.runInContext(`_loadLocalLLM = async () => ({ tokenizer: null });
+  callLocalLLM = async (prompt, opts) => {
+    if (opts && opts.onChunk) try { opts.onChunk('FALLBACK-OK'); } catch (e) {}
+    return { ok: true, text: 'FALLBACK-OK', source: 'local' };
+  };`, app);
+
+  // Scenario 6 — first call returns leaked, dead-key cache + auto-enable
+  let fetchCalls = 0;
+  app.fetch = async () => { fetchCalls++; return makeRes(429, JSON.stringify({ error: { message: 'limit: 0 quota' } })); };
+  app.window.fetch = app.fetch;
+  const r6a = await callLLM('test', { cacheKey: null });
+  const localEnabledAfter = vm.runInContext('LOCAL_LLM_ENABLED', app);
+  const deadCacheRaw = app.localStorage.getItem('sp_gemini_dead_keys') || '';
+  const r6_pass = r6a.ok === true
+               && r6a.source === 'local'
+               && r6a.fellBackFrom === 'leaked'
+               && localEnabledAfter === true
+               && deadCacheRaw.length > 0;
+  console.log(`  ${r6_pass ? 'PASS' : 'FAIL'}  6. seamless: leaked → auto-enable local + cache dead key + fall back same call`);
+  console.log(`        ok=${r6a.ok} src=${r6a.source} fellBack=${r6a.fellBackFrom} localEnabled=${localEnabledAfter} deadCacheSet=${deadCacheRaw.length>0}`);
+
+  // Scenario 7 — second call MUST skip Gemini (no fetch hit)
+  const fetchCallsBefore = fetchCalls;
+  const r7 = await callLLM('test 2', { cacheKey: null });
+  const r7_pass = r7.ok === true && r7.source === 'local' && fetchCalls === fetchCallsBefore;
+  console.log(`  ${r7_pass ? 'PASS' : 'FAIL'}  7. dead-key short-circuit: second call routes straight to local, no fetch`);
+  console.log(`        ok=${r7.ok} src=${r7.source} fetchCalls(before/after)=${fetchCallsBefore}/${fetchCalls}`);
+
+  results.push({ name: '6. seamless leaked → auto-enable + fallback', pass: r6_pass, detail: '' });
+  results.push({ name: '7. dead-key short-circuit', pass: r7_pass, detail: '' });
+
   let pass = 0, fail = 0;
   for (const r of results) {
     const tag = r.pass ? 'PASS' : 'FAIL';
+    if (!r.detail) continue;   // already printed inline for 6/7
     console.log(`  ${tag}  ${r.name}`);
     console.log(`        ${r.detail}`);
-    if (r.pass) pass++; else fail++;
   }
-  console.log(`\nGemini leaked-key classifier smoke: ${pass}/${pass+fail} scenarios passed`);
+  for (const r of results) { if (r.pass) pass++; else fail++; }
+  console.log(`\nGemini leaked-key + seamless-fallback smoke: ${pass}/${pass+fail} scenarios passed`);
   if (fail > 0) process.exit(1);
 })().catch(e => { console.error('Harness crashed:', e); process.exit(2); });
