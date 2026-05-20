@@ -14849,28 +14849,55 @@ function _aiErrorMsg(out) {
 // ---- Twelve Data cross-check (secondary provider for price sanity check) ----
 function isCrossCheck() { return !!TD_API_KEY; }
 const _crossCheckCache = {};
+// Last-known TD error for the cross-check chip to surface in plain language.
+// Cleared when the next call succeeds. Kept module-local — no localStorage.
+let _lastTdError = null;
 async function fetchTwelveDataPrice(ticker) {
-  if (!TD_API_KEY) return null;
+  if (!TD_API_KEY) { _lastTdError = 'no_key'; return null; }
   const cached = _crossCheckCache[ticker];
-  if (cached && (Date.now() - cached.ts) < 60000) return cached.price;
+  if (cached && (Date.now() - cached.ts) < 60000) { _lastTdError = null; return cached.price; }
   try {
     const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(ticker)}&apikey=${encodeURIComponent(TD_API_KEY)}`;
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok) { _lastTdError = `http_${res.status}`; return null; }
     const j = await res.json();
-    if (!j || j.status === 'error' || !j.price) return null;
+    if (j && j.status === 'error') {
+      // Distinguish rate-limit (code 429 / "API credits" message) from other
+      // errors so the cross-check chip can show actionable copy.
+      const msg = String(j.message || '').toLowerCase();
+      _lastTdError = (j.code === 429 || msg.includes('api credit') || msg.includes('rate limit') || msg.includes('out of api'))
+        ? 'rate_limited'
+        : 'api_error';
+      return null;
+    }
+    if (!j || !j.price) { _lastTdError = 'no_price'; return null; }
     const price = parseFloat(j.price);
-    if (isNaN(price) || price <= 0) return null;
+    if (isNaN(price) || price <= 0) { _lastTdError = 'no_price'; return null; }
     _crossCheckCache[ticker] = { price, ts: Date.now() };
+    _lastTdError = null;
     return price;
-  } catch (e) { return null; }
+  } catch (e) { _lastTdError = 'network'; return null; }
 }
 
 function renderCrossCheckChip(ticker, fhPrice, tdPrice) {
   const slot = document.getElementById('cross-check-slot');
   if (!slot) return;
   if (tdPrice == null) {
-    slot.innerHTML = `<div class="cross-check warn" title="Twelve Data returned no quote — symbol may not be supported or rate limit hit">⇄ Cross-check: Twelve Data returned no quote for ${ticker}</div>`;
+    // Surface the specific failure reason so the user understands WHY,
+    // and what (if anything) to do. RCA 2026-05-19: the generic "no quote"
+    // message hid the fact that TD was rate-limited 9 tickers ago.
+    const reason = _lastTdError;
+    const reasonText =
+        reason === 'rate_limited' ? `Twelve Data rate-limit hit (free tier = 8 quotes/min). Refresh in ~60s to retry.`
+      : reason === 'no_key'       ? `Twelve Data key not configured — open Settings to add one.`
+      : reason === 'no_price'     ? `Twelve Data has no quote for <b>${ticker}</b> (symbol may not be supported on the free tier).`
+      : reason === 'http_429'     ? `Twelve Data rate-limit hit (HTTP 429). Refresh in ~60s.`
+      : reason === 'network'      ? `Twelve Data fetch failed — possible network / CORS issue.`
+      :                              `Twelve Data returned no quote for <b>${ticker}</b>.`;
+    const tipText =
+        reason === 'rate_limited' ? `Free tier is 8 calls/minute. With many tickers on the page, some don't get cross-checked. Wait a minute and refresh, or switch to a paid TD plan.`
+      :                              `Twelve Data returned no usable quote. Symbol may not be supported, key may be invalid, or the API is degraded.`;
+    slot.innerHTML = `<div class="cross-check warn" title="${tipText.replace(/"/g, '&quot;')}">⇄ Cross-check unavailable · ${reasonText}</div>`;
     return;
   }
   const delta = tdPrice - fhPrice;
@@ -14958,10 +14985,25 @@ function demoMetrics(ticker, bars) {
 //   5. Pure synthetic + freetier banner.
 async function fetchBars(ticker) {
   if (isLive()) {
+    // 0) localStorage bars cache — 24h TTL. RCA 2026-05-19: in production,
+    // Yahoo is CORS-blocked from github.io AND Twelve Data hits its 8/min
+    // rate limit when 17+ tickers fire on Watchlist load. Without a cache,
+    // ticker #9 onwards fell to hybrid (synthetic) on every refresh.
+    // With this cache: first load gets ~8 real tickers + the rest hybrid;
+    // every subsequent visit gets all cached tickers instantly with zero
+    // API calls, and slowly fills the remainder over time.
+    const cached = _readCachedBars(ticker);
+    if (cached) {
+      return { bars: cached, source: 'twelvedata' };
+    }
     // 1) Yahoo Finance chart — free, no key, returns real OHLCV.
+    // (NOTE: Yahoo's /chart endpoint sends no CORS headers and is blocked
+    // by browsers from non-yahoo origins. Kept in chain for local dev /
+    // server-side environments where CORS isn't enforced.)
     try {
       const yBars = await fetchYahooWeekly(ticker);
       if (yBars && yBars.length > 100) {
+        _writeCachedBars(ticker, yBars, 'yahoo');
         return { bars: yBars, source: 'yahoo' };
       }
     } catch (_yErr) {
@@ -14973,6 +15015,7 @@ async function fetchBars(ticker) {
       try {
         const tdBars = await fetchTwelveDataWeekly(ticker);
         if (tdBars && tdBars.length > 100) {
+          _writeCachedBars(ticker, tdBars, 'twelvedata');
           return { bars: tdBars, source: 'twelvedata' };
         }
       } catch (_tdErr) {
@@ -14982,6 +15025,7 @@ async function fetchBars(ticker) {
     // 3) Finnhub /candle (paid tier).
     try {
       const bars = await fetchFinnhubWeekly(ticker);
+      _writeCachedBars(ticker, bars, 'live');
       return { bars, source: 'live' };
     } catch (e) {
       const errMsg = (e && e.message) || 'fetch failed';
@@ -15013,6 +15057,36 @@ async function fetchBars(ticker) {
     }
   }
   return { bars: generateDemoBars(ticker), source: 'demo' };
+}
+
+// localStorage-backed cache for real OHLCV bars. 24h TTL — weekly bars
+// don't change minute-to-minute, and free-tier rate limits make
+// re-fetching wasteful. Critical for production where TD's 8/min limit
+// blocks 9+ tickers on every page load (RCA 2026-05-19). Once a ticker's
+// bars are in cache, subsequent loads never hit the network — solving
+// the rate-limit cascade on watchlists of 10+ symbols.
+const LS_KEY_BARS_CACHE_PREFIX = 'sp_bars_cache:';
+const _BARS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+function _readCachedBars(ticker, source) {
+  try {
+    const raw = localStorage.getItem(LS_KEY_BARS_CACHE_PREFIX + ticker);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || !Array.isArray(obj.bars) || obj.bars.length < 100) return null;
+    if (typeof obj.ts !== 'number') return null;
+    if ((Date.now() - obj.ts) > _BARS_CACHE_TTL_MS) return null;
+    // Optionally pin a source to avoid mixing cache entries across sources;
+    // for now any real source is acceptable on read.
+    if (source && obj.source && obj.source !== source) return null;
+    return obj.bars;
+  } catch (e) { return null; }
+}
+function _writeCachedBars(ticker, bars, source) {
+  try {
+    if (!ticker || !Array.isArray(bars) || bars.length < 100) return;
+    const payload = JSON.stringify({ bars, source: source || 'unknown', ts: Date.now() });
+    localStorage.setItem(LS_KEY_BARS_CACHE_PREFIX + ticker, payload);
+  } catch (e) { /* localStorage quota or disabled — fail silently */ }
 }
 
 // CRITICAL CONTRACT — bar shape across ALL sources (synthetic, Yahoo, TD,

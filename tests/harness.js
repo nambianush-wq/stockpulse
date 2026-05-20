@@ -161,6 +161,9 @@ function loadApp() {
     'LS_KEY_COCKPIT_SIDEBAR',
     // Ticker dashboard
     'renderMain', 'selectTicker', '_selected', '_data',
+    // Bars cache (RCA 2026-05-19)
+    '_readCachedBars', '_writeCachedBars',
+    'fetchTwelveDataPrice', 'renderCrossCheckChip', '_lastTdError',
     // Cockpit + live data
     '_cockpitRenderHeatmap', '_cockpitComputeOverview',
     'fetchTickerBundle', 'fetchBars', 'fetchQuote', 'fetchFinnhubProfile', 'fetchFinnhubMetrics',
