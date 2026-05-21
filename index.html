@@ -16632,10 +16632,29 @@ function onSearchKeydown(e) {
   }
 }
 
+// Class-share / unit / warrant suffixes that ARE valid on US exchanges
+// (BRK.B, RDS.A, GOOG.A, etc.). Everything else after a dot is a foreign
+// exchange code (.TO Toronto, .KS Korea, .L London, .HK Hong Kong, …) and
+// must be filtered out — the rest of the app assumes US-listed tickers.
+const US_CLASS_SUFFIXES = new Set(['A','B','C','D','U','W','WS','WT','PR','PRA','PRB','PRC','PRD','UN']);
+function isUSListedSymbol(sym) {
+  if (!sym) return false;
+  const s = String(sym).toUpperCase();
+  if (!/^[A-Z]/.test(s)) return false;            // foreign tickers often start with digits (e.g. 131280.KQ)
+  const dot = s.indexOf('.');
+  if (dot === -1) return true;                    // plain symbol — US
+  const suffix = s.slice(dot + 1);
+  return US_CLASS_SUFFIXES.has(suffix);
+}
+
 async function searchStocks(query) {
   if (isLive()) {
     try {
-      const url = `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${encodeURIComponent(API_KEY)}`;
+      // exchange=US scopes Finnhub's global index to US-tradeable listings so we
+      // don't surface .TO / .KS / .KQ / .L results that the rest of the app
+      // cannot consume. Belt-and-suspenders: also filter client-side in case
+      // a non-US symbol leaks through.
+      const url = `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&exchange=US&token=${encodeURIComponent(API_KEY)}`;
       const res = await fetch(url);
       if (res.ok) {
         const j = await res.json();
@@ -16644,8 +16663,10 @@ async function searchStocks(query) {
         for (const r of (j.result || [])) {
           if (!r.symbol || seen.has(r.symbol)) continue;
           if (r.type && r.type !== 'Common Stock' && r.type !== 'ETP' && r.type !== 'ETF') continue;
+          const display = r.displaySymbol || r.symbol;
+          if (!isUSListedSymbol(display)) continue;
           seen.add(r.symbol);
-          out.push({ ticker: r.displaySymbol || r.symbol, name: r.description || r.symbol, meta: r.type || '' });
+          out.push({ ticker: display, name: r.description || r.symbol, meta: r.type || '' });
           if (out.length >= 12) break;
         }
         if (out.length > 0) return out;
