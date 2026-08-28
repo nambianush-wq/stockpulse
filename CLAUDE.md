@@ -4,9 +4,9 @@ Single-file dark-themed stock analysis dashboard. Vanilla HTML/CSS/JS, no build 
 
 ---
 
-## CRITICAL — Always mirror commits to BOTH remotes (2026-05-16, repo renamed 2026-05-17)
+## Release workflow — mirror published commits to BOTH remotes
 
-Every git commit MUST be pushed to both:
+Every commit intended for release MUST be pushed to both:
 - `origin` → `https://github.com/nambianush-wq/Stock-Pulse.git` (development repo)
 - `stocknaut` → `https://github.com/nambianush-wq/stockpulse.git` (live-hosting repo, GitHub Pages serves it at https://nambianush-wq.github.io/stockpulse/)
 
@@ -22,7 +22,8 @@ git push                       # pushes to origin (default)
 git push stocknaut main        # mirrors to stocknaut (URL now points at stockpulse)
 ```
 
-This is a hard rule — never push to only one remote.
+This is a release rule, not a requirement for local review or experimentation.
+Never push a release commit to only one remote.
 
 The `stocknaut` remote was originally set up as a force-push (the destination repo had a placeholder welcome README that got overwritten). Subsequent pushes are normal fast-forwards — no force needed unless histories diverge again.
 
@@ -83,7 +84,8 @@ LLM API keys have a **valuable abuse profile** ("burn someone's LLM token budget
 
 ## File location
 
-`C:\Users\anush.nambi\OneDrive - Accenture\DESKTOP\CLAUDE CODE\CLAUDE AGENTS\STOCK PULSE\index.html`
+`index.html` in the repository root. Use the workspace-relative path or the
+current platform's absolute path when a tool requires one.
 
 OneDrive is sync-managed. The folder previously had an underscore name (`STOCK_PULSE`) that OneDrive renamed mid-session to `STOCK PULSE` (with a space), losing the file in the process. The recovery flow was: user saved the running browser tab as `Index.html`, we renamed to lowercase, restored the CDN script reference, initialized git. Result: `index.html` is now under git control, so future OneDrive sync hiccups can't lose progress.
 

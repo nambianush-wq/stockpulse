@@ -3703,6 +3703,9 @@ body.cockpit-sidebar-collapsed #main { margin-left: 0; }
   gap: 10px;
   margin-bottom: 18px;
 }
+@media (min-width: 1281px) {
+  .cockpit-hero-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 1280px) { .cockpit-hero-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 640px)  { .cockpit-hero-grid { grid-template-columns: repeat(2, 1fr); } }
 .cockpit-hero-card {
@@ -5651,6 +5654,7 @@ body { padding-bottom: 44px; }
   z-index: 85;
 }
 body.menu-open #mobile-menu-backdrop { display: block; }
+body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
 /* Large tablet / narrow laptop (<=1280px) */
 @media (max-width: 1280px) {
@@ -5758,6 +5762,9 @@ body.menu-open #mobile-menu-backdrop { display: block; }
     overflow-x: auto;
     overflow-y: hidden;
   }
+  /* The drawer button already controls the sidebar on phones. Reclaim its
+     width so the active tab remains readable and the tab strip can scroll. */
+  #sidebar-toggle-btn { display: none; }
   .tab { padding: 6px 9px; font-size: 11.5px; flex-shrink: 0; }
   #topbar .actions {
     gap: 4px;
@@ -5911,11 +5918,11 @@ body.menu-open #mobile-menu-backdrop { display: block; }
     <span class="brand-text">StockPulse</span>
   </div>
   <nav class="tab-nav" role="tablist" aria-label="Primary navigation">
-    <button class="tab active" data-view="cockpit" role="tab" aria-selected="true" onclick="showView('cockpit')" title="Real-time dashboard for the entire watchlist">Cockpit</button>
-    <button class="tab" data-view="watchlist" role="tab" aria-selected="false" onclick="showView('watchlist')">Watchlist</button>
-    <button class="tab" data-view="sectors" role="tab" aria-selected="false" onclick="showView('sectors')">Sectors</button>
-    <button class="tab" data-view="picks" role="tab" aria-selected="false" onclick="showView('picks')">Top Picks</button>
-    <button class="tab" data-view="whatif" role="tab" aria-selected="false" onclick="showView('whatif')">What If</button>
+    <button id="tab-cockpit" class="tab active" data-view="cockpit" role="tab" aria-selected="true" aria-controls="cockpit-page" tabindex="0" onclick="showView('cockpit')" title="Real-time dashboard for the entire watchlist">Cockpit</button>
+    <button id="tab-watchlist" class="tab" data-view="watchlist" role="tab" aria-selected="false" aria-controls="content" tabindex="-1" onclick="showView('watchlist')">Watchlist</button>
+    <button id="tab-sectors" class="tab" data-view="sectors" role="tab" aria-selected="false" aria-controls="sectors-page" tabindex="-1" onclick="showView('sectors')">Sectors</button>
+    <button id="tab-picks" class="tab" data-view="picks" role="tab" aria-selected="false" aria-controls="picks-page" tabindex="-1" onclick="showView('picks')">Top Picks</button>
+    <button id="tab-whatif" class="tab" data-view="whatif" role="tab" aria-selected="false" aria-controls="whatif-page" tabindex="-1" onclick="showView('whatif')">What If</button>
   </nav>
   <div class="actions">
     <span id="mode-pill" class="mode-pill live">LIVE</span>
@@ -5932,7 +5939,7 @@ body.menu-open #mobile-menu-backdrop { display: block; }
 <div id="layout">
   <aside id="sidebar">
     <div id="sidebar-head">
-      <input id="search" placeholder="Filter watchlist…" oninput="filterWatchlist(this.value)">
+      <input id="search" aria-label="Filter watchlist" placeholder="Filter watchlist…" oninput="filterWatchlist(this.value)">
       <div id="sidebar-counters" class="sidebar-counters"></div>
       <div id="verdict-filter" class="verdict-filter"></div>
       <button id="more-filters-toggle" class="more-filters-toggle" onclick="toggleMoreFilters()" title="Show / hide secondary filters (type · timing · 13F ownership). Setting persists across sessions.">
@@ -6153,7 +6160,7 @@ body.menu-open #mobile-menu-backdrop { display: block; }
         <div class="cockpit-alerts-grid" id="cockpit-alerts"></div>
       </div>
     </div>
-    <div id="content" style="display:none;">
+    <div id="content" role="tabpanel" aria-labelledby="tab-watchlist" aria-hidden="true" style="display:none;">
     <div id="ticker-head">
       <div id="ticker-left">
         <div class="t-sym-block">
@@ -12158,7 +12165,7 @@ body.menu-open #mobile-menu-backdrop { display: block; }
 </div>
 
 <!-- Modify Bundle Modal -->
-<div id="modify-modal" class="modal-overlay hidden" onclick="if(event.target===this) closeModifyModal()">
+<div id="modify-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modify-modal-title" onclick="if(event.target===this) closeModifyModal()">
   <div class="modal">
     <div class="modal-head">
       <div class="modal-title" id="modify-modal-title">Modify bundle</div>
@@ -12173,10 +12180,10 @@ body.menu-open #mobile-menu-backdrop { display: block; }
 </div>
 
 <!-- Add Stock Modal -->
-<div id="add-modal" class="modal-overlay hidden" onclick="if(event.target===this) closeAddStock()">
+<div id="add-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="add-modal-title" onclick="if(event.target===this) closeAddStock()">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">Add stock or ETF</div>
+      <div class="modal-title" id="add-modal-title">Add stock or ETF</div>
       <button class="modal-close" onclick="closeAddStock()">✕</button>
     </div>
     <div class="modal-body">
@@ -12197,10 +12204,10 @@ body.menu-open #mobile-menu-backdrop { display: block; }
 </div>
 
 <!-- Settings Modal -->
-<div id="settings-modal" class="modal-overlay hidden" onclick="if(event.target===this) closeSettings()">
+<div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" onclick="if(event.target===this) closeSettings()">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">Settings</div>
+      <div class="modal-title" id="settings-modal-title">Settings</div>
       <button class="modal-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="modal-body">
@@ -12262,7 +12269,7 @@ body.menu-open #mobile-menu-backdrop { display: block; }
      fetches for analyst / insider / earnings complete). Earlier inline
      #ai-verdict-slot was wiped on the next async re-render before the
      user could see the result. -->
-<div id="ai-modal" class="modal-overlay hidden" onclick="if(event.target===this) closeAIModal()">
+<div id="ai-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title" onclick="if(event.target===this) closeAIModal()">
   <div class="modal ai-modal-card">
     <div class="modal-head">
       <div class="modal-title" id="ai-modal-title">AI explanation</div>
@@ -12673,10 +12680,13 @@ function showRecoveryBanner() {
   if (dismissedAt && (Date.now() - dismissedAt) < (30 * 24 * 60 * 60 * 1000)) return false;
   const el = document.createElement('div');
   el.id = 'sp-recovery-banner';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', 'Storage recovery');
   el.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);' +
-    'z-index:10000;max-width:560px;background:#1c2333;border:1px solid #3a4664;' +
-    'border-radius:10px;padding:14px 16px;color:#e6ecff;font:13px/1.45 Inter,system-ui,sans-serif;' +
-    'box-shadow:0 8px 30px rgba(0,0,0,0.45);';
+    'z-index:10000;max-width:560px;background:var(--panel);border:1px solid var(--line);' +
+    'border-radius:var(--r-md);padding:14px 16px;color:var(--text);font-size:13px;font-family:inherit;line-height:1.45;' +
+    'box-shadow:var(--shadow);';
   el.innerHTML =
     '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Looks like first-load or wiped storage</div>' +
     '<div style="color:#9aa6c2;margin-bottom:10px">Your watchlist is the default 4 tickers with no favorites or sim set. ' +
@@ -12729,6 +12739,7 @@ function _shouldShowExportNudge() {
   return true;
 }
 function maybeShowExportNudge() {
+  if (_recoveryBannerMounted || document.getElementById('sp-recovery-banner')) return false;
   if (!_shouldShowExportNudge()) return false;
   if (_exportNudgeMounted) return false;
   let lastExport = 0;
@@ -12739,8 +12750,8 @@ function maybeShowExportNudge() {
   const el = document.createElement('div');
   el.id = 'sp-export-nudge';
   el.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;max-width:320px;' +
-    'background:#1c2333;border:1px solid #3a4664;border-radius:10px;padding:12px 14px;' +
-    'color:#e6ecff;font:12px/1.45 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+    'background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;' +
+    'color:var(--text);font-size:12px;font-family:inherit;line-height:1.45;box-shadow:var(--shadow);';
   el.innerHTML =
     `<div style="font-weight:600;margin-bottom:2px">${label}</div>` +
     `<div style="color:#9aa6c2;margin-bottom:8px">Protect your ${WATCHLIST.length}-ticker watchlist + favorites + bundles. ` +
@@ -15654,6 +15665,7 @@ No price targets. No guarantees. Hedged language only.`;
 function _aiModalShow(title, bodyHtml, footHtml) {
   const modal = document.getElementById('ai-modal');
   if (!modal) return;
+  _modalReturnFocus = document.activeElement;
   document.getElementById('ai-modal-title').textContent = title;
   document.getElementById('ai-modal-body').innerHTML = bodyHtml;
   document.getElementById('ai-modal-foot').innerHTML = footHtml || '';
@@ -15663,11 +15675,18 @@ function _aiModalShow(title, bodyHtml, footHtml) {
 function closeAIModal() {
   const modal = document.getElementById('ai-modal');
   if (modal) modal.classList.add('hidden');
+  _restoreModalFocus();
 }
 
 // ESC dismisses the AI modal (matches the Settings modal pattern).
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    const recovery = document.getElementById('sp-recovery-banner');
+    if (recovery) {
+      const dismiss = document.getElementById('sp-recovery-dismiss');
+      if (dismiss) dismiss.click();
+      return;
+    }
     const m = document.getElementById('ai-modal');
     if (m && !m.classList.contains('hidden')) closeAIModal();
   }
@@ -17210,6 +17229,7 @@ function showView(view) {
     const active = t.dataset.view === view;
     t.classList.toggle('active', active);
     t.setAttribute('aria-selected', active ? 'true' : 'false');
+    t.setAttribute('tabindex', active ? '0' : '-1');
   });
   document.body.classList.toggle('sectors-mode', view === 'sectors');
   document.body.classList.toggle('picks-mode', view === 'picks');
@@ -17219,13 +17239,34 @@ function showView(view) {
   $('sectors-page').style.display = view === 'sectors' ? 'block' : 'none';
   $('picks-page').style.display = view === 'picks' ? 'block' : 'none';
   $('whatif-page').style.display = view === 'whatif' ? 'block' : 'none';
+  $('content').setAttribute('aria-hidden', view === 'watchlist' ? 'false' : 'true');
+  $('sectors-page').setAttribute('aria-hidden', view === 'sectors' ? 'false' : 'true');
+  $('picks-page').setAttribute('aria-hidden', view === 'picks' ? 'false' : 'true');
+  $('whatif-page').setAttribute('aria-hidden', view === 'whatif' ? 'false' : 'true');
   const cock = document.getElementById('cockpit-page');
-  if (cock) cock.style.display = view === 'cockpit' ? 'block' : 'none';
+  if (cock) {
+    cock.style.display = view === 'cockpit' ? 'block' : 'none';
+    cock.setAttribute('aria-hidden', view === 'cockpit' ? 'false' : 'true');
+  }
   if (view === 'sectors') renderSectorsPage();
   if (view === 'picks') renderPicksPage();
   if (view === 'whatif') renderWhatIfPage();
   if (view === 'cockpit') renderCockpit();
 }
+
+function focusAdjacentTab(event) {
+  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Home' && event.key !== 'End') return;
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const current = tabs.indexOf(event.currentTarget);
+  if (current < 0) return;
+  event.preventDefault();
+  const next = event.key === 'Home' ? 0
+    : event.key === 'End' ? tabs.length - 1
+    : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[next].focus();
+  showView(tabs[next].dataset.view);
+}
+document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('keydown', focusAdjacentTab));
 
 // ========================================================================
 // Single source of bar data — Watchlist / Sectors / Top Picks / What If
@@ -17827,10 +17868,17 @@ function deleteBundle(id) {
 let _modifyingBundleId = null;
 let _modifyHoldings = [];
 let _modifySearchTimer = null;
+let _modalReturnFocus = null;
+function _restoreModalFocus() {
+  const target = _modalReturnFocus;
+  _modalReturnFocus = null;
+  if (target && typeof target.focus === 'function') setTimeout(() => target.focus(), 0);
+}
 
 function openModifyBundle(id) {
   const b = SAVED_BUNDLES.find(x => x.id === id);
   if (!b) return;
+  _modalReturnFocus = document.activeElement;
   _modifyingBundleId = id;
   _modifyHoldings = b.holdings.map(h => ({ ...h })); // deep clone
   document.getElementById('modify-modal-title').textContent = `Modify bundle · ${b.name}`;
@@ -17841,6 +17889,7 @@ function closeModifyModal() {
   document.getElementById('modify-modal').classList.add('hidden');
   _modifyingBundleId = null;
   _modifyHoldings = [];
+  _restoreModalFocus();
 }
 
 function modifyAddHolding(ticker) {
@@ -22681,6 +22730,7 @@ function startRefreshTimer() {
 // Add / remove / settings
 // ========================================================================
 function openAddStock() {
+  _modalReturnFocus = document.activeElement;
   $('add-modal').classList.remove('hidden');
   $('add-search').value = '';
   _searchResults = [];
@@ -22689,7 +22739,7 @@ function openAddStock() {
   $('search-results').classList.add('hidden');
   setTimeout(() => $('add-search').focus(), 50);
 }
-function closeAddStock() { $('add-modal').classList.add('hidden'); }
+function closeAddStock() { $('add-modal').classList.add('hidden'); _restoreModalFocus(); }
 
 // Called from the modal's Add button — uses the highlighted result if any,
 // otherwise treats the input as a raw ticker.
@@ -22773,6 +22823,7 @@ function removeStock(t) {
 }
 
 function openSettings() {
+  _modalReturnFocus = document.activeElement;
   $('api-key').value = API_KEY;
   const tdInput = $('td-api-key');
   if (tdInput) tdInput.value = TD_API_KEY;
@@ -23032,7 +23083,7 @@ function importKeysFromFile() {
   };
   input.click();
 }
-function closeSettings() { $('settings-modal').classList.add('hidden'); }
+function closeSettings() { $('settings-modal').classList.add('hidden'); _restoreModalFocus(); }
 
 async function saveSettings() {
   const newKey = $('api-key').value.trim();
