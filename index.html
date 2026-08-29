@@ -24,6 +24,7 @@
   --accent-deep: #4434d4;     /* Stripe indigo deep (text on light) */
   --accent-press: #2e2b8c;    /* Stripe indigo pressed */
   --accent-subdued: #b9b9f9;  /* Pale indigo tag bg */
+  --accent-text: var(--accent-subdued); /* accent for text ON dark surfaces — lifted for contrast */
   --brand-dark-900: #1c1e54;  /* Stripe brand-dark-900 surface */
   --ink: #0d253d;             /* Stripe deep navy ink */
   --bull: #30d158;
@@ -55,6 +56,7 @@
   --accent-deep: #4434d4;
   --accent-press: #2e2b8c;
   --accent-subdued: #e8e7ff;
+  --accent-text: var(--accent-deep);    /* accent for text ON light surfaces */
   --brand-dark-900: #e8ecf7;
   --ink: #d4d9ec;
   --bull: #1a9e4c;
@@ -3127,7 +3129,6 @@ body.whatif-mode #sidebar { display: none; }
   font-size: 9px;
   font-weight: 700;
   color: var(--muted);
-  opacity: .82;
 }
 .signal-chip .sc-val {
   color: var(--text);
@@ -4338,7 +4339,7 @@ body { padding-bottom: 44px; }
   letter-spacing: .03em;
   background: linear-gradient(135deg, rgba(83,58,253,.16), rgba(191,90,242,.16));
   border: 1px solid rgba(83,58,253,.4);
-  color: var(--accent);
+  color: var(--accent-text);
   cursor: help;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -5342,7 +5343,7 @@ body { padding-bottom: 44px; }
 }
 .news-card-sub {
   font-size: 10.5px;
-  color: var(--dim);
+  color: var(--muted);
   font-style: italic;
   flex: 1 1 auto;
   min-width: 0;
@@ -22274,44 +22275,81 @@ function _fetchWithTimeout(url, ms) {
 }
 
 
-async function _fetchFredCSV(seriesId) {
+// NY Fed EFFR API — CORS-enabled government API, no key needed.
+// Returns the effective federal funds rate as a number, or null.
+async function _fetchNYFedRate() {
+  try {
+    const r = await _fetchWithTimeout('https://markets.newyorkfed.org/api/rates/effr/last/1.json', 8000);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const entry = j && j.refRates && j.refRates[0];
+    return entry ? parseFloat(entry.percentRate) : null;
+  } catch (e) { return null; }
+}
+
+// BLS public API v1 — explicit CORS support, no key for up to 500 req/day.
+// Returns { last, yoy } for CPI-U (all items, not seasonally adjusted).
+async function _fetchBLSCPI() {
+  try {
+    const r = await _fetchWithTimeout('https://api.bls.gov/publicAPI/v1/timeseries/data/CUUR0000SA0', 8000);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const items = j && j.Results && j.Results.series && j.Results.series[0] && j.Results.series[0].data;
+    if (!items || items.length < 2) return null;
+    const latest = parseFloat(items[0].value);
+    const yearAgo = items[12] ? parseFloat(items[12].value) : null;
+    const yoy = yearAgo ? +((latest - yearAgo) / yearAgo * 100).toFixed(2) : null;
+    return { last: latest, yoy };
+  } catch (e) { return null; }
+}
+
+// Treasury yield curve XML — published daily by the US Treasury.
+// Returns { yield10Y, yield3M } from the most recent trading day, or null.
+async function _fetchTreasuryYields() {
+  const now = new Date();
+  const yyyymm = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
   try {
     const r = await _fetchWithTimeout(
-      `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}`,
+      `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value=${yyyymm}`,
       8000
     );
     if (!r.ok) return null;
     const text = await r.text();
-    const lines = text.trim().split('\n').filter(l => l && !l.startsWith('DATE'));
-    if (!lines.length) return null;
-    const last = parseFloat(lines[lines.length - 1].split(',')[1]);
-    const prev12 = lines.length >= 13 ? parseFloat(lines[lines.length - 13].split(',')[1]) : null;
-    return { last, prev12 };
+    const doc = new DOMParser().parseFromString(text, 'text/xml');
+    const entries = doc.getElementsByTagName('entry');
+    if (!entries.length) return null;
+    const last = entries[entries.length - 1];
+    let y10 = null, y3m = null;
+    const all = last.getElementsByTagName('*');
+    for (let i = 0; i < all.length; i++) {
+      const ln = all[i].localName || all[i].nodeName.split(':').pop();
+      if (ln === 'BC_10YEAR') y10 = parseFloat(all[i].textContent);
+      if (ln === 'BC_3MONTH') y3m = parseFloat(all[i].textContent);
+    }
+    return (y10 != null || y3m != null) ? { yield10Y: y10, yield3M: y3m } : null;
   } catch (e) { return null; }
 }
 
 async function fetchMacroPulse() {
-  // Check cache
   try {
     const cached = JSON.parse(localStorage.getItem(LS_KEY_MACRO_CACHE) || 'null');
     if (cached && (Date.now() - cached.fetchedAt) < _SP_MACRO_TTL_MS) return cached.data;
   } catch (e) {}
-  // Fetch all from FRED public CSV — CORS-friendly, no key needed.
-  // DGS10/DGS3MO replace the former Yahoo Finance ^TNX/^IRX calls which
-  // became unreliable due to CORS restrictions on Yahoo's query1 endpoint.
-  const [y10fred, y3mfred, fedfunds, cpi] = await Promise.all([
-    _fetchFredCSV('DGS10'),
-    _fetchFredCSV('DGS3MO'),
-    _fetchFredCSV('FEDFUNDS'),
-    _fetchFredCSV('CPIAUCSL'),
+  // Three genuinely CORS-enabled public APIs — no key required for any of them.
+  // NY Fed: effective fed funds rate. BLS: CPI-U. Treasury XML: yield curve.
+  const [yields, fedRate, cpi] = await Promise.all([
+    _fetchTreasuryYields(),
+    _fetchNYFedRate(),
+    _fetchBLSCPI(),
   ]);
   const data = {
-    yield10Y:    y10fred  ? y10fred.last  : null,
-    yield3M:     y3mfred  ? y3mfred.last  : null,
-    spread10Y3M: (y10fred && y3mfred) ? +(y10fred.last - y3mfred.last).toFixed(2) : null,
-    fedRate:     fedfunds ? fedfunds.last : null,
+    yield10Y:    yields ? yields.yield10Y : null,
+    yield3M:     yields ? yields.yield3M  : null,
+    spread10Y3M: (yields && yields.yield10Y != null && yields.yield3M != null)
+                   ? +(yields.yield10Y - yields.yield3M).toFixed(2) : null,
+    fedRate:     fedRate != null ? fedRate : null,
     cpiLevel:    cpi ? cpi.last : null,
-    cpiYoY:      (cpi && cpi.prev12 && cpi.last) ? +((cpi.last - cpi.prev12) / cpi.prev12 * 100).toFixed(2) : null,
+    cpiYoY:      cpi ? cpi.yoy : null,
   };
   try { localStorage.setItem(LS_KEY_MACRO_CACHE, JSON.stringify({ data, fetchedAt: Date.now() })); } catch (e) {}
   return data;
@@ -22368,7 +22406,7 @@ function _renderMacroPulse(data) {
     ));
   }
   if (!chips.length) {
-    host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data unavailable — FRED data sources may be temporarily unreachable.</span>';
+    host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data unavailable — sources (NY Fed, BLS, Treasury) may be temporarily unreachable or blocked by your network.</span>';
     return;
   }
   host.innerHTML = chips.join('');
