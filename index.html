@@ -21949,6 +21949,9 @@ function fmt(n) {
 
 function selectTicker(t) {
   _selected = t;
+  // Switch to Watchlist tab so #content is visible; renderMain() would write
+  // into a display:none panel if the user is on Cockpit or any other tab.
+  if (_currentView !== 'watchlist') showView('watchlist');
   renderWatchlist($('search').value);
   renderMain();
   // On mobile, close the sidebar drawer so the chart is visible.
