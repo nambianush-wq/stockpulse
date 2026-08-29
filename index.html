@@ -39,6 +39,39 @@
   --r-xl: 16px;
   --r-pill: 9999px;
 }
+/* ── Light theme override ── */
+[data-theme="light"] {
+  --bg: #f4f6fb;
+  --panel: #ffffff;
+  --raised: #edf0f8;
+  --line: #d4d9ec;
+  --text: #0f1728;
+  --muted: #5b6388;
+  --dim: #8a93b5;
+  --accent: #533afd;
+  --accent-soft: #665efd;
+  --accent-deep: #4434d4;
+  --accent-press: #2e2b8c;
+  --accent-subdued: #e8e7ff;
+  --brand-dark-900: #e8ecf7;
+  --ink: #d4d9ec;
+  --bull: #1a9e4c;
+  --bear: #cc2a20;
+  --ruby: #c41855;
+  --warn: #c97200;
+  --violet: #b034b5;
+  --shadow: 0 8px 24px rgba(83,58,253,.10), 0 2px 6px rgba(0,0,0,.06);
+}
+[data-theme="light"] #topbar {
+  background: rgba(255,255,255,.92);
+  border-bottom-color: var(--line);
+}
+[data-theme="light"] .tab { color: var(--muted); }
+[data-theme="light"] .tab.active { color: var(--accent); }
+[data-theme="light"] #sidebar { background: var(--panel); border-right: 1px solid var(--line); }
+[data-theme="light"] .wl-item { background: var(--raised); }
+[data-theme="light"] .wl-item:hover { background: var(--line); }
+.wl-item.kb-focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
   height: 100%;
@@ -6066,6 +6099,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
       <span id="sidebar-toggle-icon" class="btn-icon" aria-hidden="true">⇤</span>
       <span id="sidebar-toggle-label" class="btn-label"> Hide sidebar</span>
     </button>
+    <button class="btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Switch between dark and light theme. Setting is remembered across sessions." aria-label="Toggle theme"><span id="theme-toggle-icon" class="btn-icon">☀</span><span class="btn-label" id="theme-toggle-label"> Light</span></button>
     <button class="btn" onclick="openAddStock()" title="Add stock"><span class="btn-icon">+</span><span class="btn-label"> Add Stock</span></button>
     <button class="btn" onclick="openSettings()" title="Settings"><span class="btn-icon">⚙</span><span class="btn-label"> Settings</span></button>
   </div>
@@ -6238,6 +6272,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
             <option value="60">Auto-refresh: 1h</option>
           </select>
           <button class="cockpit-refresh-btn" onclick="(async()=>{ try { await refreshAll(true); } catch(e){} renderCockpit(); })()" title="Re-fetch live prices for the watchlist and recompute every cockpit metric — fires immediately, independent of the auto-refresh timer">↻ Refresh now</button>
+          <button class="cockpit-refresh-btn" onclick="exportWatchlistCSV()" title="Download your watchlist as a CSV file with ticker, price, verdict, timing, heat score, and 12M forecast." style="background:var(--raised);color:var(--text);">⬇ CSV</button>
           <button id="cockpit-sidebar-btn" class="cockpit-sidebar-btn" onclick="toggleCockpitSidebar()" title="Collapse the watchlist sidebar to give the cockpit full width — click again to bring it back. Setting is remembered across sessions."><span id="cockpit-sidebar-icon" class="cockpit-sidebar-icon">⇤</span><span id="cockpit-sidebar-label">Collapse sidebar</span></button>
         </div>
       </div>
@@ -6250,6 +6285,15 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
           </div>
         </div>
         <div class="cockpit-indices-grid" id="cockpit-indices"></div>
+      </div>
+      <div class="cockpit-section" id="cockpit-macro-section" style="padding:14px 0 0;">
+        <div class="cockpit-section-head">
+          <div>
+            <div class="cockpit-section-title">Macro pulse</div>
+            <div class="cockpit-section-sub">Key US economic indicators · updated daily · context for why the whole market is moving</div>
+          </div>
+        </div>
+        <div id="cockpit-macro-row" style="display:flex; flex-wrap:wrap; gap:10px; padding:10px 0 0;"></div>
       </div>
       <div class="cockpit-section" id="cockpit-heatmap-section">
         <div class="cockpit-section-head">
@@ -14338,7 +14382,7 @@ function computeBuyTiming(bars, verdict, forecasts) {
 //   - seasonality === null  → bars too short (< 3 yrs), chip is omitted
 //   - analystMomentum === null AND recs === undefined → "fetching" pending pill
 //   - analystMomentum === null AND recs === null      → coverage unavailable, omitted
-function _renderSignalChipsRow(seasonality, analystMomentum, analystRecs, insiderCluster, insiderTxns) {
+function _renderSignalChipsRow(seasonality, analystMomentum, analystRecs, insiderCluster, insiderTxns, priceTarget, shortInt, currentPrice) {
   const chips = [];
   if (seasonality && seasonality.currentAvg != null) {
     const cur = seasonality.currentAvg;
@@ -14442,6 +14486,59 @@ function _renderSignalChipsRow(seasonality, analystMomentum, analystRecs, inside
   } else if (insiderTxns === undefined && isLive()) {
     chips.push(`<span class="signal-chip pending" title="Fetching SEC Form 4 insider transactions via Finnhub…">Insiders · loading…</span>`);
   }
+
+  // Analyst price target chip
+  if (priceTarget && priceTarget.targetMean && currentPrice) {
+    const mean = priceTarget.targetMean;
+    const hi = priceTarget.targetHigh;
+    const lo = priceTarget.targetLow;
+    const n = priceTarget.numberOfAnalysts || 0;
+    const upside = ((mean - currentPrice) / currentPrice * 100);
+    const cls = upside >= 5 ? 'positive' : upside <= -5 ? 'negative' : '';
+    const arrow = upside >= 5 ? '▲' : upside <= -5 ? '▼' : '·';
+    const upsideStr = `${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%`;
+    const rangeStr = (hi && lo) ? ` · range $${lo.toFixed(0)}–$${hi.toFixed(0)}` : '';
+    const tooltip = (
+      `Analyst consensus price target · ${n} analyst${n === 1 ? '' : 's'} covering this stock.\n\n` +
+      `Mean target: $${mean.toFixed(2)} · implied upside from current price: ${upsideStr}\n` +
+      `${hi && lo ? `Range: $${lo.toFixed(2)} (bear) — $${hi.toFixed(2)} (bull)\n` : ''}` +
+      `\nWhat this means: The average of Wall Street price targets over the next 12 months. Not a guarantee — analyst accuracy varies widely. Use as a sanity-check against your own thesis, not as a primary signal.`
+    );
+    chips.push(
+      `<span class="signal-chip ${cls}" title="${tooltip.replace(/"/g,'&quot;')}">` +
+      `<span class="sc-arrow">${arrow}</span>` +
+      `<span class="sc-lbl">Target</span> ` +
+      `<span class="sc-val">$${mean.toFixed(0)} avg</span> ` +
+      `<span class="sc-val" style="opacity:.85">${upsideStr}${rangeStr}</span>` +
+      `</span>`
+    );
+  } else if (priceTarget === undefined && isLive()) {
+    chips.push(`<span class="signal-chip pending" title="Fetching analyst price targets from Finnhub…">Target · loading…</span>`);
+  }
+
+  // Short interest chip
+  if (shortInt && shortInt.shortInterest && shortInt.shareFloat) {
+    const si = shortInt.shortInterest;
+    const fl = shortInt.shareFloat;
+    const pctFloat = (si / fl * 100);
+    const cls = pctFloat >= 20 ? 'negative' : pctFloat >= 10 ? '' : '';
+    const arrow = pctFloat >= 20 ? '▲' : '·';
+    const tooltip = (
+      `Short interest · shares sold short as a percentage of float.\n\n` +
+      `Short interest: ${(si / 1e6).toFixed(1)}M shares · Float: ${(fl / 1e6).toFixed(1)}M shares · Short % of float: ${pctFloat.toFixed(1)}%\n\n` +
+      `What this means: High short interest (>15% of float) signals bearish sentiment but also short-squeeze potential if positive catalysts appear. Low short interest (<5%) means few bearish bets — broadly positive signal.`
+    );
+    chips.push(
+      `<span class="signal-chip ${cls}" title="${tooltip.replace(/"/g,'&quot;')}">` +
+      `<span class="sc-arrow">${arrow}</span>` +
+      `<span class="sc-lbl">Short</span> ` +
+      `<span class="sc-val">${pctFloat.toFixed(1)}% float</span>` +
+      `</span>`
+    );
+  } else if (shortInt === undefined && isLive()) {
+    chips.push(`<span class="signal-chip pending" title="Fetching short interest from Finnhub…">Short · loading…</span>`);
+  }
+
   if (chips.length === 0) return '';
   return `<div class="signal-chips-row">${chips.join('')}</div>`;
 }
@@ -14488,6 +14585,34 @@ function renderTimingChip(timing, compact) {
 // ========================================================================
 // Upcoming key events — earnings, dividends, macro
 // ========================================================================
+// Render a compact 4-quarter earnings beat/miss history bar inline in the events card.
+// earningsHist: array of { period, actual, estimate, surprise, surprisePercent } (Finnhub /stock/earnings)
+function _renderEarningsHistory(earningsHist) {
+  if (!earningsHist || !earningsHist.length) return '';
+  const quarters = earningsHist.slice(0, 4).reverse(); // oldest → newest
+  const bars = quarters.map(q => {
+    const beat = (q.surprise != null) ? q.surprise >= 0 : (q.actual != null && q.estimate != null ? q.actual >= q.estimate : null);
+    const pct = (q.surprisePercent != null) ? q.surprisePercent : null;
+    const label = q.period || '';
+    const color = beat === true ? 'var(--bull)' : beat === false ? 'var(--bear)' : 'var(--muted)';
+    const tag = beat === true ? 'Beat' : beat === false ? 'Miss' : '?';
+    const pctStr = pct != null ? ` ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : '';
+    const tooltip = `${label} · EPS actual: ${q.actual != null ? '$' + q.actual.toFixed(2) : '?'} vs estimate: ${q.estimate != null ? '$' + q.estimate.toFixed(2) : '?'}${pctStr ? ' · surprise: ' + pctStr : ''}`;
+    return `<div class="earn-hist-bar" title="${tooltip.replace(/"/g,'&quot;')}" style="cursor:help">
+      <div class="earn-hist-fill" style="background:${color}; height:18px; width:100%; border-radius:3px; opacity:.85;"></div>
+      <div class="earn-hist-lbl" style="font-size:9px; color:${color}; margin-top:2px; text-align:center;">${tag}${pctStr}</div>
+      <div class="earn-hist-period" style="font-size:9px; color:var(--dim); text-align:center; white-space:nowrap; overflow:hidden;">${label}</div>
+    </div>`;
+  }).join('');
+  return `<div class="ev-row" style="padding:10px 14px 8px; border-top:1px solid var(--line);">
+    <div class="ev-icon" style="font-size:13px;" title="Last 4 quarters of EPS beat/miss history · sourced from Finnhub">$</div>
+    <div class="ev-main">
+      <div class="ev-line" style="margin-bottom:6px;"><span class="ev-name" title="Last 4 quarters of EPS actual vs analyst estimate. Green = beat, red = miss. Surprise % shown below each bar." style="cursor:help">EPS Beat/Miss History · last 4 quarters</span></div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; max-width:260px;">${bars}</div>
+    </div>
+  </div>`;
+}
+
 function buildUpcomingEvents(ticker, profile, metrics) {
   profile = profile || {}; metrics = metrics || {};
   const events = [];
@@ -15006,6 +15131,106 @@ function _kickInsiderFetch(ticker) {
   }).catch(() => { _insiderCache[ticker] = null; });
 }
 
+// ── Analyst price target — Finnhub /stock/price-target ──
+const LS_KEY_PRICE_TARGET_PREFIX = 'sp_ptgt_';
+const _SP_PRICE_TARGET_TTL_MS = 12 * 60 * 60 * 1000;
+const _priceTargetCache = {};
+async function fetchPriceTarget(ticker) {
+  if (!isLive()) return null;
+  const key = LS_KEY_PRICE_TARGET_PREFIX + ticker;
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < _SP_PRICE_TARGET_TTL_MS) return cached.data || null;
+  } catch (e) {}
+  try {
+    const res = await fetch(`https://finnhub.io/api/v1/stock/price-target?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(API_KEY)}`);
+    if (!res.ok) { try { localStorage.setItem(key, JSON.stringify({ data: null, fetchedAt: Date.now() })); } catch (_) {} return null; }
+    const j = await res.json();
+    const data = (j && j.targetMean) ? j : null;
+    try { localStorage.setItem(key, JSON.stringify({ data, fetchedAt: Date.now() })); } catch (_) {}
+    return data;
+  } catch (e) { return null; }
+}
+function getPriceTargetCached(ticker) {
+  return Object.prototype.hasOwnProperty.call(_priceTargetCache, ticker) ? _priceTargetCache[ticker] : undefined;
+}
+function _kickPriceTargetFetch(ticker) {
+  if (Object.prototype.hasOwnProperty.call(_priceTargetCache, ticker)) return;
+  _priceTargetCache[ticker] = null;
+  fetchPriceTarget(ticker).then(r => {
+    _priceTargetCache[ticker] = r;
+    if (_selected === ticker && _data[_selected]) renderMainSoon();
+  }).catch(() => { _priceTargetCache[ticker] = null; });
+}
+
+// ── Earnings beat/miss history — Finnhub /stock/earnings ──
+const LS_KEY_EARN_HIST_PREFIX = 'sp_earnhist_';
+const _SP_EARN_HIST_TTL_MS = 24 * 60 * 60 * 1000;
+const _earningsHistCache = {};
+async function fetchEarningsHistory(ticker) {
+  if (!isLive()) return null;
+  const key = LS_KEY_EARN_HIST_PREFIX + ticker;
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < _SP_EARN_HIST_TTL_MS) return cached.data || null;
+  } catch (e) {}
+  try {
+    const res = await fetch(`https://finnhub.io/api/v1/stock/earnings?symbol=${encodeURIComponent(ticker)}&limit=4&token=${encodeURIComponent(API_KEY)}`);
+    if (!res.ok) { try { localStorage.setItem(key, JSON.stringify({ data: null, fetchedAt: Date.now() })); } catch (_) {} return null; }
+    const j = await res.json();
+    const data = Array.isArray(j) && j.length ? j : null;
+    try { localStorage.setItem(key, JSON.stringify({ data, fetchedAt: Date.now() })); } catch (_) {}
+    return data;
+  } catch (e) { return null; }
+}
+function getEarningsHistCached(ticker) {
+  return Object.prototype.hasOwnProperty.call(_earningsHistCache, ticker) ? _earningsHistCache[ticker] : undefined;
+}
+function _kickEarningsHistFetch(ticker) {
+  if (Object.prototype.hasOwnProperty.call(_earningsHistCache, ticker)) return;
+  _earningsHistCache[ticker] = null;
+  fetchEarningsHistory(ticker).then(r => {
+    _earningsHistCache[ticker] = r;
+    if (_selected === ticker && _data[_selected]) renderMainSoon();
+  }).catch(() => { _earningsHistCache[ticker] = null; });
+}
+
+// ── Short interest — Finnhub /stock/short-interest ──
+const LS_KEY_SHORT_INT_PREFIX = 'sp_shortint_';
+const _SP_SHORT_INT_TTL_MS = 24 * 60 * 60 * 1000;
+const _shortIntCache = {};
+async function fetchShortInterest(ticker) {
+  if (!isLive()) return null;
+  const key = LS_KEY_SHORT_INT_PREFIX + ticker;
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < _SP_SHORT_INT_TTL_MS) return cached.data || null;
+  } catch (e) {}
+  try {
+    const to = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const res = await fetch(`https://finnhub.io/api/v1/stock/short-interest?symbol=${encodeURIComponent(ticker)}&from=${from}&to=${to}&token=${encodeURIComponent(API_KEY)}`);
+    if (!res.ok) { try { localStorage.setItem(key, JSON.stringify({ data: null, fetchedAt: Date.now() })); } catch (_) {} return null; }
+    const j = await res.json();
+    // Finnhub returns { data: [{date, shortInterest, shareFloat},...] } sorted recent-first
+    const entry = j && Array.isArray(j.data) && j.data.length ? j.data[0] : null;
+    const data = entry ? { shortInterest: entry.shortInterest, shareFloat: entry.shareFloat, date: entry.date } : null;
+    try { localStorage.setItem(key, JSON.stringify({ data, fetchedAt: Date.now() })); } catch (_) {}
+    return data;
+  } catch (e) { return null; }
+}
+function getShortIntCached(ticker) {
+  return Object.prototype.hasOwnProperty.call(_shortIntCache, ticker) ? _shortIntCache[ticker] : undefined;
+}
+function _kickShortIntFetch(ticker) {
+  if (Object.prototype.hasOwnProperty.call(_shortIntCache, ticker)) return;
+  _shortIntCache[ticker] = null;
+  fetchShortInterest(ticker).then(r => {
+    _shortIntCache[ticker] = r;
+    if (_selected === ticker && _data[_selected]) renderMainSoon();
+  }).catch(() => { _shortIntCache[ticker] = null; });
+}
+
 // Derive a cluster-buying signal from raw Form 4 transactions. Returns null
 // when there's no usable data (empty / fetch failed / no recent activity).
 //
@@ -15346,6 +15571,29 @@ function toggleFinBERT() {
   // Re-render the dashboard so the toggle button reflects the new state.
   if (_selected && _data[_selected]) renderMain();
 }
+
+// ── Theme toggle ──
+const LS_KEY_THEME = 'sp_theme';
+function _applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const icon  = document.getElementById('theme-toggle-icon');
+  const label = document.getElementById('theme-toggle-label');
+  if (icon)  icon.textContent  = theme === 'light' ? '◑' : '☀';
+  if (label) label.textContent = theme === 'light' ? ' Dark' : ' Light';
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem(LS_KEY_THEME, next); } catch (e) {}
+  _applyTheme(next);
+}
+// Apply persisted theme immediately (before first paint)
+(function () {
+  try {
+    const saved = localStorage.getItem(LS_KEY_THEME);
+    if (saved === 'light') _applyTheme('light');
+  } catch (e) {}
+})();
 
 // ============================================================
 // In-browser LLM fallback — Qwen2.5-0.5B-Instruct via transformers.js
@@ -20723,8 +20971,75 @@ function renderWhatIfResults(p) {
       <div class="wi-save-lbl">Save this simulation:</div>
       <input id="wi-save-name" type="text" value="${_escapeHtml(defaultBundleName)}" placeholder="${_escapeHtml(defaultBundleName)}" maxlength="80" autocomplete="off" title="Pre-filled with a sensible default — click to edit, or hit Save bundle as-is. Saved bundles appear in My Bundles and on the Cockpit alerts when behind pace.">
       <button class="btn btn-primary" onclick="saveCurrentBundle()">Save bundle</button>
+      <button class="btn" onclick="exportPortfolioCSV()" title="Download this portfolio as a CSV file with ticker, allocation, verdict, forecast, and current price." style="margin-left:8px;">⬇ Export CSV</button>
     </div>
   `;
+}
+
+// ── CSV export helpers ──
+function _downloadCSV(filename, rows) {
+  const csv = rows.map(r => r.map(cell => {
+    const s = String(cell == null ? '' : cell);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function exportPortfolioCSV() {
+  const cards = document.querySelectorAll('.wi-card');
+  const rows = [['Ticker','Name','Allocation %','Verdict','Heat Score','12M Forecast %','Current Price']];
+  cards.forEach(card => {
+    const ticker = card.getAttribute('data-ticker') || '';
+    if (!ticker) return;
+    const d = _data[ticker];
+    if (!d) return;
+    const profile = d.profile || {};
+    const v = d.verdict || {};
+    const bars = d.bars || [];
+    const last = bars[bars.length - 1];
+    const price = last ? last.close : '';
+    const forecast = buildForecast(bars, v, [12]);
+    const fc12 = forecast.find ? forecast.find(f => f.months === 12) : null;
+    const allocEl = card.querySelector('.wi-card-alloc, .wi-alloc');
+    const alloc = allocEl ? allocEl.textContent.replace(/[^0-9.]/g,'') : '';
+    rows.push([ticker, profile.name || '', alloc, v.label || '', v.score || '', fc12 ? fc12.expReturn.toFixed(1) : '', price ? price.toFixed(2) : '']);
+  });
+  if (rows.length <= 1) {
+    // Fall back: read from _lastPortfolio if DOM isn't rendered
+    showToast({ title: 'No portfolio data', body: 'Build a portfolio in the What If tab first, then export.', type: 'warn' });
+    return;
+  }
+  _downloadCSV(`stockpulse-portfolio-${new Date().toISOString().slice(0,10)}.csv`, rows);
+  showToast({ title: 'Portfolio exported', body: `${rows.length - 1} holdings downloaded as CSV.`, type: 'bull' });
+}
+
+function exportWatchlistCSV() {
+  const rows = [['Ticker','Name','Price','1W Change %','Verdict','Heat Score','Timing','12M Forecast %','Sector']];
+  for (const ticker of WATCHLIST) {
+    const d = _data[ticker];
+    if (!d) { rows.push([ticker,'','','','','','','','']); continue; }
+    const profile = d.profile || {};
+    const v = d.verdict || {};
+    const bars = d.bars || [];
+    const last = bars[bars.length - 1];
+    const prev = bars[bars.length - 2];
+    const price = last ? last.close.toFixed(2) : '';
+    const chg = (last && prev) ? ((last.close - prev.close) / prev.close * 100).toFixed(2) : '';
+    const forecast = buildForecast(bars, v, [12]);
+    const fc12 = forecast.find ? forecast.find(f => f.months === 12) : null;
+    const timing = computeBuyTiming(bars, v, forecast);
+    rows.push([
+      ticker, profile.name || '', price, chg, v.label || '', v.score || '',
+      timing ? timing.action : '', fc12 ? fc12.expReturn.toFixed(1) : '',
+      profile.finnhubIndustry || ''
+    ]);
+  }
+  _downloadCSV(`stockpulse-watchlist-${new Date().toISOString().slice(0,10)}.csv`, rows);
+  showToast({ title: 'Watchlist exported', body: `${rows.length - 1} tickers downloaded as CSV.`, type: 'bull' });
 }
 
 // ---- Top Picks ----
@@ -21912,6 +22227,128 @@ function _cockpitRenderAlerts(ov) {
   }).join('');
 }
 
+// ── Macro pulse ──
+// Fetches key US macro indicators from free public endpoints (no API key required).
+// ^TNX and ^IRX via Yahoo Finance (same CORS-accessible endpoint used for quotes).
+// Fed rate and CPI from FRED public CSV embed (https://fred.stlouisfed.org/graph/fredgraph.csv?id=X)
+// — no API key required for the CSV download endpoint.
+const LS_KEY_MACRO_CACHE = 'sp_macro_cache';
+const _SP_MACRO_TTL_MS = 4 * 60 * 60 * 1000; // 4-hour cache (macro updates once daily)
+let _macroPulseData = null;
+
+async function _fetchYahooQuote(sym) {
+  try {
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const result = j && j.chart && j.chart.result && j.chart.result[0];
+    if (!result) return null;
+    const closes = result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close;
+    if (!closes || !closes.length) return null;
+    // Latest non-null close
+    for (let i = closes.length - 1; i >= 0; i--) {
+      if (closes[i] != null) return closes[i];
+    }
+    return null;
+  } catch (e) { return null; }
+}
+
+async function _fetchFredCSV(seriesId) {
+  try {
+    const r = await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    const text = await r.text();
+    const lines = text.trim().split('\n').filter(l => l && !l.startsWith('DATE'));
+    if (!lines.length) return null;
+    // Last two lines for YoY calculation
+    const last = parseFloat(lines[lines.length - 1].split(',')[1]);
+    const prev12 = lines.length >= 13 ? parseFloat(lines[lines.length - 13].split(',')[1]) : null;
+    return { last, prev12 };
+  } catch (e) { return null; }
+}
+
+async function fetchMacroPulse() {
+  // Check cache
+  try {
+    const cached = JSON.parse(localStorage.getItem(LS_KEY_MACRO_CACHE) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < _SP_MACRO_TTL_MS) return cached.data;
+  } catch (e) {}
+  // Fetch all in parallel
+  const [y10, y3m, fedfunds, cpi] = await Promise.all([
+    _fetchYahooQuote('^TNX'),
+    _fetchYahooQuote('^IRX'),
+    _fetchFredCSV('FEDFUNDS'),
+    _fetchFredCSV('CPIAUCSL'),
+  ]);
+  const data = {
+    yield10Y:    y10  != null ? y10  : null,
+    yield3M:     y3m  != null ? y3m  : null,
+    spread10Y3M: (y10 != null && y3m != null) ? +(y10 - y3m).toFixed(2) : null,
+    fedRate:     fedfunds ? fedfunds.last : null,
+    cpiLevel:    cpi ? cpi.last : null,
+    cpiYoY:      (cpi && cpi.prev12 && cpi.last) ? +((cpi.last - cpi.prev12) / cpi.prev12 * 100).toFixed(2) : null,
+  };
+  try { localStorage.setItem(LS_KEY_MACRO_CACHE, JSON.stringify({ data, fetchedAt: Date.now() })); } catch (e) {}
+  return data;
+}
+
+function _renderMacroPulse(data) {
+  const host = document.getElementById('cockpit-macro-row');
+  if (!host) return;
+  if (!data) { host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data unavailable — check network.</span>'; return; }
+
+  const chips = [];
+  function chip(label, value, unit, tooltip, cls) {
+    return `<div class="signal-chip ${cls || ''}" style="padding:10px 14px; min-width:130px; display:flex; flex-direction:column; gap:2px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--raised);" title="${tooltip.replace(/"/g,'&quot;')}">
+      <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">${label}</div>
+      <div style="font-size:18px; font-weight:300; color:var(--text);">${value != null ? value : '—'}${unit ? `<span style="font-size:11px; color:var(--muted); margin-left:2px;">${unit}</span>` : ''}</div>
+    </div>`;
+  }
+
+  if (data.yield10Y != null) {
+    const spread = data.spread10Y3M;
+    const inverted = spread != null && spread < 0;
+    chips.push(chip(
+      '10Y Treasury Yield',
+      data.yield10Y.toFixed(2), '%',
+      `US 10-year Treasury yield · ${data.yield10Y.toFixed(2)}%\n\n${spread != null ? `Yield curve spread (10Y − 3M): ${spread >= 0 ? '+' : ''}${spread.toFixed(2)}% · ${inverted ? 'INVERTED — historically precedes recessions by 12–18 months' : 'Normal — positive spread, no immediate inversion signal'}\n\n` : ''}What this means: Higher yields raise the discount rate on future earnings, pressuring high-P/E growth stocks. Lower yields are a tailwind. Watch for direction, not just level.`,
+      inverted ? 'negative' : ''
+    ));
+  }
+  if (data.spread10Y3M != null) {
+    const s = data.spread10Y3M;
+    chips.push(chip(
+      'Yield Curve Spread',
+      `${s >= 0 ? '+' : ''}${s.toFixed(2)}`, '%',
+      `10Y minus 3M Treasury yield spread · ${s >= 0 ? '+' : ''}${s.toFixed(2)}%\n\nWhat this means: Negative spread (inverted curve) has preceded every US recession since 1955. A deeply negative reading (< −0.5%) sustained for 2+ quarters is the classic recession signal.`,
+      s < 0 ? 'negative' : s > 1 ? 'positive' : ''
+    ));
+  }
+  if (data.fedRate != null) {
+    chips.push(chip(
+      'Fed Funds Rate',
+      data.fedRate.toFixed(2), '%',
+      `Federal Reserve overnight lending rate · ${data.fedRate.toFixed(2)}%\n\nWhat this means: Higher rates slow inflation but also pressure borrowing, growth, and high-multiple stocks. The direction of rate changes (cutting vs hiking) often matters more than the absolute level.`,
+      ''
+    ));
+  }
+  if (data.cpiYoY != null) {
+    const hot = data.cpiYoY > 4;
+    const cool = data.cpiYoY < 2.5;
+    chips.push(chip(
+      'CPI Inflation (YoY)',
+      data.cpiYoY.toFixed(1), '%',
+      `US Consumer Price Index · year-over-year change · ${data.cpiYoY.toFixed(1)}%\n\n${hot ? 'HOT — above 4%, Fed likely to hold or hike. Bearish for bonds and high-growth stocks.' : cool ? 'COOL — below 2.5%, Fed may cut. Bullish for growth and bonds.' : 'MODERATE — within the 2.5–4% range. Fed likely on hold.'}\n\nWhat this means: CPI is the Fed\'s primary input for rate decisions. Hotter-than-expected = bearish for stocks; cooler = bullish.`,
+      hot ? 'negative' : cool ? 'positive' : ''
+    ));
+  }
+  if (!chips.length) {
+    host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data loading…</span>';
+    return;
+  }
+  host.innerHTML = chips.join('');
+}
+
 function renderCockpit() {
   // Meta — tracked count (LIVE/DEMO mode shown via topbar pill, not duplicated here)
   const meta = document.getElementById('cockpit-meta-text');
@@ -21928,6 +22365,15 @@ function renderCockpit() {
   // Kick off live-data fetch for index tickers in the background; the section
   // re-renders when each fetch settles. No-op in DEMO mode.
   _cockpitEnsureIndexData();
+  // Macro pulse — fetch from Yahoo Finance + FRED public CSV (no key needed)
+  if (_macroPulseData) {
+    _renderMacroPulse(_macroPulseData);
+  } else {
+    fetchMacroPulse().then(data => {
+      _macroPulseData = data;
+      _renderMacroPulse(data);
+    }).catch(() => _renderMacroPulse(null));
+  }
   _cockpitRenderHeatmap(ov);
   _cockpitRenderWatchlistPerf(ov);
   _cockpitRenderSectors(ov);
@@ -22347,6 +22793,12 @@ function renderMain() {
   // synthesized fallback; the response triggers a re-render with the real
   // date once it lands.
   _kickEarningsFetch(_selected);
+  _kickPriceTargetFetch(_selected);
+  _kickEarningsHistFetch(_selected);
+  _kickShortIntFetch(_selected);
+  const priceTarget = getPriceTargetCached(_selected);
+  const earningsHist = getEarningsHistCached(_selected);
+  const shortInt = getShortIntCached(_selected);
   const events = buildUpcomingEvents(_selected, profile, metrics);
   const lastDate = new Date(last.time * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
@@ -22374,6 +22826,7 @@ function renderMain() {
           <div id="verdict-meter-fill" style="width:${meterWidth}%; ${v.score < 0 ? 'left:50%; transform:translateX(-100%); right:auto;' : 'left:50%;'}"></div>
         </div>
         ${hasLLM() ? `<button class="ai-btn" onclick="whyVerdict('${_selected}')" title="${tip('whyVerdict')}"><span class="ai-btn-spark">✦</span> Why this verdict?</button>` : ''}
+        ${_renderPriceAlertControl(_selected, last.close)}
       </div>
     </div>
 
@@ -22407,7 +22860,7 @@ function renderMain() {
     })()}
 
     <div class="ticker-signal-row">
-      ${_renderSignalChipsRow(seasonality, analystMomentum, analystRecs, insiderCluster, insiderTxns)}
+      ${_renderSignalChipsRow(seasonality, analystMomentum, analystRecs, insiderCluster, insiderTxns, priceTarget, shortInt, last ? last.close : null)}
       ${render13FBadge(_selected, false)}
     </div>
 
@@ -22519,6 +22972,7 @@ function renderMain() {
           </div>
         </div>`;
       }).join('')}
+      ${_renderEarningsHistory(earningsHist)}
     </div>
 
     <div id="peer-card">
@@ -22961,6 +23415,167 @@ function requestNotificationPermission() {
   }
 }
 
+// ── Price alert system ──
+// Alerts are stored in localStorage as an array of { ticker, threshold, direction }
+// where direction is 'above' or 'below'. Checked on every refresh cycle.
+const LS_KEY_PRICE_ALERTS = 'sp_price_alerts';
+
+function getPriceAlerts() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY_PRICE_ALERTS) || '[]'); } catch (e) { return []; }
+}
+
+function savePriceAlerts(alerts) {
+  try { localStorage.setItem(LS_KEY_PRICE_ALERTS, JSON.stringify(alerts)); } catch (e) {}
+}
+
+function setPriceAlert(ticker, threshold) {
+  threshold = parseFloat(threshold);
+  if (!ticker || isNaN(threshold) || threshold <= 0) return false;
+  const alerts = getPriceAlerts().filter(a => a.ticker !== ticker);
+  const d = _data[ticker];
+  const currentPrice = d && d.bars && d.bars.length ? d.bars[d.bars.length - 1].close : null;
+  const direction = (currentPrice && threshold > currentPrice) ? 'above' : 'below';
+  alerts.push({ ticker, threshold, direction, setAt: Date.now() });
+  savePriceAlerts(alerts);
+  showToast({
+    title: `Alert set for ${ticker}`,
+    body: `You'll be notified when price crosses $${threshold.toFixed(2)} (${direction === 'above' ? '▲ above' : '▼ below'} current $${currentPrice ? currentPrice.toFixed(2) : '?'}).`,
+    type: 'bull',
+  });
+  return true;
+}
+
+function removePriceAlert(ticker) {
+  savePriceAlerts(getPriceAlerts().filter(a => a.ticker !== ticker));
+  if (_selected === ticker && _data[ticker]) renderMain();
+}
+
+function getPriceAlertFor(ticker) {
+  return getPriceAlerts().find(a => a.ticker === ticker) || null;
+}
+
+function _checkPriceAlerts() {
+  const alerts = getPriceAlerts();
+  if (!alerts.length) return;
+  const fired = [];
+  const remaining = [];
+  for (const a of alerts) {
+    const d = _data[a.ticker];
+    if (!d || !d.bars || !d.bars.length) { remaining.push(a); continue; }
+    const price = d.bars[d.bars.length - 1].close;
+    const triggered = (a.direction === 'above' && price >= a.threshold) ||
+                      (a.direction === 'below' && price <= a.threshold);
+    if (triggered) {
+      fired.push({ ...a, currentPrice: price });
+    } else {
+      remaining.push(a);
+    }
+  }
+  if (!fired.length) return;
+  savePriceAlerts(remaining);
+  for (const f of fired) {
+    const msg = `${f.ticker} crossed $${f.threshold.toFixed(2)} — now $${f.currentPrice.toFixed(2)}`;
+    showToast({ title: `Price alert: ${f.ticker}`, body: msg, type: 'bull' });
+    if (window.Notification && Notification.permission === 'granted') {
+      try { new Notification(`StockPulse — ${f.ticker} alert`, { body: msg, icon: '/favicon.ico' }); } catch (e) {}
+    }
+  }
+}
+
+function _renderPriceAlertControl(ticker, currentPrice) {
+  const existing = getPriceAlertFor(ticker);
+  if (existing) {
+    return `<div class="price-alert-control" style="margin-top:8px; display:flex; align-items:center; gap:6px; font-size:11px;">
+      <span style="color:var(--bull);">◉</span>
+      <span style="color:var(--muted);">Alert at $${existing.threshold.toFixed(2)}</span>
+      <button onclick="removePriceAlert('${ticker}')" style="font-size:10px; color:var(--bear); background:none; border:none; cursor:pointer; padding:0;" title="Remove this price alert">✕ Remove</button>
+    </div>`;
+  }
+  return `<div class="price-alert-control" style="margin-top:8px; display:flex; align-items:center; gap:6px;">
+    <input id="alert-threshold-${ticker}" type="number" step="0.01" min="0.01" placeholder="Set alert $"
+      style="width:100px; font-size:11px; padding:4px 8px; background:rgba(255,255,255,.06); border:1px solid var(--line); border-radius:var(--r-sm); color:var(--text);"
+      title="Enter a price — you'll be notified (browser notification + toast) when the stock crosses this level. Alert fires once, then clears."
+      onkeydown="if(event.key==='Enter'){const v=this.value;if(setPriceAlert('${ticker}',v))renderMain();}">
+    <button onclick="const v=document.getElementById('alert-threshold-${ticker}')&&document.getElementById('alert-threshold-${ticker}').value;if(setPriceAlert('${ticker}',v))renderMain();"
+      style="font-size:11px; padding:4px 10px; background:var(--raised); border:1px solid var(--line); border-radius:var(--r-sm); color:var(--text); cursor:pointer;"
+      title="Set a price alert for ${ticker}">Set alert</button>
+  </div>`;
+}
+
+// ── Keyboard navigation ──
+// j/k = move down/up watchlist · Enter = open selected ticker
+// Escape = close any open modal · / = focus search
+document.addEventListener('keydown', function(e) {
+  // Skip when focus is inside an input / textarea / contenteditable
+  const tag = (e.target.tagName || '').toLowerCase();
+  const inInput = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+  // Escape closes the top-most modal
+  if (e.key === 'Escape') {
+    const modal = document.querySelector('.modal-overlay:not([style*="display: none"])') ||
+                  document.getElementById('ai-modal') ||
+                  document.getElementById('settings-modal') ||
+                  document.getElementById('add-modal');
+    if (modal && (modal.style.display !== 'none')) {
+      modal.style.display = 'none';
+      return;
+    }
+  }
+
+  if (inInput) return;
+
+  // / focuses the watchlist search
+  if (e.key === '/') {
+    e.preventDefault();
+    const search = document.getElementById('search');
+    if (search) { search.focus(); search.select(); }
+    return;
+  }
+
+  // j/k navigates watchlist items
+  if (e.key === 'j' || e.key === 'k') {
+    e.preventDefault();
+    const items = Array.from(document.querySelectorAll('.wl-item'));
+    if (!items.length) return;
+    const active = document.querySelector('.wl-item.kb-focus');
+    let idx = active ? items.indexOf(active) : -1;
+    if (active) active.classList.remove('kb-focus');
+    idx = e.key === 'j' ? Math.min(idx + 1, items.length - 1) : Math.max(idx - 1, 0);
+    items[idx].classList.add('kb-focus');
+    items[idx].scrollIntoView({ block: 'nearest' });
+    return;
+  }
+
+  // Enter opens the keyboard-focused watchlist item
+  if (e.key === 'Enter') {
+    const focused = document.querySelector('.wl-item.kb-focus');
+    if (focused) {
+      const ticker = focused.getAttribute('data-ticker');
+      if (ticker) selectTicker(ticker);
+    }
+    return;
+  }
+});
+
+// ── FinBERT auto-enable on WebGPU ──
+// If the browser supports WebGPU (Chrome/Edge 2023+) and FinBERT hasn't
+// been explicitly disabled by the user, silently enable it and show one toast.
+(function _maybeAutoEnableFinBERT() {
+  const explicitPref = localStorage.getItem(LS_KEY_FINBERT);
+  if (explicitPref !== null) return; // user has explicitly set a preference — respect it
+  if (!window.navigator || !navigator.gpu) return; // no WebGPU support
+  FINBERT_ENABLED = true;
+  try { localStorage.setItem(LS_KEY_FINBERT, '1'); } catch (e) {}
+  // Show a one-time toast after a short delay so it doesn't compete with the boot sequence
+  setTimeout(() => {
+    showToast({
+      title: 'FinBERT enabled automatically',
+      body: 'Your browser supports WebGPU — news sentiment will use the in-browser FinBERT model. Toggle in Settings.',
+      type: 'bull',
+    });
+  }, 3000);
+})();
+
 // ========================================================================
 // Refresh loop
 // ========================================================================
@@ -23013,6 +23628,7 @@ async function refreshAll(silent = false) {
   if (_selected && _data[_selected]) renderMain();
   if (!silent) notifyChanges(changes);
   if (!silent) notifyTimingChanges(timingChanges);
+  _checkPriceAlerts();
 }
 
 function startRefreshTimer() {
