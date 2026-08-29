@@ -12204,6 +12204,28 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 </div>
 
 <!-- Settings Modal -->
+<style>
+  .settings-section { margin-bottom: 18px; }
+  .settings-section-head {
+    font-size: 10px; letter-spacing: 0.08em; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 8px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  .toggle-row {
+    display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+    padding: 2px 0;
+  }
+  .toggle-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+  .toggle-info { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-label { font-size: 13px; color: var(--text); }
+  .toggle-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .settings-storage-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .settings-storage-row #settings-key-status { flex: 1; min-width: 0; }
+  .settings-storage-actions { display: flex; gap: 8px; flex-shrink: 0; margin-top: 2px; }
+</style>
 <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" onclick="if(event.target===this) closeSettings()">
   <div class="modal">
     <div class="modal-head">
@@ -12211,51 +12233,86 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
       <button class="modal-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="modal-row">
-        <label for="api-key">Finnhub API key</label>
-        <input id="api-key" type="password" placeholder="Paste your key — runs in DEMO mode without one">
-        <div class="help-text">Free 60 calls/min at <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a>.</div>
-      </div>
-      <div class="modal-row">
-        <label for="td-api-key">Twelve Data API key <span class="help-tag muted">optional · cross-check</span></label>
-        <input id="td-api-key" type="password" placeholder="Second-source price sanity check">
-        <div class="help-text">Free 800/day at <a href="https://twelvedata.com/register" target="_blank">twelvedata.com/register</a>.</div>
-      </div>
-      <div class="modal-row">
-        <label for="groq-api-key">Groq API key <span class="help-tag muted">optional · AI</span></label>
-        <input id="groq-api-key" type="password" placeholder="Paste your Groq key for AI explanations">
-        <div class="help-text">Powers <b>Why this verdict?</b> and <b>Resolve conflict</b>. Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (Llama 4 Scout, fast inference, no card).</div>
-      </div>
-      <div class="modal-row">
-        <label><input type="checkbox" id="local-llm-enabled"> In-browser LLM fallback <span class="help-tag">no key · ~400 MB once</span></label>
-        <div class="help-text">Fallback when Groq is missing or rejected. First click downloads Qwen2.5-0.5B (~400 MB, cached forever). Lower quality, but $0 and offline.</div>
-      </div>
-      <div class="modal-row">
-        <label>Storage status</label>
-        <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
-        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-          <button type="button" class="btn" onclick="exportKeys()" title="Download a JSON file with your API keys, watchlist, favorites, sim set, saved bundles, and preferences. Use to migrate to another browser, origin, or device — localStorage is per-origin so the same URL on a different host has empty storage." style="padding:6px 12px; font-size:11px;">⬇ Export all data</button>
-          <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore from a previously-exported JSON backup (or a legacy keys.txt). Merges with whatever is already on this origin — never overwrites local progress." style="padding:6px 12px; font-size:11px;">⬆ Import data</button>
+
+      <!-- DATA SOURCES -->
+      <div class="settings-section">
+        <div class="settings-section-head">Data Sources</div>
+        <div class="modal-row">
+          <label for="api-key">Finnhub API key <span class="help-tag">required</span></label>
+          <input id="api-key" type="password" placeholder="Runs in DEMO mode without one">
+          <div class="help-text" style="margin-top:4px">Free 60 calls/min — <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a></div>
+        </div>
+        <div class="modal-row">
+          <label for="td-api-key">Twelve Data API key <span class="help-tag muted">optional · cross-check</span></label>
+          <input id="td-api-key" type="password" placeholder="Second-source price sanity check">
+          <div class="help-text" style="margin-top:4px">Free 800/day — <a href="https://twelvedata.com/register" target="_blank">twelvedata.com/register</a></div>
         </div>
       </div>
-      <div class="modal-row">
-        <label for="refresh-interval">Refresh interval</label>
-        <select id="refresh-interval">
-          <option value="0">Manual only</option>
-          <option value="60">Every 1 minute</option>
-          <option value="300" selected="">Every 5 minutes</option>
-          <option value="900">Every 15 minutes</option>
-          <option value="3600">Every 1 hour</option>
-        </select>
+
+      <!-- AI FEATURES -->
+      <div class="settings-section">
+        <div class="settings-section-head">AI Features</div>
+        <div class="modal-row">
+          <label for="groq-api-key">Groq API key <span class="help-tag muted">optional</span></label>
+          <input id="groq-api-key" type="password" placeholder="Paste your Groq key for AI explanations">
+          <div class="help-text" style="margin-top:4px">Powers <b>Why this verdict?</b> &amp; <b>Resolve conflict</b> — <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a></div>
+        </div>
+        <div class="modal-row">
+          <label class="toggle-row">
+            <input type="checkbox" id="local-llm-enabled">
+            <div class="toggle-info">
+              <span class="toggle-label">In-browser LLM fallback <span class="help-tag">no key · ~400 MB once</span></span>
+              <span class="toggle-desc">Fallback when Groq is unavailable. Downloads Qwen2.5-0.5B on first use (~400 MB, cached forever). Offline-capable, lower quality.</span>
+            </div>
+          </label>
+        </div>
       </div>
-      <div class="modal-row">
-        <label><input type="checkbox" id="notify-on-change" checked=""> Notify when verdict changes</label>
-        <div class="help-text">Browser notifications + toast pop-ups when any stock's signal flips between BUY/HOLD/SELL.</div>
+
+      <!-- PREFERENCES -->
+      <div class="settings-section">
+        <div class="settings-section-head">Preferences</div>
+        <div class="modal-row">
+          <label for="refresh-interval">Refresh interval</label>
+          <select id="refresh-interval">
+            <option value="0">Manual only</option>
+            <option value="60">Every 1 minute</option>
+            <option value="300" selected="">Every 5 minutes</option>
+            <option value="900">Every 15 minutes</option>
+            <option value="3600">Every 1 hour</option>
+          </select>
+        </div>
+        <div class="modal-row">
+          <label class="toggle-row">
+            <input type="checkbox" id="notify-on-change" checked="">
+            <div class="toggle-info">
+              <span class="toggle-label">Verdict-change alerts</span>
+              <span class="toggle-desc">Browser notifications + toasts when a stock flips between BUY / HOLD / SELL.</span>
+            </div>
+          </label>
+        </div>
+        <div class="modal-row">
+          <label class="toggle-row">
+            <input type="checkbox" id="buy-timing-alerts">
+            <div class="toggle-info">
+              <span class="toggle-label">Buy-timing alerts</span>
+              <span class="toggle-desc">Fires once when a ticker enters a buy window (MA40 pull-back, oversold-bounce, early-rally). No repeat spam.</span>
+            </div>
+          </label>
+        </div>
       </div>
-      <div class="modal-row">
-        <label><input type="checkbox" id="buy-timing-alerts"> Notify on buy-timing opportunities</label>
-        <div class="help-text">Surface the moment a watchlist ticker enters a buy window — price pulls back to MA40, oversold-bounce, or early-rally signal. Fires only on transitions IN (never spams while a ticker stays in a buy state).</div>
+
+      <!-- STORAGE -->
+      <div class="settings-section" style="margin-bottom:0">
+        <div class="settings-section-head">Storage</div>
+        <div class="modal-row settings-storage-row">
+          <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
+          <div class="settings-storage-actions">
+            <button type="button" class="btn" onclick="exportKeys()" title="Download a JSON file with your API keys, watchlist, favorites, sim set, saved bundles, and preferences." style="padding:6px 12px; font-size:11px;">⬇ Export</button>
+            <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore from a previously-exported JSON backup." style="padding:6px 12px; font-size:11px;">⬆ Import</button>
+          </div>
+        </div>
       </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeSettings()">Cancel</button>
@@ -15332,13 +15389,35 @@ function _llmCacheSet(key, text) {
   } catch (e) { /* quota or private mode — non-fatal */ }
 }
 
-// Groq model — Llama 4 Scout on Groq's LPU inference runs at ~500 tok/s,
-// usually returning the full 130-word explanation in well under 1 s.
-// Gemini was removed 2026-05-20 after repeated key-revocation issues
-// made it unreliable as a deployment-wide option (Google's scanner
-// revokes any key it finds in public source). Groq's free tier is also
-// faster and has higher RPM, so it became the primary remote provider.
-const GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+// Groq model priority list — tried in order on every cold start.
+// The first model that returns HTTP 200 is cached in localStorage for 7 days
+// so repeat calls skip the probe entirely. On a 404 ("model does not exist")
+// the dead entry is evicted and the next candidate is tried automatically —
+// no code change needed when Groq deprecates a model.
+// Gemini was removed 2026-05-20; Groq is now the sole remote provider.
+const GROQ_MODELS = [
+  'meta-llama/llama-4-maverick-17b-128e-instruct',
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama3-70b-8192',
+];
+const LS_KEY_GROQ_MODEL = 'sp_groq_model'; // {model, ts}
+function _groqModelsToTry() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODEL) || 'null');
+    if (s && s.model && (Date.now() - (s.ts || 0)) < 7 * 86400000)
+      return [s.model, ...GROQ_MODELS.filter(m => m !== s.model)];
+  } catch (e) {}
+  return [...GROQ_MODELS];
+}
+function _cacheGroqModel(model) {
+  try { localStorage.setItem(LS_KEY_GROQ_MODEL, JSON.stringify({ model, ts: Date.now() })); } catch (e) {}
+}
+function _evictGroqModel(model) {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODEL) || 'null');
+    if (s && s.model === model) localStorage.removeItem(LS_KEY_GROQ_MODEL);
+  } catch (e) {}
+}
 
 // Provider-agnostic LLM call. Returns { ok, text, error }.
 //   opts.cacheKey  — required for caching; pass null to bypass
@@ -15442,93 +15521,107 @@ async function callLLM(prompt, opts) {
 // compatible /v1/chat/completions endpoint, so the request body is the
 // standard ChatCompletions shape and streaming uses standard `data: {...}`
 // SSE chunks with `delta.content` fragments.
+// Loops over GROQ_MODELS automatically: on 404 (model deprecated/removed)
+// the dead entry is evicted and the next candidate is tried transparently.
 async function _callGroqLLM(prompt, opts) {
   opts = opts || {};
   const stream = typeof opts.onChunk === 'function';
-  try {
-    const url = 'https://api.groq.com/openai/v1/chat/completions';
-    const body = {
-      model: GROQ_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: opts.temp != null ? opts.temp : 0.3,
-      max_tokens: opts.maxTokens || 250,
-      stream,
-    };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      const detailLc = (detail || '').toLowerCase();
-      // Groq surfaces a "key revoked / disabled" through 401 with a body
-      // message containing "invalid api key" or "api key has been revoked".
-      // Treat as 'leaked' (terminal) so the dispatcher falls through to the
-      // next provider — mirrors Gemini's classification.
-      const leakedShape = detailLc.includes('revoked')
-                       || detailLc.includes('disabled')
-                       || detailLc.includes('invalid api key')
-                       || detailLc.includes('api_key_invalid');
-      if (leakedShape) return { ok: false, error: 'leaked', text: '', detail, source: 'groq' };
-      if (res.status === 401 || res.status === 403) return { ok: false, error: 'auth', text: '', detail, source: 'groq' };
-      if (res.status === 429) return { ok: false, error: 'rate_limit', text: '', detail, source: 'groq' };
-      return { ok: false, error: 'api_error', text: '', detail: `HTTP ${res.status} ${detail.slice(0, 200)}`, source: 'groq' };
-    }
-    if (!stream) {
-      const data = await res.json();
-      const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (!text) return { ok: false, error: 'empty', text: '', source: 'groq' };
-      return { ok: true, text: String(text).trim(), source: 'groq' };
-    }
-    if (!res.body || !res.body.getReader) {
-      // Older browser fallback — parse the whole JSON
-      const data = await res.json().catch(() => null);
-      const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (!text) return { ok: false, error: 'empty', text: '', source: 'groq' };
-      const clean = String(text).trim();
-      try { opts.onChunk(clean); } catch (e) {}
-      return { ok: true, text: clean, source: 'groq' };
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    let full = '';
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf('\n\n')) !== -1) {
-        const eventBlock = buf.slice(0, idx);
-        buf = buf.slice(idx + 2);
-        const dataLines = eventBlock.split('\n')
-          .filter(l => l.startsWith('data: '))
-          .map(l => l.slice(6).trim());
-        for (const payload of dataLines) {
-          if (!payload || payload === '[DONE]') continue;
-          try {
-            const obj = JSON.parse(payload);
-            // OpenAI-compatible stream chunk: choices[0].delta.content
-            const delta = obj && obj.choices && obj.choices[0] && obj.choices[0].delta;
-            const txt = delta && delta.content;
-            if (txt) {
-              full += txt;
-              try { opts.onChunk(full.trim()); } catch (e) {}
-            }
-          } catch (e) { /* malformed event, skip */ }
+  const models = _groqModelsToTry();
+  let lastErr = { ok: false, error: 'api_error', text: '', detail: 'No Groq models available', source: 'groq' };
+  for (const model of models) {
+    try {
+      const url = 'https://api.groq.com/openai/v1/chat/completions';
+      const body = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: opts.temp != null ? opts.temp : 0.3,
+        max_tokens: opts.maxTokens || 250,
+        stream,
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        const detailLc = (detail || '').toLowerCase();
+        // Groq surfaces a "key revoked / disabled" through 401 with a body
+        // message containing "invalid api key" or "api key has been revoked".
+        // Treat as 'leaked' (terminal) so the dispatcher falls through to the
+        // next provider — mirrors Gemini's classification.
+        const leakedShape = detailLc.includes('revoked')
+                         || detailLc.includes('disabled')
+                         || detailLc.includes('invalid api key')
+                         || detailLc.includes('api_key_invalid');
+        if (leakedShape) return { ok: false, error: 'leaked', text: '', detail, source: 'groq' };
+        if (res.status === 401 || res.status === 403) return { ok: false, error: 'auth', text: '', detail, source: 'groq' };
+        if (res.status === 429) return { ok: false, error: 'rate_limit', text: '', detail, source: 'groq' };
+        // 404 = model deprecated/removed — evict cache entry and try next candidate
+        if (res.status === 404 || detailLc.includes('does not exist')) {
+          _evictGroqModel(model);
+          lastErr = { ok: false, error: 'api_error', text: '', detail: `HTTP ${res.status} ${detail.slice(0, 200)}`, source: 'groq' };
+          continue;
+        }
+        return { ok: false, error: 'api_error', text: '', detail: `HTTP ${res.status} ${detail.slice(0, 200)}`, source: 'groq' };
+      }
+      _cacheGroqModel(model);
+      if (!stream) {
+        const data = await res.json();
+        const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (!text) return { ok: false, error: 'empty', text: '', source: 'groq' };
+        return { ok: true, text: String(text).trim(), source: 'groq' };
+      }
+      if (!res.body || !res.body.getReader) {
+        // Older browser fallback — parse the whole JSON
+        const data = await res.json().catch(() => null);
+        const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (!text) return { ok: false, error: 'empty', text: '', source: 'groq' };
+        const clean = String(text).trim();
+        try { opts.onChunk(clean); } catch (e) {}
+        return { ok: true, text: clean, source: 'groq' };
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let full = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const eventBlock = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const dataLines = eventBlock.split('\n')
+            .filter(l => l.startsWith('data: '))
+            .map(l => l.slice(6).trim());
+          for (const payload of dataLines) {
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const obj = JSON.parse(payload);
+              // OpenAI-compatible stream chunk: choices[0].delta.content
+              const delta = obj && obj.choices && obj.choices[0] && obj.choices[0].delta;
+              const txt = delta && delta.content;
+              if (txt) {
+                full += txt;
+                try { opts.onChunk(full.trim()); } catch (e) {}
+              }
+            } catch (e) { /* malformed event, skip */ }
+          }
         }
       }
+      const clean = full.trim();
+      if (!clean) return { ok: false, error: 'empty', text: '', source: 'groq' };
+      return { ok: true, text: clean, source: 'groq' };
+    } catch (e) {
+      return { ok: false, error: 'network', text: '', detail: e.message || String(e), source: 'groq' };
     }
-    const clean = full.trim();
-    if (!clean) return { ok: false, error: 'empty', text: '', source: 'groq' };
-    return { ok: true, text: clean, source: 'groq' };
-  } catch (e) {
-    return { ok: false, error: 'network', text: '', detail: e.message || String(e), source: 'groq' };
   }
+  return lastErr;
 }
 
 // Minimal markdown → HTML so Gemini's natural **bold** / *italic* / line-break
