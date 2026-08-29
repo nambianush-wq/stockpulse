@@ -12216,9 +12216,10 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
     padding: 2px 0; text-transform: none; font-size: inherit;
     color: inherit; margin-bottom: 0; letter-spacing: 0;
+    width: 100%; box-sizing: border-box;
   }
   .toggle-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
-  .toggle-info { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .toggle-label {
     font-size: 13px; color: var(--text);
     text-transform: none; letter-spacing: 0;
@@ -12861,7 +12862,7 @@ function dataStorageStatus() {
 // Layman-friendly explanations for every indicator. All include a 'What this means'
 // section so non-finance users know how to act on the number.
 const TIP = {
-  rsi: "RSI(14W) — Relative Strength Index over 14 WEEKLY bars (~3.5 months), a 0-to-100 momentum gauge.\n\nWhat this means: Above 70 = stretched (often pulls back). Below 30 = oversold (sometimes bounces, but in a downtrend it usually keeps falling). 50 = neutral.\n\nWhy weekly: StockPulse uses weekly bars throughout (Finnhub's free /candle endpoint is paywalled for daily, so we standardise on weekly). This means RSI(14W) is SLOWER and SMOOTHER than the 14-day RSI you see on Yahoo Finance or TradingView's daily charts — a strong multi-month uptrend can pin it in the 80s for weeks. Use it for trend-momentum confirmation, not for daily swing-trade timing.\n\nAlways pair RSI with the trend — never act on it alone.",
+  rsi: "A 0-to-100 speed gauge for recent price moves. Above 70 usually means the stock has risen very fast and may be due for a pullback; below 30 means it has fallen fast and might bounce. Think of it as a temperature check on momentum — not a buy or sell command by itself.\n\nNote: StockPulse uses weekly bars, so this RSI is slower and smoother than the daily RSI on Yahoo Finance. Always pair it with the trend.",
   ma15: "MA15 — the average closing price of the last 15 weeks (~3 months).\n\nWhat this means: When today's price is above MA15, short-term momentum is positive. Stocks in uptrends often pull back to MA15 and bounce.",
   ma40: "MA40 — the average closing price of the last 40 weeks (~1 year).\n\nWhat this means: The most-watched trend line on Wall Street. Above MA40 = the stock is in a confirmed uptrend. Below MA40 = downtrend. Crossing it is usually a regime change.",
   ma100: "MA100 — the average closing price of the last 100 weeks (~2 years).\n\nWhat this means: The long-term trend line. Crossing this usually signals a multi-year structural shift in the stock.",
@@ -12885,8 +12886,8 @@ const TIP = {
   oneMonth: "1-Month Change — price move over the last 4 weeks.\n\nWhat this means: Medium-term momentum. Sustained moves over 4 weeks are stronger signals than single-day spikes.",
   threeMonth: "3-Month Change — price move over the last quarter.\n\nWhat this means: Real trend confirmation. Stocks up 15%+ over 3 months are typically in genuine uptrends, not just noise.",
   marketCap: "Market Cap — total dollar value of all shares outstanding.\n\nWhat this means: Above $200B = mega-cap (stable, slow-growing). $10-200B = large-cap. $2-10B = mid-cap (more growth, more risk). Below $2B = small-cap (highest growth + risk).",
-  pe: "P/E Ratio — Price ÷ Earnings per share.\n\nWhat this means: How many years of current earnings it would take to pay back the share price. Below 15 = cheap (value). 15-25 = average. Above 30 = expensive (growth expected). Compare to sector average.",
-  eps: "EPS (TTM) — Earnings Per Share over trailing 12 months.\n\nWhat this means: Profit attributable to each share. Higher = more profitable per share. Compare to historical EPS to spot growth or decline.",
+  pe: "The price you pay for every $1 of profit the company earns. A high number (40+) means investors expect fast growth; a low number (under 15) can mean the stock is cheap — or that growth is slow. Always compare it to similar companies, not the whole market.",
+  eps: "How much profit the company earned per share over the last 12 months (TTM = Trailing Twelve Months). Growing EPS over time is a healthy sign — the company is becoming more profitable. Shrinking EPS is a warning flag worth investigating before buying.",
   divYield: "Dividend Yield — annual dividend divided by current price.\n\nWhat this means: 3% yield means dividends pay 3% per year just from holding. Above 6% often signals trouble (price falling faster than dividend). Below 2% = growth-oriented.",
   divAnnual: "Annual Dividend — total dividend per share over the year.\n\nWhat this means: Cash you'd receive per share each year. Tax-efficient income source for buy-and-hold investors.",
   cumPnL: "Cumulative P&L — total gain or loss since you saved this bundle.\n\nWhat this means: Current value minus what you started with. The headline number for evaluating the bundle. Positive = winning. Negative = losing.",
@@ -12916,6 +12917,21 @@ const TIP = {
   pace: "Pace vs Forecast — how the bundle is tracking against the 12-month forecast prorated for elapsed days.\n\nWhat this means: 'Ahead of pace' = doing BETTER than the forecast predicted at this point. 'Behind pace' = doing WORSE than predicted. The forecast was set the day you saved the bundle; pace tells you if reality is beating or missing the plan.",
   whyVerdict: "Asks a free LLM to explain the verdict in plain English.\n\nWhat this does: Sends the verdict score + driving signals + recent news headlines + 12M forecast to Groq (Llama 4 Scout) and streams back a 3-4 sentence explanation of WHY the model rates this stock the way it does — including any disagreement between the chart and the news.\n\nWhy this matters: The heat score is a number. The signals list is technical jargon. This turns both into a sentence like \"the chart is bullish BUT the company just guided down — consider waiting.\" It's the human read on top of the math.\n\nProvider: Groq (free) by default. If no Groq key is set, falls back to an in-browser Qwen2.5-0.5B model (~400 MB one-time download, then runs offline). Either way, no card required. Answers are cached for 24h per ticker so re-clicking is instant and free.\n\nIMPORTANT: AI-generated explanations are advisory, not investment advice. Always cross-check with the signal table.",
   resolveConflict: "Asks a free LLM how to handle a CONFLICT timing signal.\n\nWhat this does: CONFLICT means the chart says one thing (e.g. bullish technicals) and the forecast says another (e.g. bearish 12M return). The timing engine refuses to commit. This button asks Groq (or the in-browser fallback) to (1) name which side is pulling each way in plain English, (2) say which side has more current evidence, and (3) propose ONE concrete action — e.g. \"half-size DCA over 3 buys\", \"wait for next earnings\", \"skip entirely\".\n\nWhy this matters: Without this, a CONFLICT chip leaves you stuck with no next step. The model can read the recent news and weigh which side is more credible right now.\n\nProvider: Groq by default, in-browser fallback when no key. Cached for 24h. AI-suggested posture, not investment advice — size to your own risk tolerance.",
+  evImpactHigh: "High-impact events can cause big, sudden price moves the moment the news drops. If you own this stock, watch the result closely — prices can swing 2–5% or more in minutes.",
+  evImpactMedium: "Medium-impact events can nudge the stock price but rarely cause dramatic swings. Worth keeping an eye on, especially if the result surprises investors.",
+  evImpactLow: "Low-impact events rarely move the stock price much on their own. They are worth knowing about but usually do not require any action from you.",
+  evCpi: "The government measures how much everyday things — food, rent, gas — cost compared to last year. When prices rise a lot, the central bank often raises interest rates, which can push stock prices down across the board.",
+  evFomc: "A group of US central bank officials votes on whether to raise, lower, or hold interest rates. Higher rates make borrowing more expensive and tend to pull stock prices down; lower rates do the opposite.",
+  evEarnings: "The company reports how much money it made (or lost) over the past three months. If profits beat what analysts expected, the stock often jumps; if they disappoint, it can drop sharply — sometimes 10% or more in a single day.",
+  evDividend: "To receive the next dividend payment you must own the stock BEFORE this date. Buy on or after this date and you miss the upcoming payout — the price usually dips slightly to reflect that.",
+  evNfp: "The US government releases how many new jobs were added last month. A strong number means the economy is healthy, but it can also signal that interest rates will stay high longer — a mixed result for stocks.",
+  sectionCompanyDetails: "Basic facts about the company — its size, industry, and key financial numbers. Use this section to quickly understand what the company does and whether it matches the kind of investment you are looking for.",
+  sectionEvents: "Scheduled dates when big news is expected, like earnings reports or government data releases. Events like these can cause sudden price swings, so knowing they are coming helps you avoid being caught off guard.",
+  sectionSignals: "Patterns the app found in price, volume, and market data that suggest the stock might be about to move up or down. More signals pointing in the same direction means stronger conviction — one lone signal is just a hint.",
+  sectionChart: "A weekly price chart showing how the stock has moved over time, with trend lines drawn automatically. Rising trend lines mean the stock has generally been climbing; falling ones mean it has been sliding.",
+  sectionVolChart: "Shows how many shares were bought and sold each week. A big price move backed by high volume is more trustworthy than one on low volume — high volume means lots of investors agreed on the direction.",
+  sectionPeers: "Other stocks in the same industry, ranked by recent performance. If your stock is lagging while peers are surging, the company may have a specific problem — not just sector-wide headwinds.",
+  sectionPriceChange: "How much the price changed over the past 7 days (one full week). A weekly view smooths out single-day noise and gives a cleaner read on short-term momentum than a daily percentage would.",
 };
 function tip(key) { return (TIP[key] || '').replace(/"/g, '&quot;'); }
 
@@ -22360,10 +22376,11 @@ function renderMain() {
         const du = daysUntil(e.date);
         const dun = daysUntilNum(e.date);
         const whenClass = (du === 'Today') ? 'ev-when-today' : (dun >= 0 && dun <= 7 ? 'ev-when-soon' : '');
+        const evTipKey = {earnings:'evEarnings',dividend:'evDividend',fomc:'evFomc',cpi:'evCpi',jobs:'evNfp'}[e.kind] || '';
         return `<div class="ev-row">
           <div class="ev-icon">${e.icon}</div>
           <div class="ev-main">
-            <div class="ev-line"><span class="ev-name">${e.title}</span><span class="ev-impact ${e.impact}">${e.impact} impact</span></div>
+            <div class="ev-line"><span class="ev-name" title="${tip(evTipKey)}" style="cursor:help">${e.title}</span><span class="ev-impact ${e.impact}" title="${tip('evImpact' + e.impact)}" style="cursor:help">${e.impact} impact</span></div>
             <div class="ev-sowhat">${e.soWhat}</div>
           </div>
           <div class="ev-date">
