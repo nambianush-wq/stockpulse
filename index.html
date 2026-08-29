@@ -6173,7 +6173,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         </div>
         <div>
           <div class="t-price" id="t-price">$168.84</div>
-          <div class="t-change up">+7.08 (+4.37%)<span class="t-change-period" title="Change is week-over-week — our bar resolution is weekly">1W</span></div>
+          <div class="t-change up">+7.08 (+4.37%)<span class="t-change-period" title="${tip('sectionPriceChange')}" style="cursor:help">1W</span></div>
         </div>
       </div>
       <div id="verdict-card" class="bull" style="color:var(--bull)">
@@ -22234,7 +22234,7 @@ function renderMain() {
         </div>
         <div>
           <div class="t-price" id="t-price">$${fmt(last.close)}</div>
-          <div class="t-change ${dir}">${change >= 0 ? '+' : ''}${fmt(change)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)<span class="t-change-period" title="Change is week-over-week — our bar resolution is weekly">1W</span></div>
+          <div class="t-change ${dir}">${change >= 0 ? '+' : ''}${fmt(change)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)<span class="t-change-period" title="${tip('sectionPriceChange')}" style="cursor:help">1W</span></div>
         </div>
       </div>
       <div id="verdict-card" class="${verdictPolarity}" style="color:${meterColor}; cursor:help" title="${_verdictTooltip(v).replace(/"/g,'&quot;')}">
@@ -22369,7 +22369,7 @@ function renderMain() {
 
     <div id="events-card">
       <div class="ev-head">
-        <div class="ev-title">Upcoming Key Events · could move this stock</div>
+        <div class="ev-title" title="${tip('sectionEvents')}" style="cursor:help">Upcoming Key Events · could move this stock</div>
         <div class="cd-meta">Next ${events.length} catalysts</div>
       </div>
       ${events.map(e => {
@@ -22393,7 +22393,7 @@ function renderMain() {
 
     <div id="peer-card">
       <div class="ev-head">
-        <div class="ev-title">Sector Top Performers · <span id="peer-card-sector">…</span></div>
+        <div class="ev-title" title="${tip('sectionPeers')}" style="cursor:help">Sector Top Performers · <span id="peer-card-sector">…</span></div>
         <div class="cd-meta">Ranked by heat score · click any peer to add</div>
       </div>
       <div id="peer-card-body">
@@ -22403,21 +22403,22 @@ function renderMain() {
 
     <div id="company-details">
       <div class="cd-head">
-        <div class="cd-title">Company Details${isLive() ? '' : ' · synthetic demo data'}</div>
+        <div class="cd-title" title="${tip('sectionCompanyDetails')}" style="cursor:help">About This Company${isLive() ? '' : ' · synthetic demo data'}</div>
         <div class="cd-meta">${profile.currency || 'USD'}${profile.country ? ' · ' + profile.country : ''}</div>
       </div>
       <div class="cd-grid">
         <div class="cd-cell" title="${tip('marketCap')}" style="cursor:help"><div class="cd-lbl">Market Cap</div><div class="cd-val">${fmtMcap(profile.marketCapitalization)}</div></div>
         <div class="cd-cell" title="${tip('pe')}" style="cursor:help"><div class="cd-lbl">P/E Ratio</div><div class="cd-val">${fmtNum(metrics.peExclExtraTTM)}</div></div>
-        <div class="cd-cell" title="${tip('eps')}" style="cursor:help"><div class="cd-lbl">EPS (TTM)</div><div class="cd-val">$${fmtNum(metrics.epsBasicExclExtraItemsTTM)}</div></div>
-        <div class="cd-cell" title="${tip('divYield')}" style="cursor:help"><div class="cd-lbl">Div Yield</div><div class="cd-val">${fmtPct(metrics.dividendYieldIndicatedAnnual)}</div></div>
-        <div class="cd-cell" title="${tip('divAnnual')}" style="cursor:help"><div class="cd-lbl">Ann. Dividend</div><div class="cd-val">$${fmtNum(metrics.dividendPerShareAnnual)}</div></div>
+        <div class="cd-cell" title="${tip('eps')}" style="cursor:help"><div class="cd-lbl">Earnings / Share</div><div class="cd-val">$${fmtNum(metrics.epsBasicExclExtraItemsTTM)}</div></div>
+        <div class="cd-cell" title="${tip('divYield')}" style="cursor:help"><div class="cd-lbl">Dividend Yield</div><div class="cd-val">${fmtPct(metrics.dividendYieldIndicatedAnnual)}</div></div>
+        <div class="cd-cell" title="${tip('divAnnual')}" style="cursor:help"><div class="cd-lbl">Annual Dividend</div><div class="cd-val">$${fmtNum(metrics.dividendPerShareAnnual)}</div></div>
         <div class="cd-cell" title="${tip('hi52')}\n\nSource priority: Finnhub /stock/metric (intraday daily extremes) → fallback to bar-computed (weekly closes only — may miss intra-week wicks)." style="cursor:help"><div class="cd-lbl">52W High</div><div class="cd-val">$${fmtNum((metrics['52WeekHigh'] && metrics['52WeekHigh'] > 0) ? metrics['52WeekHigh'] : w52hi)}</div></div>
         <div class="cd-cell" title="${tip('lo52')}\n\nSource priority: Finnhub /stock/metric (intraday daily extremes) → fallback to bar-computed (weekly closes only — may miss intra-week wicks)." style="cursor:help"><div class="cd-lbl">52W Low</div><div class="cd-val">$${fmtNum((metrics['52WeekLow'] && metrics['52WeekLow'] > 0) ? metrics['52WeekLow'] : w52lo)}</div></div>
         <div class="cd-cell" title="${tip('beta')}" style="cursor:help"><div class="cd-lbl">Beta</div><div class="cd-val">${fmtNum(metrics.beta)}</div></div>
       </div>
     </div>
 
+    <div id="stats-strip-head" style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;padding:18px 0 6px 2px;">Momentum &amp; Trend · how the stock is moving</div>
     <div id="stats-strip">
       <div class="stat" title="${tip('rsi')}" style="cursor:help"><div class="stat-lbl">RSI(14W)</div><div class="stat-val ${v.lastRsi > 70 ? 'down' : v.lastRsi < 30 ? 'up' : ''}">${v.lastRsi.toFixed(1)}</div></div>
       <div class="stat" title="${tip('ma15')}" style="cursor:help"><div class="stat-lbl">MA15</div><div class="stat-val">$${fmt(v.ma15)}</div></div>
@@ -22427,7 +22428,7 @@ function renderMain() {
 
     <div class="chart-panel">
       <div class="chart-head">
-        <div class="chart-title">Price chart · weekly bars with trend lines</div>
+        <div class="chart-title" title="${tip('sectionChart')}" style="cursor:help">Price chart · weekly bars with trend lines</div>
         <div class="legend">
           <div class="legend-item"><div class="legend-swatch" style="background:#ff9f0a"></div>MA15 (3-mo)</div>
           <div class="legend-item"><div class="legend-swatch" style="background:#533afd"></div>MA40 (1-yr)</div>
@@ -22449,7 +22450,7 @@ function renderMain() {
 
     <div class="chart-panel">
       <div class="chart-head">
-        <div class="chart-title">Trading activity · is the move backed by volume?</div>
+        <div class="chart-title" title="${tip('sectionVolChart')}" style="cursor:help">Trading activity · is the move backed by volume?</div>
       </div>
       <div class="chart-body"><div id="vol-chart" style="height:120px"></div></div>
       <div class="lede-hint">Tall bars = unusually heavy trading. Spikes often confirm a breakout or warn of a reversal.</div>
@@ -22457,7 +22458,7 @@ function renderMain() {
 
     <div id="signals-panel">
       <div id="signals-head">
-        <div class="chart-title">Active signals · what's driving the verdict</div>
+        <div class="chart-title" title="${tip('sectionSignals')}" style="cursor:help">Active signals · what's driving the verdict</div>
         <div style="font-size:11px;color:var(--muted)">${v.signals.length} contributing factors</div>
       </div>
       <div id="signals-grid">
