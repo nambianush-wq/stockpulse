@@ -4079,7 +4079,7 @@ body { padding-bottom: 44px; }
    Needle rotates based on 1-week change; clamps at ±5%. */
 .cockpit-indices-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 10px;
   margin-top: 4px;
 }
@@ -6302,7 +6302,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Key exchanges &amp; indices</div>
-            <div class="cockpit-section-sub">Animated gauges for the headline US benchmarks — S&amp;P 500, NASDAQ-100, Dow 30, Russell 2000, the VIX fear gauge, Gold, and 20-year Treasuries · needle position = 1-week change · click any card to add the proxy ETF to your watchlist</div>
+            <div class="cockpit-section-sub">Animated gauges for the headline US benchmarks — S&amp;P 500, NASDAQ-100, Dow 30, Russell 2000, Gold, and 20-year Treasuries · needle position = 1-week change · click any card to add the proxy ETF to your watchlist</div>
           </div>
         </div>
         <div class="cockpit-indices-grid" id="cockpit-indices"></div>
@@ -21826,29 +21826,25 @@ function _cockpitMoodLabel(avgScore) {
 // Key indices to render in the gauge strip. ETF proxies for the major US
 // benchmarks + a few asset-class signals (VIX, Gold, 20Y Treasuries).
 const _COCKPIT_INDICES = [
-  { ticker: 'SPY', label: 'S&P 500',      role: 'Broad US large-cap',                 tone: 'equity' },
-  { ticker: 'QQQ', label: 'NASDAQ-100',   role: 'US tech-tilted growth',              tone: 'equity' },
-  { ticker: 'DIA', label: 'Dow Jones 30', role: 'Blue-chip industrials',              tone: 'equity' },
-  { ticker: 'IWM', label: 'Russell 2000', role: 'US small-cap breadth',               tone: 'equity' },
-  { ticker: 'VIX', label: 'VIX',          role: 'Volatility (fear) — inverse signal', tone: 'vol' },
-  { ticker: 'GLD', label: 'Gold',         role: 'Safe-haven · inflation hedge',       tone: 'alt' },
-  { ticker: 'TLT', label: '20Y Treasuries', role: 'Long-duration bonds',              tone: 'bond' },
+  { ticker: 'SPY', label: 'S&P 500',        role: 'Broad US large-cap',         tone: 'equity' },
+  { ticker: 'QQQ', label: 'NASDAQ-100',     role: 'US tech-tilted growth',      tone: 'equity' },
+  { ticker: 'DIA', label: 'Dow Jones 30',   role: 'Blue-chip industrials',      tone: 'equity' },
+  { ticker: 'IWM', label: 'Russell 2000',   role: 'US small-cap breadth',       tone: 'equity' },
+  { ticker: 'GLD', label: 'Gold',           role: 'Safe-haven · inflation hedge', tone: 'alt' },
+  { ticker: 'TLT', label: '20Y Treasuries', role: 'Long-duration bonds',        tone: 'bond' },
 ];
 
 // Build the animated semicircle gauge SVG. dialPct ∈ [-100..+100] where +5%
 // 1-week change maps to +100 (full right swing). The needle CSS transitions
 // from its previous position to the new one (0.9s cubic-bezier).
-function _cockpitGaugeSvg(wkChg, isFear) {
-  // Map wkChg → -100..+100 with a soft clamp at ±5%. For the VIX (fear) we
-  // invert so a SPIKE in vol points the needle LEFT (bad for equity), not right.
+function _cockpitGaugeSvg(wkChg) {
   const cappedRaw = Math.max(-5, Math.min(5, wkChg));
-  const capped = isFear ? -cappedRaw : cappedRaw;
-  const dialPct = (capped / 5) * 100;   // -100..+100
+  const dialPct = (cappedRaw / 5) * 100;   // -100..+100
   // Needle angle: -90deg at -100 (full left), 0deg at 0, +90deg at +100
   const angle = (dialPct / 100) * 90;
   // Arc colours — green for right, red for left, amber near zero
-  const isUp   = capped > 0.3;
-  const isDown = capped < -0.3;
+  const isUp   = cappedRaw > 0.3;
+  const isDown = cappedRaw < -0.3;
   const arcCol = isUp ? 'var(--bull)' : isDown ? 'var(--bear)' : 'var(--warn)';
   // Arc geometry: semicircle viewBox 100x50, center (50,50), radius 40
   // Arc-bg is the full 180° backdrop. Arc-fill is the portion from center
@@ -21920,79 +21916,44 @@ function _cockpitRenderIndices() {
     const wkAgo = closes[closes.length - 2] || last;
     const moAgoIdx = Math.max(0, closes.length - 5);
     const moAgo = closes[moAgoIdx] || last;
-    const isFear = idx.ticker === 'VIX';
     // Prefer the LIVE quote price over the bar close, just like the heatmap.
-    // dayChange / dayChangePct are the universal "today's move" definition.
-    // VIX is special — Finnhub's quote endpoint does NOT cover the CBOE VIX
-    // index directly (only VIX-related ETFs like VIXY / UVXY). When the price
-    // looks implausible (> 100 — VIX has never closed above ~90 historically)
-    // we suppress the displayed price and show a clear placeholder.
     const q = _data[idx.ticker] && _data[idx.ticker].quote;
     const livePrice = (q && q.price > 0) ? q.price : last;
     const isLivePrice = !!(q && q.price > 0);
     const dayChangePct = (q && typeof q.changePct === 'number') ? q.changePct : null;
-    // Implausibility guard — VIX is the only index in this set where this
-    // can trip. If it does, show "—" instead of misleading number.
-    const vixImplausible = isFear && livePrice > 100;
-    const displayPrice = vixImplausible ? '—' : `$${fmt(livePrice)}`;
-    // 1W / 1M deltas anchored to live price when available (so they reflect
-    // today, not last weekly close).
-    const endPrice = vixImplausible ? last : livePrice;
-    const wkChg = ((endPrice - wkAgo) / wkAgo) * 100;
-    const moChg = ((endPrice - moAgo) / moAgo) * 100;
+    const displayPrice = `$${fmt(livePrice)}`;
+    const wkChg = ((livePrice - wkAgo) / wkAgo) * 100;
+    const moChg = ((livePrice - moAgo) / moAgo) * 100;
     const sparkSamples = sampleSparkPoints(closes.slice(-26), 24);
     const spark = sparklineSvg(sparkSamples, 100, 16);
-    // 12-month forecast for the index — same forecast engine as Watchlist /
-    // Sectors / Top Picks (user feedback 2026-05-18: gauge cards should show
-    // history AND forecast, not just 1W).
     let f12 = 0, conf12 = 0;
-    let verdictLbl = 'HOLD';
     try {
       const v = computeVerdict(bars);
-      verdictLbl = v.label;
       const fc = buildForecast(bars, v, [12]);
       const f = fc.find(x => x.months === 12) || fc[0];
       if (f) { f12 = f.expReturn; conf12 = f.confidence; }
     } catch (e) {}
-    // For VIX the forecast direction reads opposite — rising vol = market risk.
-    // We still show the number but the colour follows the equity-friendly convention.
-    // Headline % — prefer today's live change over 1W (user feedback
-    // 2026-05-18: live %age should be the prominent number on each card).
-    const hasToday = (typeof dayChangePct === 'number') && !vixImplausible;
+    const hasToday = typeof dayChangePct === 'number';
     const headlinePct = hasToday ? dayChangePct : wkChg;
     const headlineLabel = hasToday ? 'today' : '1W';
-    // For the VIX, an UP move is BAD for equity, so flip the colour semantics
-    // in the headline number. Other indices: up = green, down = red.
-    const dirCls = isFear
-      ? (headlinePct > 0.3 ? 'down' : headlinePct < -0.3 ? 'up' : 'warn')
-      : (headlinePct > 0.3 ? 'up'   : headlinePct < -0.3 ? 'down' : 'warn');
-    const cardCls = dirCls === 'up' ? 'up' : dirCls === 'down' ? 'down' : 'warn';
+    const dirCls = headlinePct > 0.3 ? 'up' : headlinePct < -0.3 ? 'down' : 'warn';
+    const cardCls = dirCls;
     const hasLiveBars = !!(_data[idx.ticker] && _data[idx.ticker].bars && _data[idx.ticker].bars.length > 100);
-    const sourceLabel = vixImplausible ? 'N/A' : (isLivePrice ? 'LIVE' : (hasLiveBars ? 'LIVE' : (live ? 'loading…' : 'DEMO')));
-    const sourceCls = vixImplausible ? 'synth' : (isLivePrice || hasLiveBars ? 'live' : (live ? 'loading' : 'synth'));
+    const sourceLabel = isLivePrice ? 'LIVE' : (hasLiveBars ? 'LIVE' : (live ? 'loading…' : 'DEMO'));
+    const sourceCls = isLivePrice || hasLiveBars ? 'live' : (live ? 'loading' : 'synth');
     const loadingCls = (live && !isLivePrice && !hasLiveBars) ? ' loading' : '';
-    const interpretation = isFear
-      ? `${idx.label} ${headlineLabel} ${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}% — ${headlinePct > 1.5 ? 'volatility spiking · risk-off shift' : (headlinePct < -1.5 ? 'volatility easing · risk-on tone' : 'volatility steady')}`
-      : `${idx.label} ${headlineLabel} ${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}% — ${headlinePct > 0.5 ? 'higher' : (headlinePct < -0.5 ? 'lower' : 'roughly flat')}`;
-    const tipBase = vixImplausible
-      ? `VIX index isn't quoted by Finnhub's stock-quote endpoint (it's a CBOE index, not an equity). Price shown is suppressed to avoid the stale anchor leaking. For the actual VIX, see cboe.com/tradable_products/vix. The 1W direction shown is still informative.\n\n${idx.role}`
-      : `${interpretation}\n\n${idx.role}\n\nPrice ${displayPrice}\nHistory: 1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}% · 1M ${moChg >= 0 ? '+' : ''}${moChg.toFixed(2)}%\nForecast: 12M ${f12 >= 0 ? '+' : ''}${f12.toFixed(1)}% at ${conf12}% confidence\n\nNeedle = 1-week change scaled to ±5%. ${isFear ? 'INVERTED for VIX — a spike points LEFT because rising volatility is bad for equity.' : ''}\n\nClick to add ${idx.ticker} to your watchlist + open the full ticker dashboard.`;
-    // Headline % display — for VIX in implausible state we show "—" instead
-    // of a misleading number, with no period label (the gauge needle is the
-    // only signal we trust). Otherwise show the signed %.
-    const headlineDisplay = vixImplausible
-      ? `<div class="cockpit-index-val warn" style="font-size:14px;">—</div><div class="cockpit-index-headline-period">no live quote</div>`
-      : `<div class="cockpit-index-val ${dirCls}">${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}%</div><div class="cockpit-index-headline-period">${headlineLabel}</div>`;
+    const interpretation = `${idx.label} ${headlineLabel} ${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}% — ${headlinePct > 0.5 ? 'higher' : (headlinePct < -0.5 ? 'lower' : 'roughly flat')}`;
+    const tipBase = `${interpretation}\n\n${idx.role}\n\nPrice ${displayPrice}\nHistory: 1W ${wkChg >= 0 ? '+' : ''}${wkChg.toFixed(2)}% · 1M ${moChg >= 0 ? '+' : ''}${moChg.toFixed(2)}%\nForecast: 12M ${f12 >= 0 ? '+' : ''}${f12.toFixed(1)}% at ${conf12}% confidence\n\nNeedle = 1-week change scaled to ±5%.\n\nClick to add ${idx.ticker} to your watchlist + open the full ticker dashboard.`;
     return `<div class="cockpit-index-card ${cardCls}${loadingCls}"
       title="${tipBase}"
       onclick="(async()=>{ if(!WATCHLIST.includes('${idx.ticker}')){ WATCHLIST.push('${idx.ticker}'); saveWatchlist(); } selectTicker('${idx.ticker}'); showView('watchlist'); })();" tabindex="0">
       <div class="cockpit-index-label">${idx.label}</div>
       <div class="cockpit-index-name">${idx.ticker}</div>
       <div class="cockpit-index-gauge-wrap">
-        ${_cockpitGaugeSvg(wkChg, isFear)}
+        ${_cockpitGaugeSvg(wkChg)}
       </div>
       <div class="cockpit-index-headline">
-        ${headlineDisplay}
+        <div class="cockpit-index-val ${dirCls}">${headlinePct >= 0 ? '+' : ''}${headlinePct.toFixed(2)}%</div><div class="cockpit-index-headline-period">${headlineLabel}</div>
       </div>
       <div class="cockpit-index-price">${displayPrice}</div>
       <div class="cockpit-index-stats">
