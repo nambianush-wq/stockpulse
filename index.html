@@ -13481,6 +13481,19 @@ let LAST_TIMINGS = JSON.parse(localStorage.getItem(LS_KEY_TIMINGS) || '{}');
 // source. First activation downloads the model (~60-100 MB, cached in IndexedDB
 // by transformers.js itself — second visit is instant).
 const LS_KEY_FINBERT = 'sp_finbert_enabled';
+// One-time migration (2026-08-29): a FinBERT auto-enable IIFE in the previous
+// deployment wrote sp_finbert_enabled=1 to localStorage for WebGPU browsers.
+// That caused transformers.js WASM shader compilation to block the main thread
+// → RESULT_CODE_HUNG tab crash. Reset the key so FinBERT is opt-in again.
+// The migration flag prevents this from clearing a deliberate future re-enable.
+(function _migrateFinBERT() {
+  try {
+    if (!localStorage.getItem('sp_finbert_migrated_v2')) {
+      localStorage.removeItem(LS_KEY_FINBERT);
+      localStorage.setItem('sp_finbert_migrated_v2', '1');
+    }
+  } catch (e) {}
+})();
 let FINBERT_ENABLED = localStorage.getItem(LS_KEY_FINBERT) === '1';
 // In-browser LLM fallback — Qwen2.5-0.5B-Instruct via transformers.js (same
 // lib that powers FinBERT). When ON, the "Why this verdict?" and "Resolve
@@ -22379,13 +22392,18 @@ function renderCockpit() {
   // re-renders when each fetch settles. No-op in DEMO mode.
   _cockpitEnsureIndexData();
   // Macro pulse — fetch from Yahoo Finance + FRED public CSV (no key needed)
-  if (_macroPulseData) {
-    _renderMacroPulse(_macroPulseData);
+  // _macroPulseData: null=not fetched yet, false=fetched+failed, object=success
+  if (_macroPulseData !== null) {
+    _renderMacroPulse(_macroPulseData || null);
   } else {
+    _macroPulseData = undefined; // in-flight sentinel — prevents duplicate fetches
     fetchMacroPulse().then(data => {
-      _macroPulseData = data;
+      _macroPulseData = data || false; // false = fetched but got nothing
       _renderMacroPulse(data);
-    }).catch(() => _renderMacroPulse(null));
+    }).catch(() => {
+      _macroPulseData = false;
+      _renderMacroPulse(null);
+    });
   }
   _cockpitRenderHeatmap(ov);
   _cockpitRenderWatchlistPerf(ov);
