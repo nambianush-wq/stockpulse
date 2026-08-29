@@ -16,6 +16,7 @@
   --raised: #1c2244;
   --line: #2a3158;
   --text: #eef0fa;
+  --fg: #eef0fa;             /* gauge needle + pivot + interactive text */
   --muted: #8a93b5;
   --dim: #5b6388;
   --accent: #533afd;          /* Stripe primary indigo */
@@ -41,13 +42,14 @@
 }
 /* ── Light theme override ── */
 [data-theme="light"] {
-  --bg: #f4f6fb;
+  --bg: #eef1f8;
   --panel: #ffffff;
   --raised: #edf0f8;
-  --line: #d4d9ec;
+  --line: #b8c0d8;           /* was #d4d9ec — stronger card borders */
   --text: #0f1728;
+  --fg: #0f1728;             /* gauge needle + pivot in light mode */
   --muted: #5b6388;
-  --dim: #8a93b5;
+  --dim: #6b76a0;            /* was #8a93b5 — raises contrast to ~4.6:1 on white */
   --accent: #533afd;
   --accent-soft: #665efd;
   --accent-deep: #4434d4;
@@ -68,9 +70,19 @@
 }
 [data-theme="light"] .tab { color: var(--muted); }
 [data-theme="light"] .tab.active { color: var(--accent); }
-[data-theme="light"] #sidebar { background: var(--panel); border-right: 1px solid var(--line); }
+[data-theme="light"] #sidebar { background: var(--panel); border-right: 1px solid var(--line); box-shadow: 2px 0 8px rgba(0,0,0,.07); }
 [data-theme="light"] .wl-item { background: var(--raised); }
 [data-theme="light"] .wl-item:hover { background: var(--line); }
+/* Light-mode card depth: border alone (--line) lacks enough contrast on white.
+   A soft shadow lifts cards off the page surface without heavy visual noise. */
+[data-theme="light"] .cockpit-index-card,
+[data-theme="light"] .cockpit-hero-card,
+[data-theme="light"] .stock-tile,
+[data-theme="light"] .sector-card,
+[data-theme="light"] .wi-summary-card,
+[data-theme="light"] .bundle-item {
+  box-shadow: 0 1px 4px rgba(0,0,0,.09), 0 0 0 1px rgba(0,0,0,.05);
+}
 .wl-item.kb-focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -4095,7 +4107,7 @@ body { padding-bottom: 44px; }
 /* Top-border color removed — direction is already carried by the gauge needle
    + headline % color (principle 11, X2 dedupe). */
 .cockpit-index-label {
-  font-size: 9.5px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .08em;
   color: var(--muted);
@@ -4121,7 +4133,7 @@ body { padding-bottom: 44px; }
   height: 100%;
   overflow: visible;
 }
-.cockpit-index-gauge .arc-bg { fill: none; stroke: var(--line); stroke-width: 8; }
+.cockpit-index-gauge .arc-bg { fill: none; stroke: rgba(255,255,255,.15); stroke-width: 8; }
 .cockpit-index-gauge .arc-fill {
   fill: none;
   stroke-width: 8;
@@ -4160,19 +4172,18 @@ body { padding-bottom: 44px; }
 .cockpit-index-val.down { color: var(--bear); }
 .cockpit-index-val.warn { color: var(--warn); }
 .cockpit-index-headline-period {
-  font-size: 8.5px;
-  color: var(--dim);
+  font-size: 9.5px;
+  color: var(--muted);
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
   margin-top: 1px;
 }
-/* Price line — bold white, with no period suffix (period is on the
-   headline above). Cleaner than the old "$X · today · 1W +x%" smush. */
+/* Price line — uses var(--text) so it renders in both dark and light mode. */
 .cockpit-index-price {
   font-size: 13px;
   font-weight: 700;
-  color: white;
+  color: var(--text);
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
 }
@@ -4185,7 +4196,7 @@ body { padding-bottom: 44px; }
   width: 100%;
   margin-top: 9px;
   padding-top: 7px;
-  border-top: 1px solid rgba(138,146,166,.10);
+  border-top: 1px solid rgba(138,146,166,.25);
   font-variant-numeric: tabular-nums;
 }
 .cockpit-idx-stat {
@@ -4196,11 +4207,11 @@ body { padding-bottom: 44px; }
   min-width: 0;
 }
 .cockpit-idx-stat .lbl {
-  color: var(--dim);
+  color: var(--muted);
   font-weight: 700;
   letter-spacing: .05em;
   text-transform: uppercase;
-  font-size: 8.5px;
+  font-size: 9px;
   white-space: nowrap;
 }
 .cockpit-idx-stat b {
@@ -5493,7 +5504,7 @@ body { padding-bottom: 44px; }
 .pos-neg-pill .pn-sym { font-weight: 800; }
 
 /* Sparkline */
-.sparkline { vertical-align: middle; opacity: .9; }
+.sparkline { vertical-align: middle; opacity: 1; }
 .sparkline.right { margin-left: auto; }
 
 /* Historical performance pills inside holding cards */
@@ -15915,6 +15926,15 @@ function _evictGroqModel(model) {
     const s = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODEL) || 'null');
     if (s && s.model === model) localStorage.removeItem(LS_KEY_GROQ_MODEL);
   } catch (e) {}
+  // Also remove the model from the discovery cache and expire it so
+  // _syncGroqModelsIfStale() fetches a fresh list on the next callLLM().
+  try {
+    const disc = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODELS) || 'null');
+    if (disc && disc.models) {
+      const filtered = disc.models.filter(m => m !== model);
+      localStorage.setItem(LS_KEY_GROQ_MODELS, JSON.stringify({ models: filtered, ts: 0 }));
+    }
+  } catch (e) {}
 }
 
 // Provider-agnostic LLM call. Returns { ok, text, error }.
@@ -17924,7 +17944,10 @@ function sparklineSvg(samples, width, height) {
     const y = height - 1.5 - ((c - min) / range) * (height - 3);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
-  const color = samples[samples.length - 1] >= samples[0] ? '#30d158' : '#ff453a';
+  const rs = getComputedStyle(document.documentElement);
+  const bullColor = rs.getPropertyValue('--bull').trim() || '#30d158';
+  const bearColor = rs.getPropertyValue('--bear').trim() || '#ff453a';
+  const color = samples[samples.length - 1] >= samples[0] ? bullColor : bearColor;
   return `<svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M${pts.join(' L')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
