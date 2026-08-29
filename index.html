@@ -430,14 +430,16 @@ input:focus, select:focus {
   top: 12px;
   right: 12px;
   z-index: 2;
+  opacity: 0;
+  transition: opacity .15s;
 }
+.stock-tile:hover .row-actions,
+.stock-tile:focus-within .row-actions { opacity: 1; }
 .stock-tile .tile-rank {
-  /* push rank down so it doesn't collide with actions */
-  top: 38px;
+  /* rank at natural position now that actions are hover-only */
+  top: 14px;
 }
-/* Reserve space inside tile-head so the sector chip never extends under the
-   absolutely-positioned row-actions / tile-rank in the top-right corner. */
-.stock-tile .tile-head { padding-right: 60px; min-height: 30px; }
+.stock-tile .tile-head { padding-right: 46px; min-height: 30px; }
 .stock-tile .tile-sector-chip { max-width: calc(100% - 0px); }
 .pick-line1 .row-actions { margin-left: auto; }
 
@@ -1697,15 +1699,12 @@ body.sectors-mode #sidebar { display: none; }
 .goal-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .goal-description {
-  font-size: 13px;
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 16px;
-  line-height: 1.55;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  padding: 2px 4px;
 }
-.goal-description strong { color: var(--accent); font-weight: 600; }
+.goal-description strong { color: var(--text); font-weight: 600; }
 
 /* Tile grid */
 .tile-grid {
@@ -2073,7 +2072,7 @@ body.sectors-mode #sidebar { display: none; }
   border-radius: 14px;
   margin-bottom: 18px;
   overflow: hidden;
-  animation: fade-slide .35s;
+  animation: fade-slide .15s;
 }
 .sector-block-head {
   padding: 16px 20px 14px;
@@ -3371,7 +3370,6 @@ body.whatif-mode #sidebar { display: none; }
   margin-top: 6px;
   padding: 4px 6px;
   background: rgba(255,255,255,.03);
-  border: 1px solid var(--line);
   border-radius: 6px;
   cursor: help;
 }
@@ -6565,16 +6563,14 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
             <div class="sectors-title">Top stocks by investment goal</div>
             <div class="sectors-sub">Ranked across the built-in catalog of ~120 US stocks and ETFs. Each tile shows the heat score, current price, 1-week change, and 12-month forecast with confidence.</div>
           </div>
-          <div class="sectors-mode-note">Rankings use catalog data + the same forecast engine as the watchlist. Click any tile to add it and open the full dashboard.</div>
         </div>
         <div class="goal-pills" id="goal-pills" role="tablist" aria-label="Investment goal"><button class="goal-pill active" role="tab" aria-selected="true" onclick="selectGoal(&#39;growth&#39;)">Growth</button><button class="goal-pill " role="tab" aria-selected="false" onclick="selectGoal(&#39;preservation&#39;)">Capital Preservation</button><button class="goal-pill " role="tab" aria-selected="false" onclick="selectGoal(&#39;income&#39;)">Income</button><button class="goal-pill " role="tab" aria-selected="false" onclick="selectGoal(&#39;value&#39;)">Value</button><button class="goal-pill " role="tab" aria-selected="false" onclick="selectGoal(&#39;momentum&#39;)">Momentum</button></div>
         <div class="goal-description" id="goal-description"><strong>Capital growth.</strong> Stocks with the strongest combined trend and 12-month forecast — biased toward names that could appreciate meaningfully. Best for long horizons and risk tolerance.</div>
         <div class="picks-filters" id="sectors-filters">
-          <div class="picks-filter-lbl">History window</div>
+          <div class="picks-filter-lbl" title="Controls how many years of price history are used to compute the past-performance line on each tile.">Show past returns for:</div>
           <button class="picks-period-pill" data-yrs="1" onclick="selectSectorsHistory(1)">1 Year</button>
           <button class="picks-period-pill active" data-yrs="3" onclick="selectSectorsHistory(3)">3 Years</button>
           <button class="picks-period-pill" data-yrs="5" onclick="selectSectorsHistory(5)">5 Years</button>
-          <div class="picks-filter-lbl" style="margin-left:auto;text-transform:none;letter-spacing:.02em;font-weight:400;color:var(--dim);font-style:italic;">Past performance for the selected window appears in every tile.</div>
         </div>
         <div class="sec-filters-wrap" id="sectors-discovery-filters" role="region" aria-label="Discovery filters"></div>
       </div>
@@ -7359,11 +7355,10 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     </a>
   </div>
         <div class="picks-filters" id="picks-filters">
-          <div class="picks-filter-lbl">History window</div>
+          <div class="picks-filter-lbl" title="Controls how many years of price history are used to compute the ← History card (return and max drawdown) on each pick row.">Show past returns for:</div>
           <button class="picks-period-pill" data-yrs="1" onclick="selectPicksHistory(1)">1 Year</button>
           <button class="picks-period-pill active" data-yrs="3" onclick="selectPicksHistory(3)">3 Years</button>
           <button class="picks-period-pill" data-yrs="5" onclick="selectPicksHistory(5)">5 Years</button>
-          <div class="picks-filter-lbl" style="margin-left:auto;text-transform:none;letter-spacing:.02em;font-weight:400;color:var(--dim);font-style:italic;">Historical performance over the selected window appears alongside the forecast cards.</div>
         </div>
         <div class="picks-filters" id="picks-timing-pills" style="margin-top:6px;"></div>
         <div class="picks-filters" id="picks-inst-pills" style="margin-top:6px;"></div>
@@ -17443,13 +17438,13 @@ function renderSectorsFilterPills() {
       { v:'buy_plus',    l:'Buy or better',t:'Only BUY or STRONG BUY tickers' },
       { v:'strong_buy',  l:'Strong Buy',   t:'Only STRONG BUY tickers' },
     ])}
-    ${row('Dividend', 'div', [
-      { v:'all',      l:'Any',        t:'No dividend filter' },
-      { v:'pays',     l:'Pays',       t:'Only stocks that pay any dividend' },
-      { v:'hi_yield', l:'High yield', t:'Only stocks with dividend yield ≥ 4%' },
-    ])}
     <details class="sec-filters-advanced"${advOpen ? ' open' : ''} ontoggle="try { localStorage.setItem('sp_sectors_adv_open_v1', this.open ? '1' : '0'); } catch(e) {}">
       <summary>More filters${advActive > 0 ? ` <span class="sec-filter-adv-count">${advActive} active</span>` : ''}</summary>
+      ${row('Dividend', 'div', [
+        { v:'all',      l:'Any',        t:'No dividend filter' },
+        { v:'pays',     l:'Pays',       t:'Only stocks that pay any dividend' },
+        { v:'hi_yield', l:'High yield', t:'Only stocks with dividend yield ≥ 4%' },
+      ])}
       ${row('Min 12M forecast', 'fcMin', [
         { v:0,  l:'Any',     t:'No floor on 12-month expected return' },
         { v:10, l:'≥ +10%',  t:'Only stocks with expected 12-month return ≥ 10%' },
@@ -17508,7 +17503,7 @@ const GOAL_DEFS = {
     rank: m => (m.forecast12 * 0.55) + (m.score * 0.35) + (m.monthChange * 0.10),
   },
   preservation: {
-    label: 'Capital Preservation',
+    label: 'Preserve',
     desc: '<strong>Protect what you have.</strong> Low-volatility names with stable trends and healthy dividends — favors defensive sectors (utilities, staples, healthcare) over high-beta growth. Best for risk-averse holders.',
     rank: m => (-m.volatility * 1.8) + (Math.min(m.divYield, 6) * 2.5) + (Math.max(0, m.score) * 0.4) + (m.forecast12 > 0 ? 8 : -8),
   },
@@ -20799,16 +20794,14 @@ function _renderPicksTimingPills() {
   const mode = _picksTimingFilter;
   const pill = (key, label, full) => `<button class="picks-period-pill ${mode === key ? 'active' : ''}" onclick="setPicksTimingFilter('${key}')" title="${full.replace(/"/g,'&quot;')}">${label}</button>`;
   host.innerHTML = `
-    <span class="picks-period-lbl" style="margin-right:8px;">Buy timing</span>
+    <span class="picks-period-lbl" style="margin-right:8px;" title="Filter picks by the model's recommended entry timing">Buy timing</span>
     <button class="picks-period-pill ${mode === null ? 'active' : ''}" onclick="setPicksTimingFilter(null)" title="Show all picks regardless of buy timing">All</button>
     ${pill('BUY_NOW',     'Buy now',        'Show only picks where the model favours immediate entry (trend confirmed, not stretched)')}
     ${pill('EARLY_RALLY', 'Ahead of rally', 'Show only picks where the model has turned bullish BUT price is still at/below MA40 and RSI is not stretched — entry near trend support, not chasing a breakout')}
     ${pill('BUY_ON_DIP',  'On dip',         'Show only picks that are stretched / overbought — wait for a pullback')}
     ${pill('DCA',        'DCA',        'Show only picks where high vol favours dollar-cost-averaging')}
     ${pill('WAIT',       'Wait',       'Show only picks with no clear entry trigger')}
-    ${pill('CONFLICT',   'Conflict',   'Show only picks where verdict and forecast disagree — speculative')}
-    ${pill('SELL',       'Sell',       'Show only picks with SELL verdict — bearish trend, distinct from Avoid')}
-    ${pill('AVOID',      'Avoid',      'Show only picks the model flags as negative-expected')}
+    ${pill('CONFLICT',   'Conflict',   'Show only picks where verdict and forecast disagree — speculative, proceed with caution')}
   `;
 }
 // Top Picks 13F-ownership filter — same idea as the Watchlist one. null off,
@@ -20825,8 +20818,8 @@ function _renderPicksInstPills() {
   const mode = _picksInstFilter;
   const pill = (key, label, full) => `<button class="picks-period-pill ${mode === key ? 'active' : ''}" onclick="setPicksInstFilter('${key}')" title="${full.replace(/"/g,'&quot;')}">${label}</button>`;
   host.innerHTML = `
-    <span class="picks-period-lbl" style="margin-right:8px;">Institutional (13F)</span>
-    <button class="picks-period-pill ${mode === null ? 'active' : ''}" onclick="setPicksInstFilter(null)" title="Show all picks regardless of 13F ownership">Any</button>
+    <span class="picks-period-lbl" style="margin-right:8px;" title="13F — institutional investors must report their stock holdings to the SEC quarterly. Filter to only picks with institutional backing.">Institutional (13F)</span>
+    <button class="picks-period-pill ${mode === null ? 'active' : ''}" onclick="setPicksInstFilter(null)" title="Show all picks regardless of 13F ownership">All</button>
     ${pill('inst1', '≥1 mgr',     'Show only picks held by at least 1 of the top active 13F managers')}
     ${pill('inst2', '≥2 mgrs',    'Show only picks held by 2 or more top managers — shared conviction')}
     ${pill('inst3', 'Consensus ≥3', 'Show only picks held by 3 or more top managers — strong consensus')}
@@ -20970,17 +20963,8 @@ function renderPicksList() {
   // Jump bar — color-coded by each sector's mood
   const jump = $('picks-jump');
   if (jump) {
-    const legendTip = 'Sector mood — each chip is colored by its sector\'s overall verdict mix.\n\nGreen (Strong / Healthy) = mostly bullish sector. Grey (Mixed) = no clear direction. Amber (Soft) / Red (Weak) = bearish.';
-    const legend = `<details class="picks-jump-legend-collapsible">
-      <summary title="${legendTip.replace(/"/g, '&quot;')}">Sector mood key ▾</summary>
-      <div class="picks-jump-legend">
-        <span class="swatch"><span class="swatch-dot" style="background:rgba(48,209,88,.45)"></span>Strong</span>
-        <span class="swatch"><span class="swatch-dot" style="background:rgba(48,209,88,.20)"></span>Healthy</span>
-        <span class="swatch"><span class="swatch-dot" style="background:rgba(138,146,166,.4)"></span>Mixed</span>
-        <span class="swatch"><span class="swatch-dot" style="background:rgba(255,159,10,.4)"></span>Soft</span>
-        <span class="swatch"><span class="swatch-dot" style="background:rgba(255,69,58,.5)"></span>Weak</span>
-      </div>
-    </details>`;
+    const legendTip = 'Sector mood — chip color indicates the sector\'s overall verdict mix.\n\nGreen = mostly bullish (Strong / Healthy). Grey = no clear direction (Mixed). Amber = softening (Soft). Red = bearish (Weak).';
+    const legend = `<span class="picks-jump-legend-inline" title="${legendTip.replace(/"/g, '&quot;')}" style="font-size:11px;color:var(--dim);cursor:help;white-space:nowrap;align-self:center;">Mood key ▸</span>`;
     const links = finalEntries.map(e => {
       const mood = moodFor(e.avgScore);
       const moodKey = mood.cls.replace('mood-', 'jump-');
@@ -21016,20 +21000,16 @@ function renderSectorBlock(e) {
         <div class="sb-mood ${mood.cls}">${mood.label}</div>
         <div class="sb-meta">${e.count} stocks · ${e.strongBuys} strong buy · ${e.buys} buy · avg score ${e.avgScore >= 0 ? '+' : ''}${e.avgScore.toFixed(0)}</div>
       </div>
-      <div class="sb-outlook">${mood.desc}.${narrative ? ' ' + narrative : ''}</div>
+      ${(narrative || mood.desc) ? `<div class="sb-outlook">${narrative || mood.desc}</div>` : ''}
       <div class="sb-stats">
         <div class="sb-stat">
-          <div class="sb-stat-lbl">Avg 1Y Forecast</div>
+          <div class="sb-stat-lbl" title="Average 12-month expected return across all ranked picks in this sector">Avg 1Y Forecast</div>
           <div class="sb-stat-val ${e.avgForecast12 >= 0 ? 'up' : 'down'}">${e.avgForecast12 >= 0 ? '+' : ''}${e.avgForecast12.toFixed(1)}%</div>
         </div>
         ${topPerf ? `<div class="sb-stat">
-          <div class="sb-stat-lbl">Top 3M Performer</div>
+          <div class="sb-stat-lbl" title="The stock with the highest 3-month return in this sector — first name in the list is often this one">Top 3M Performer</div>
           <div class="sb-stat-val">${topPerf.ticker} ${topPerf.threeMoChange >= 0 ? '+' : ''}${topPerf.threeMoChange.toFixed(1)}%</div>
         </div>` : ''}
-        <div class="sb-stat">
-          <div class="sb-stat-lbl">Ranked Picks</div>
-          <div class="sb-stat-val">${e.picks.length} of ${e.count}</div>
-        </div>
       </div>
     </div>
     <div class="sector-block-body">
@@ -21046,7 +21026,6 @@ function renderPickRow(m, rank) {
   const verdictClass = 'verdict-' + m.verdict.replace(/\s+/g, '-');
   const f12 = m.forecasts.find(f => f.months === 12);
   const overallDir = (f12 && f12.expReturn < 0) ? 'fc-down' : 'fc-up';
-  const pn = posNegFor({ score: m.score, forecast12: f12 ? f12.expReturn : 0 });
   // Full verdict tooltip — prefer the cached _data entry which carries the
   // full signals array; fall back to a score+thresholds tip otherwise.
   const fullVerdict = (typeof _data !== 'undefined' && _data[m.ticker] && _data[m.ticker].verdict)
@@ -21054,7 +21033,7 @@ function renderPickRow(m, rank) {
     : { label: m.verdict, score: m.score, signals: [] };
   const verdictTip = _verdictTooltip(fullVerdict);
   return `<div class="pick-row ${overallDir}" tabindex="0" onclick="tileClick('${m.ticker}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();tileClick('${m.ticker}')}" title="${m.name.replace(/"/g, '&quot;')}">
-    <div class="pick-heat" style="--heat-color:${heat}"></div>
+    <div class="pick-heat" style="--heat-color:${heat}" title="Heat score ${m.score >= 0 ? '+' : ''}${m.score} — ${tip('heatBar')}" style="cursor:help"></div>
     <div class="pick-main">
       <div class="pick-line1">
         <span class="pick-rank">#${rank}</span>
@@ -21100,6 +21079,7 @@ function renderPickRow(m, rank) {
             <div class="pick-fc-h">${f.months}-Month</div>
             <div class="pick-fc-pct ${fdir}">${f.expReturn >= 0 ? '+' : ''}${f.expReturn.toFixed(1)}%</div>
             <div class="pick-fc-px">→ $${fmt(f.expPrice)}</div>
+            <div class="pick-fc-conf"><div class="bar"><div class="fill" style="width:${f.confidence}%"></div></div><span>${f.confidence}%</span></div>
           </div>`;
         };
         return sorted.map(fcCell).join('');
@@ -21122,7 +21102,8 @@ function renderGoalPills() {
   host.innerHTML = Object.keys(GOAL_DEFS).map(k => {
     const def = GOAL_DEFS[k];
     const active = k === _currentGoal;
-    return `<button class="goal-pill ${active ? 'active' : ''}" role="tab" aria-selected="${active}" onclick="selectGoal('${k}')">${def.label}</button>`;
+    const descTip = def.desc.replace(/<[^>]+>/g, '').split('.')[0];
+    return `<button class="goal-pill ${active ? 'active' : ''}" role="tab" aria-selected="${active}" onclick="selectGoal('${k}')" title="${descTip.replace(/"/g, '&quot;')}">${def.label}</button>`;
   }).join('');
 }
 
@@ -21242,7 +21223,7 @@ function renderTilesFromCache() {
         <button class="sectors-no-matches-btn" onclick="clearSectorsFilters()">Reset all filters</button>
       </div>`;
     } else {
-      host.innerHTML = `<div class="sectors-empty"><div class="sectors-empty-glyph">∅</div><div class="sectors-empty-msg">No stocks match this goal right now.</div></div>`;
+      host.innerHTML = `<div class="sectors-empty"><div class="sectors-empty-glyph">∅</div><div class="sectors-empty-msg">No stocks match this goal right now. Try a different goal:</div><div class="sectors-empty-goals" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">${Object.keys(GOAL_DEFS).filter(k => k !== _currentGoal).map(k => `<button class="goal-pill" onclick="selectGoal('${k}')" title="${GOAL_DEFS[k].desc.replace(/<[^>]+>/g,'').split('.')[0].replace(/"/g,'&quot;')}">${GOAL_DEFS[k].label}</button>`).join('')}</div></div>`;
     }
     return;
   }
@@ -21251,9 +21232,8 @@ function renderTilesFromCache() {
     const dir = m.wkChange >= 0 ? 'up' : 'down';
     const fcdir = m.forecast12 >= 0 ? 'up' : 'down';
     const inWl = WATCHLIST.includes(m.ticker);
-    const pn = posNegFor(m);
     return `<div class="stock-tile fc-${fcdir} ${inWl ? 'is-in-watch' : ''}" tabindex="0" onclick="tileClick('${m.ticker}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();tileClick('${m.ticker}')}" title="${m.name.replace(/"/g, '&quot;')}">
-      <div class="tile-heat" style="--heat-color: ${heat}"></div>
+      <div class="tile-heat" style="--heat-color: ${heat}" title="Heat score ${m.score >= 0 ? '+' : ''}${m.score} — ${tip('heatBar')}" style="cursor:help"></div>
       ${rowActionsHtml(m.ticker)}
       <div class="tile-rank">#${i + 1}</div>
       <div class="tile-head">
@@ -21280,7 +21260,6 @@ function renderTilesFromCache() {
           const vTip = (typeof _verdictTooltip === 'function') ? _verdictTooltip(fullV) : '';
           return `<span class="pick-verdict ${vClass}" title="${vTip.replace(/"/g, '&quot;')}" style="cursor:help">${m.verdict}</span>`;
         })()}
-        <span class="pos-neg-pill ${pn.cls}" title="${tip('posNeg')}" style="cursor:help"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
         ${(() => {
           const action = _classifyTimingFromCache(m);
           const icon = _TIMING_ICONS[action] || '·';
@@ -21291,7 +21270,7 @@ function renderTilesFromCache() {
         ${render13FBadge(m.ticker, true)}
       </div>
       ${_renderTileCrossGoalBadge(m)}
-      ${(m.history1Y && m.history3Y && m.history5Y) ? (() => {
+      ${(m.history1Y && m.history3Y && m.history5Y && !['growth', 'momentum'].includes(_currentGoal)) ? (() => {
         const h1 = m.history1Y, h3 = m.history3Y, h5 = m.history5Y;
         const activePeriod = m.historyYears || 3;
         const hActive = activePeriod === 1 ? h1 : activePeriod === 5 ? h5 : h3;
