@@ -22273,24 +22273,6 @@ function _fetchWithTimeout(url, ms) {
     .finally(() => clearTimeout(timer));
 }
 
-async function _fetchYahooQuote(sym) {
-  try {
-    const r = await _fetchWithTimeout(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`,
-      8000
-    );
-    if (!r.ok) return null;
-    const j = await r.json();
-    const result = j && j.chart && j.chart.result && j.chart.result[0];
-    if (!result) return null;
-    const closes = result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close;
-    if (!closes || !closes.length) return null;
-    for (let i = closes.length - 1; i >= 0; i--) {
-      if (closes[i] != null) return closes[i];
-    }
-    return null;
-  } catch (e) { return null; }
-}
 
 async function _fetchFredCSV(seriesId) {
   try {
@@ -22314,17 +22296,19 @@ async function fetchMacroPulse() {
     const cached = JSON.parse(localStorage.getItem(LS_KEY_MACRO_CACHE) || 'null');
     if (cached && (Date.now() - cached.fetchedAt) < _SP_MACRO_TTL_MS) return cached.data;
   } catch (e) {}
-  // Fetch all in parallel
-  const [y10, y3m, fedfunds, cpi] = await Promise.all([
-    _fetchYahooQuote('^TNX'),
-    _fetchYahooQuote('^IRX'),
+  // Fetch all from FRED public CSV — CORS-friendly, no key needed.
+  // DGS10/DGS3MO replace the former Yahoo Finance ^TNX/^IRX calls which
+  // became unreliable due to CORS restrictions on Yahoo's query1 endpoint.
+  const [y10fred, y3mfred, fedfunds, cpi] = await Promise.all([
+    _fetchFredCSV('DGS10'),
+    _fetchFredCSV('DGS3MO'),
     _fetchFredCSV('FEDFUNDS'),
     _fetchFredCSV('CPIAUCSL'),
   ]);
   const data = {
-    yield10Y:    y10  != null ? y10  : null,
-    yield3M:     y3m  != null ? y3m  : null,
-    spread10Y3M: (y10 != null && y3m != null) ? +(y10 - y3m).toFixed(2) : null,
+    yield10Y:    y10fred  ? y10fred.last  : null,
+    yield3M:     y3mfred  ? y3mfred.last  : null,
+    spread10Y3M: (y10fred && y3mfred) ? +(y10fred.last - y3mfred.last).toFixed(2) : null,
     fedRate:     fedfunds ? fedfunds.last : null,
     cpiLevel:    cpi ? cpi.last : null,
     cpiYoY:      (cpi && cpi.prev12 && cpi.last) ? +((cpi.last - cpi.prev12) / cpi.prev12 * 100).toFixed(2) : null,
@@ -22384,7 +22368,7 @@ function _renderMacroPulse(data) {
     ));
   }
   if (!chips.length) {
-    host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data loading…</span>';
+    host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data unavailable — FRED data sources may be temporarily unreachable.</span>';
     return;
   }
   host.innerHTML = chips.join('');
@@ -22406,7 +22390,7 @@ function renderCockpit() {
   // Kick off live-data fetch for index tickers in the background; the section
   // re-renders when each fetch settles. No-op in DEMO mode.
   _cockpitEnsureIndexData();
-  // Macro pulse — fetch from Yahoo Finance + FRED public CSV (no key needed)
+  // Macro pulse — fetch from FRED public CSV (no key needed)
   // _macroPulseData: null=not fetched yet, false=fetched+failed, object=success
   if (_macroPulseData !== null) {
     _renderMacroPulse(_macroPulseData || null);
