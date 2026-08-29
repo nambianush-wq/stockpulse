@@ -15400,14 +15400,55 @@ const GROQ_MODELS = [
   'meta-llama/llama-4-scout-17b-16e-instruct',
   'llama3-70b-8192',
 ];
-const LS_KEY_GROQ_MODEL = 'sp_groq_model'; // {model, ts}
-function _groqModelsToTry() {
+const LS_KEY_GROQ_MODEL  = 'sp_groq_model';      // {model, ts}  — cached winner (7d)
+const LS_KEY_GROQ_MODELS = 'sp_groq_models_disc'; // {models: [], ts} — live list (24h)
+
+// Query Groq /models once per 24 h and persist the result.
+// Filters out speech/guard models; sorts newest first so freshly-added
+// models naturally appear at the top of the probe list.
+async function _syncGroqModels() {
+  if (!hasGroqKey()) return;
   try {
-    const s = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODEL) || 'null');
-    if (s && s.model && (Date.now() - (s.ts || 0)) < 7 * 86400000)
-      return [s.model, ...GROQ_MODELS.filter(m => m !== s.model)];
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const ids = (data.data || [])
+      .filter(m => {
+        const id = (m.id || '').toLowerCase();
+        return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard');
+      })
+      .sort((a, b) => (b.created || 0) - (a.created || 0))
+      .map(m => m.id);
+    if (ids.length)
+      localStorage.setItem(LS_KEY_GROQ_MODELS, JSON.stringify({ models: ids, ts: Date.now() }));
   } catch (e) {}
-  return [...GROQ_MODELS];
+}
+// Fire-and-forget: only runs the network call when the cached list is >24 h old.
+function _syncGroqModelsIfStale() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODELS) || 'null');
+    if (s && (Date.now() - (s.ts || 0)) < 86400000) return;
+  } catch (e) {}
+  _syncGroqModels();
+}
+
+// Returns the probe list: live-discovered models (newest first) merged with
+// the hardcoded fallbacks, with the cached winner promoted to the front.
+function _groqModelsToTry() {
+  let discovered = [];
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODELS) || 'null');
+    if (s && s.models && (Date.now() - (s.ts || 0)) < 86400000) discovered = s.models;
+  } catch (e) {}
+  const merged = [...discovered, ...GROQ_MODELS.filter(m => !discovered.includes(m))];
+  try {
+    const w = JSON.parse(localStorage.getItem(LS_KEY_GROQ_MODEL) || 'null');
+    if (w && w.model && merged.includes(w.model) && (Date.now() - (w.ts || 0)) < 7 * 86400000)
+      return [w.model, ...merged.filter(m => m !== w.model)];
+  } catch (e) {}
+  return merged.length ? merged : [...GROQ_MODELS];
 }
 function _cacheGroqModel(model) {
   try { localStorage.setItem(LS_KEY_GROQ_MODEL, JSON.stringify({ model, ts: Date.now() })); } catch (e) {}
@@ -15434,6 +15475,9 @@ function _evictGroqModel(model) {
 //                    Caching only happens on the final complete value.
 async function callLLM(prompt, opts) {
   opts = opts || {};
+  // Keep the discovered-models list fresh in the background (≤1 network call/24 h).
+  // Does not block the current call — next call or next session picks up new models.
+  _syncGroqModelsIfStale();
   const cacheKey = opts.cacheKey || null;
   if (cacheKey) {
     const cached = _llmCacheGet(cacheKey);
