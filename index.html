@@ -6315,7 +6315,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
             <div class="cockpit-section-sub">Key US economic indicators · updated daily · context for why the whole market is moving</div>
           </div>
         </div>
-        <div id="cockpit-macro-row" style="display:flex; flex-wrap:wrap; gap:10px; padding:10px 0 0;"></div>
+        <div id="cockpit-macro-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:10px 0 0;"></div>
       </div>
       <div class="cockpit-section" id="cockpit-heatmap-section">
         <div class="cockpit-section-head">
@@ -22275,15 +22275,20 @@ function _fetchWithTimeout(url, ms) {
 }
 
 
-// NY Fed EFFR API — CORS-enabled government API, no key needed.
-// Returns the effective federal funds rate as a number, or null.
+// NY Fed rates API — CORS-enabled government API, no key needed.
+// Returns the effective federal funds rate (EFFR) as a number, or null.
 async function _fetchNYFedRate() {
   try {
-    const r = await _fetchWithTimeout('https://markets.newyorkfed.org/api/rates/effr/last/1.json', 8000);
+    // /all/last/1 returns every ref-rate type for the last trading day
+    const r = await _fetchWithTimeout('https://markets.newyorkfed.org/api/rates/all/last/1.json', 8000);
     if (!r.ok) return null;
     const j = await r.json();
-    const entry = j && j.refRates && j.refRates[0];
-    return entry ? parseFloat(entry.percentRate) : null;
+    const rates = j && j.refRates;
+    if (!rates) return null;
+    const effr = rates.find(x => x.type === 'EFFR') || rates[0];
+    if (!effr) return null;
+    // Use target upper bound as the "Fed Funds Rate" shown to users; fall back to percentRate
+    return parseFloat(effr.targetRateTo ?? effr.percentRate ?? effr.rate) || null;
   } catch (e) { return null; }
 }
 
@@ -22358,58 +22363,71 @@ async function fetchMacroPulse() {
 function _renderMacroPulse(data) {
   const host = document.getElementById('cockpit-macro-row');
   if (!host) return;
-  if (!data) { host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data unavailable — check network.</span>'; return; }
 
-  const chips = [];
-  function chip(label, value, unit, tooltip, cls) {
-    return `<div class="signal-chip ${cls || ''}" style="padding:10px 14px; min-width:130px; display:flex; flex-direction:column; gap:2px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--raised);" title="${tooltip.replace(/"/g,'&quot;')}">
-      <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">${label}</div>
-      <div style="font-size:18px; font-weight:300; color:var(--text);">${value != null ? value : '—'}${unit ? `<span style="font-size:11px; color:var(--muted); margin-left:2px;">${unit}</span>` : ''}</div>
+  // Always render all 4 slots — null values show "—" so the grid never collapses
+  // to a single chip or empty row regardless of which sources are reachable.
+  function chip(label, rawValue, unit, tooltip, cls) {
+    const hasVal = rawValue != null && !isNaN(rawValue);
+    const valHtml = hasVal
+      ? `${rawValue}${unit ? `<span style="font-size:11px;color:var(--muted);margin-left:2px;">${unit}</span>` : ''}`
+      : `<span style="color:var(--muted);font-size:14px;" title="Source unreachable — network or CORS block">—</span>`;
+    return `<div class="signal-chip ${cls || ''}" style="padding:12px 16px;display:flex;flex-direction:column;gap:3px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--raised);" title="${tooltip.replace(/"/g,'&quot;')}">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${label}</div>
+      <div style="font-size:20px;font-weight:300;color:${hasVal ? 'var(--text)' : 'var(--muted)'};">${valHtml}</div>
     </div>`;
   }
 
-  if (data.yield10Y != null) {
-    const spread = data.spread10Y3M;
-    const inverted = spread != null && spread < 0;
-    chips.push(chip(
+  const d = data || {};
+
+  // Chip 1 — 10Y Treasury Yield
+  const y10 = d.yield10Y != null ? d.yield10Y : null;
+  const spread = d.spread10Y3M != null ? d.spread10Y3M : null;
+  const inverted = spread != null && spread < 0;
+  host.innerHTML = [
+    chip(
       '10Y Treasury Yield',
-      data.yield10Y.toFixed(2), '%',
-      `US 10-year Treasury yield · ${data.yield10Y.toFixed(2)}%\n\n${spread != null ? `Yield curve spread (10Y − 3M): ${spread >= 0 ? '+' : ''}${spread.toFixed(2)}% · ${inverted ? 'INVERTED — historically precedes recessions by 12–18 months' : 'Normal — positive spread, no immediate inversion signal'}\n\n` : ''}What this means: Higher yields raise the discount rate on future earnings, pressuring high-P/E growth stocks. Lower yields are a tailwind. Watch for direction, not just level.`,
+      y10 != null ? y10.toFixed(2) : null, '%',
+      y10 != null
+        ? `US 10-year Treasury yield · ${y10.toFixed(2)}%\n\n${spread != null ? `Yield curve spread (10Y − 3M): ${spread >= 0 ? '+' : ''}${spread.toFixed(2)}% · ${inverted ? 'INVERTED — historically precedes recessions by 12–18 months' : 'Normal — positive spread, no immediate inversion signal'}\n\n` : ''}What this means: Higher yields raise the discount rate on future earnings, pressuring high-P/E growth stocks. Lower yields are a tailwind.`
+        : 'US 10-year Treasury yield — unavailable (Treasury XML source may be CORS-blocked on this network).',
       inverted ? 'negative' : ''
-    ));
-  }
-  if (data.spread10Y3M != null) {
-    const s = data.spread10Y3M;
-    chips.push(chip(
+    ),
+
+    // Chip 2 — Yield Curve Spread
+    chip(
       'Yield Curve Spread',
-      `${s >= 0 ? '+' : ''}${s.toFixed(2)}`, '%',
-      `10Y minus 3M Treasury yield spread · ${s >= 0 ? '+' : ''}${s.toFixed(2)}%\n\nWhat this means: Negative spread (inverted curve) has preceded every US recession since 1955. A deeply negative reading (< −0.5%) sustained for 2+ quarters is the classic recession signal.`,
-      s < 0 ? 'negative' : s > 1 ? 'positive' : ''
-    ));
-  }
-  if (data.fedRate != null) {
-    chips.push(chip(
+      spread != null ? `${spread >= 0 ? '+' : ''}${spread.toFixed(2)}` : null, '%',
+      spread != null
+        ? `10Y minus 3M Treasury yield spread · ${spread >= 0 ? '+' : ''}${spread.toFixed(2)}%\n\nWhat this means: Negative spread (inverted curve) has preceded every US recession since 1955. A deeply negative reading (< −0.5%) sustained for 2+ quarters is the classic recession signal.`
+        : '10Y − 3M Treasury yield spread — unavailable (requires both yield readings to load).',
+      spread != null ? (spread < 0 ? 'negative' : spread > 1 ? 'positive' : '') : ''
+    ),
+
+    // Chip 3 — Fed Funds Rate
+    chip(
       'Fed Funds Rate',
-      data.fedRate.toFixed(2), '%',
-      `Federal Reserve overnight lending rate · ${data.fedRate.toFixed(2)}%\n\nWhat this means: Higher rates slow inflation but also pressure borrowing, growth, and high-multiple stocks. The direction of rate changes (cutting vs hiking) often matters more than the absolute level.`,
+      d.fedRate != null ? d.fedRate.toFixed(2) : null, '%',
+      d.fedRate != null
+        ? `Federal Reserve overnight lending rate (upper target) · ${d.fedRate.toFixed(2)}%\n\nWhat this means: Higher rates slow inflation but also pressure borrowing, growth, and high-multiple stocks. The direction of rate changes (cutting vs hiking) often matters more than the absolute level.`
+        : 'Fed Funds Rate — unavailable (NY Fed API source may be unreachable).',
       ''
-    ));
-  }
-  if (data.cpiYoY != null) {
-    const hot = data.cpiYoY > 4;
-    const cool = data.cpiYoY < 2.5;
-    chips.push(chip(
-      'CPI Inflation (YoY)',
-      data.cpiYoY.toFixed(1), '%',
-      `US Consumer Price Index · year-over-year change · ${data.cpiYoY.toFixed(1)}%\n\n${hot ? 'HOT — above 4%, Fed likely to hold or hike. Bearish for bonds and high-growth stocks.' : cool ? 'COOL — below 2.5%, Fed may cut. Bullish for growth and bonds.' : 'MODERATE — within the 2.5–4% range. Fed likely on hold.'}\n\nWhat this means: CPI is the Fed\'s primary input for rate decisions. Hotter-than-expected = bearish for stocks; cooler = bullish.`,
-      hot ? 'negative' : cool ? 'positive' : ''
-    ));
-  }
-  if (!chips.length) {
-    host.innerHTML = '<span style="color:var(--muted);font-size:12px;">Macro data unavailable — sources (NY Fed, BLS, Treasury) may be temporarily unreachable or blocked by your network.</span>';
-    return;
-  }
-  host.innerHTML = chips.join('');
+    ),
+
+    // Chip 4 — CPI Inflation
+    (() => {
+      const cpi = d.cpiYoY != null ? d.cpiYoY : null;
+      const hot = cpi != null && cpi > 4;
+      const cool = cpi != null && cpi < 2.5;
+      return chip(
+        'CPI Inflation (YoY)',
+        cpi != null ? cpi.toFixed(1) : null, '%',
+        cpi != null
+          ? `US Consumer Price Index · year-over-year change · ${cpi.toFixed(1)}%\n\n${hot ? 'HOT — above 4%, Fed likely to hold or hike. Bearish for bonds and high-growth stocks.' : cool ? 'COOL — below 2.5%, Fed may cut. Bullish for growth and bonds.' : 'MODERATE — within the 2.5–4% range. Fed likely on hold.'}\n\nWhat this means: CPI is the Fed\'s primary input for rate decisions. Hotter-than-expected = bearish for stocks; cooler = bullish.`
+          : 'CPI Inflation — unavailable (BLS API source may be unreachable).',
+        hot ? 'negative' : cool ? 'positive' : ''
+      );
+    })(),
+  ].join('');
 }
 
 function renderCockpit() {
@@ -22428,18 +22446,17 @@ function renderCockpit() {
   // Kick off live-data fetch for index tickers in the background; the section
   // re-renders when each fetch settles. No-op in DEMO mode.
   _cockpitEnsureIndexData();
-  // Macro pulse — fetch from FRED public CSV (no key needed)
-  // _macroPulseData: null=not fetched yet, false=fetched+failed, object=success
+  // Macro pulse — null = not fetched yet, undefined = in-flight, object = done (may have nulls)
   if (_macroPulseData !== null) {
-    _renderMacroPulse(_macroPulseData || null);
+    _renderMacroPulse(_macroPulseData || {});
   } else {
     _macroPulseData = undefined; // in-flight sentinel — prevents duplicate fetches
     fetchMacroPulse().then(data => {
-      _macroPulseData = data || false; // false = fetched but got nothing
-      _renderMacroPulse(data);
+      _macroPulseData = data || {};
+      _renderMacroPulse(data || {});
     }).catch(() => {
-      _macroPulseData = false;
-      _renderMacroPulse(null);
+      _macroPulseData = {};
+      _renderMacroPulse({});
     });
   }
   _cockpitRenderHeatmap(ov);
