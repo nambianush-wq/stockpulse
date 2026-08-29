@@ -12211,14 +12211,22 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     text-transform: uppercase; margin-bottom: 8px;
     padding-bottom: 4px; border-bottom: 1px solid var(--border);
   }
-  .toggle-row {
+  /* Override .modal-row label's block/uppercase rules for toggle rows */
+  .modal-row label.toggle-row {
     display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
-    padding: 2px 0;
+    padding: 2px 0; text-transform: none; font-size: inherit;
+    color: inherit; margin-bottom: 0; letter-spacing: 0;
   }
-  .toggle-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+  .toggle-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
   .toggle-info { display: flex; flex-direction: column; gap: 2px; }
-  .toggle-label { font-size: 13px; color: var(--text); }
-  .toggle-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .toggle-label {
+    font-size: 13px; color: var(--text);
+    text-transform: none; letter-spacing: 0;
+  }
+  .toggle-desc {
+    font-size: 11px; color: var(--muted); line-height: 1.4;
+    text-transform: none; letter-spacing: 0;
+  }
   .settings-storage-row {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 12px; flex-wrap: wrap;
