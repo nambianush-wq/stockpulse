@@ -13491,16 +13491,16 @@ let LAST_TIMINGS = JSON.parse(localStorage.getItem(LS_KEY_TIMINGS) || '{}');
 // source. First activation downloads the model (~60-100 MB, cached in IndexedDB
 // by transformers.js itself — second visit is instant).
 const LS_KEY_FINBERT = 'sp_finbert_enabled';
-// One-time migration (2026-08-29): a FinBERT auto-enable IIFE in the previous
-// deployment wrote sp_finbert_enabled=1 to localStorage for WebGPU browsers.
-// That caused transformers.js WASM shader compilation to block the main thread
-// → RESULT_CODE_HUNG tab crash. Reset the key so FinBERT is opt-in again.
-// The migration flag prevents this from clearing a deliberate future re-enable.
-(function _migrateFinBERT() {
+// One-time migration (2026-08-29 v3): clears both FinBERT and local-LLM
+// auto-enable flags that previous deploys baked into localStorage.
+// Both can trigger transformers.js WASM/WebGPU compilation on the main
+// thread → RESULT_CODE_HUNG. Both are now strictly opt-in from Settings.
+(function _migrateAIKeys() {
   try {
-    if (!localStorage.getItem('sp_finbert_migrated_v2')) {
-      localStorage.removeItem(LS_KEY_FINBERT);
-      localStorage.setItem('sp_finbert_migrated_v2', '1');
+    if (!localStorage.getItem('sp_ai_migrated_v3')) {
+      localStorage.removeItem('sp_finbert_enabled');
+      localStorage.removeItem('sp_local_llm_enabled');
+      localStorage.setItem('sp_ai_migrated_v3', '1');
     }
   } catch (e) {}
 })();
@@ -13523,8 +13523,9 @@ const LS_KEY_LOCAL_LLM = 'sp_local_llm_enabled';
 function _defaultLocalLlmEnabled() {
   const stored = localStorage.getItem(LS_KEY_LOCAL_LLM);
   if (stored !== null) return stored === '1';
-  const hasGroq = !!(GROQ_API_KEY && GROQ_API_KEY.trim());
-  return !hasGroq;
+  // Default OFF — opt-in only. Auto-ON caused transformers.js WASM to block
+  // the main thread when callLLM fired. Users enable via Settings.
+  return false;
 }
 let LOCAL_LLM_ENABLED = _defaultLocalLlmEnabled();
 
