@@ -6102,6 +6102,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
             <option value="60">Auto-refresh: 1h</option>
           </select>
           <button class="cockpit-refresh-btn" onclick="(async()=>{ try { await refreshAll(true); } catch(e){} renderCockpit(); })()" title="Re-fetch live prices for the watchlist and recompute every cockpit metric — fires immediately, independent of the auto-refresh timer">↻ Refresh now</button>
+          <button id="cockpit-sidebar-btn" class="cockpit-sidebar-btn" onclick="toggleCockpitSidebar()" title="Collapse the watchlist sidebar to give the cockpit full width — click again to bring it back. Setting is remembered across sessions."><span id="cockpit-sidebar-icon" class="cockpit-sidebar-icon">⇤</span><span id="cockpit-sidebar-label">Collapse sidebar</span></button>
         </div>
       </div>
       <div class="cockpit-hero-grid" id="cockpit-hero"></div>
