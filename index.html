@@ -12218,7 +12218,8 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     color: inherit; margin-bottom: 0; letter-spacing: 0;
     width: 100%; box-sizing: border-box;
   }
-  .toggle-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
+  /* .modal-row input {width:100%} must not apply to checkboxes */
+  .toggle-row input[type="checkbox"] { width: auto !important; margin-top: 3px; flex-shrink: 0; }
   .toggle-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .toggle-label {
     font-size: 13px; color: var(--text);
