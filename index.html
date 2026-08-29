@@ -5545,7 +5545,7 @@ body { padding-bottom: 44px; }
   align-items: center;
 }
 .wi-cal-row:first-of-type { border-top: none; padding-top: 6px; }
-.wi-cal-icon { font-size: 18px; opacity: .9; line-height: 1.2; }
+.wi-cal-icon { font-size: 13px; font-weight: 700; opacity: .85; line-height: 1.2; min-width: 16px; text-align: center; color: var(--muted); }
 .wi-cal-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .wi-cal-name { font-size: 13px; font-weight: 600; color: var(--text); }
 .wi-cal-attr { font-size: 11px; color: var(--muted); }
@@ -5621,6 +5621,144 @@ body { padding-bottom: 44px; }
 .wi-method-collapsible > summary::-webkit-details-marker { display: none; }
 .wi-method-collapsible > summary::before { content: '▸ '; color: var(--muted); }
 .wi-method-collapsible[open] > summary::before { content: '▾ '; }
+
+/* What If — form footer (simset hint + Advanced toggle) */
+.wi-form-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 4px;
+  flex-wrap: wrap;
+}
+.wi-simset-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 5px 10px;
+  background: rgba(83,58,253,.08);
+  border: 1px solid rgba(83,58,253,.3);
+  border-radius: 7px;
+}
+.wi-simset-hint-btn {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wi-simset-hint-btn:hover { opacity: .8; }
+.wi-advanced-toggle {
+  margin-left: auto;
+}
+.wi-advanced-toggle > summary {
+  font-size: 11.5px;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  padding: 4px 8px;
+  border-radius: 5px;
+  transition: background .12s;
+}
+.wi-advanced-toggle > summary::-webkit-details-marker { display: none; }
+.wi-advanced-toggle > summary::after { content: ' ▾'; }
+.wi-advanced-toggle[open] > summary::after { content: ' ▴'; }
+.wi-advanced-toggle > summary:hover { background: var(--line); color: var(--text); }
+.wi-field-adv {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+  flex-wrap: wrap;
+}
+.wi-field-adv label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.wi-field-adv select { padding: 5px 8px; font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--text); }
+.wi-adv-hint { font-size: 11px; color: var(--dim); font-style: italic; }
+
+/* Source sections (investor clone, stock picker) as collapsible details */
+.wi-source-details {
+  margin: 10px 0 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.wi-source-details > summary.wi-source-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  background: rgba(255,255,255,.02);
+  transition: background .12s, color .12s;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.wi-source-details > summary.wi-source-summary::-webkit-details-marker { display: none; }
+.wi-source-details > summary.wi-source-summary::before { content: '▸ '; color: var(--dim); }
+.wi-source-details[open] > summary.wi-source-summary::before { content: '▾ '; }
+.wi-source-details > summary.wi-source-summary:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.wi-source-details[open] { border-color: rgba(255,255,255,.1); }
+.wi-source-details > .wi-investor-section,
+.wi-source-details > .wi-picker-section { margin: 0; border: 0; border-radius: 0; border-top: 1px solid var(--line); }
+.wi-investor-source-sub, .wi-picker-source-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  padding: 8px 0 10px;
+}
+
+/* Holding card deep stats — collapsible perf + 24/36M forecasts */
+.wi-h-deep {
+  margin-top: 4px;
+}
+.wi-h-deep > summary {
+  font-size: 10.5px;
+  color: var(--dim);
+  cursor: pointer;
+  list-style: none;
+  padding: 3px 0;
+}
+.wi-h-deep > summary::-webkit-details-marker { display: none; }
+.wi-h-deep > summary::before { content: '▸ '; }
+.wi-h-deep[open] > summary::before { content: '▾ '; }
+.wi-h-deep > summary:hover { color: var(--muted); }
+.wi-h-forecasts-primary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+/* Calendar card — collapsible */
+.wi-calendar-details { border-radius: 10px; overflow: hidden; margin: 14px 0; }
+.wi-cal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 600;
+  transition: background .12s;
+}
+.wi-calendar-details[open] .wi-cal-summary { border-radius: 10px 10px 0 0; border-bottom: 1px solid var(--line); }
+.wi-cal-summary::-webkit-details-marker { display: none; }
+.wi-cal-summary::before { content: '▸ '; color: var(--muted); font-size: 11px; }
+.wi-calendar-details[open] .wi-cal-summary::before { content: '▾ '; }
+.wi-cal-summary:hover { background: var(--raised); }
+.wi-calendar-details .wi-cal-row:first-of-type { border-top: none; }
+.wi-cal-summary-text { flex: 1; }
+.wi-calendar-details .wi-cal-row { border-top: 1px solid var(--line); padding: 10px 14px; }
 
 /* ============================================================
    Responsive layer — phones, iPads, small laptops
@@ -11522,7 +11660,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         </div>
       </div>
       <div id="whatif-lab" class="wi-mode-section">
-        <div class="whatif-form" style="grid-template-columns: 1fr 1.1fr 0.85fr 0.9fr auto;">
+        <div class="whatif-form" style="grid-template-columns: 1fr 1.1fr 0.85fr auto;">
           <div class="wi-field">
             <label for="wi-amount">Investment amount</label>
             <div class="wi-amount-prefix">
@@ -11547,41 +11685,49 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
               <option value="36">36 months</option>
             </select>
           </div>
-          <div class="wi-field">
-            <label for="wi-history" title="Ground risk/volatility/drawdown stats on this much history">Ground on</label>
-            <select id="wi-history">
-              <option value="1">Last 1 year</option>
-              <option value="3">Last 3 years</option>
-              <option value="5" selected="">Last 5 years</option>
-            </select>
-          </div>
           <button class="btn btn-primary wi-build-btn" onclick="buildPortfolioClick()" title="Build using the catalog-wide top picks for the selected goal">Build Portfolio</button>
-          <button class="btn wi-build-btn" id="wi-build-simset-btn" onclick="buildPortfolioFromSimSetClick()" title="Build using only the tickers in your Simulation Set" style="background:rgba(83,58,253,.15); border:1px solid rgba(83,58,253,.5); color:var(--accent);">Build from Sim Set</button>
         </div>
-        <div class="wi-investor-section">
-          <div class="wi-investor-head">
-            <span class="wi-investor-title">Or clone a top active 13F manager</span>
-            <span class="wi-investor-sub">Pick one — your $ amount above is used. Long US-equity book only; weights from most-recent SEC 13F filings.</span>
+        <div class="wi-form-footer">
+          <div id="wi-simset-hint" class="wi-simset-hint" style="display:none">
+            Sim Set loaded — <button class="wi-simset-hint-btn" onclick="buildPortfolioFromSimSetClick()" title="Build using only the tickers in your Simulation Set">Build from Sim Set →</button>
           </div>
-          <div class="wi-investor-strip" id="wi-investor-strip"></div>
-          <div class="wi-investor-actions">
-            <button class="btn wi-compare-btn" id="wi-compare-all-btn" onclick="compareAllClonesClick()" title="Build every manager clone and surface consensus picks, per-manager projected metrics, the overlap matrix, and each manager's idiosyncratic bets.">⊕ Compare all managers</button>
-          </div>
-        </div>
-        <div class="wi-picker-section">
-          <div class="wi-picker-head">
-            <span class="wi-picker-title">Or pick specific stocks &amp; optimise for your goal</span>
-            <span class="wi-picker-sub">Type a ticker or name, add as many as you like. We'll allocate your $ amount across them using the goal's ranking formula — then suggest better-fit alternatives in each segment.</span>
-          </div>
-          <div class="wi-picker-row">
-            <div class="wi-picker-search-wrap">
-              <input id="wi-picker-search" type="text" placeholder="Type ticker (AAPL) or name (Apple)…" autocomplete="off" oninput="pickerOnSearchInput(this.value)" onfocus="pickerOnSearchInput(this.value)">
-              <div id="wi-picker-search-results" class="wi-picker-search-results hidden"></div>
+          <details class="wi-advanced-toggle">
+            <summary>Advanced</summary>
+            <div class="wi-field-adv">
+              <label for="wi-history" title="Ground risk/volatility/drawdown stats on this much history">Ground on</label>
+              <select id="wi-history">
+                <option value="1">Last 1 year</option>
+                <option value="3">Last 3 years</option>
+                <option value="5" selected="">Last 5 years</option>
+              </select>
+              <span class="wi-adv-hint">Controls how many years of weekly bar data are used for Sharpe, volatility, and max drawdown. Default: 5 years.</span>
             </div>
-            <button class="wi-picker-build-btn" id="wi-picker-build-btn" onclick="buildPortfolioFromPickerClick()" title="Build a goal-optimised mix using only the tickers you've picked above. Per-holding 'better fit in segment' suggestions appear in the results.">Optimise these stocks</button>
-          </div>
-          <div class="wi-picker-chips" id="wi-picker-chips"></div>
+          </details>
         </div>
+        <details class="wi-source-details">
+          <summary class="wi-source-summary">Clone a top 13F manager instead</summary>
+          <div class="wi-investor-section">
+            <div class="wi-investor-source-sub">Pick one — your $ amount above is used. Long US-equity book only; weights from most-recent SEC 13F filings.</div>
+            <div class="wi-investor-strip" id="wi-investor-strip"></div>
+            <div class="wi-investor-actions">
+              <button class="btn wi-compare-btn" id="wi-compare-all-btn" onclick="compareAllClonesClick()" title="Build every manager clone and surface consensus picks, per-manager projected metrics, the overlap matrix, and each manager's idiosyncratic bets.">⊕ Compare all managers</button>
+            </div>
+          </div>
+        </details>
+        <details class="wi-source-details">
+          <summary class="wi-source-summary">Pick specific stocks &amp; optimise</summary>
+          <div class="wi-picker-section">
+            <div class="wi-picker-source-sub">Type a ticker or name, add as many as you like. We'll allocate your $ amount across them using the goal's ranking formula — then suggest better-fit alternatives in each segment.</div>
+            <div class="wi-picker-row">
+              <div class="wi-picker-search-wrap">
+                <input id="wi-picker-search" type="text" placeholder="Type ticker (AAPL) or name (Apple)…" autocomplete="off" oninput="pickerOnSearchInput(this.value)" onfocus="pickerOnSearchInput(this.value)">
+                <div id="wi-picker-search-results" class="wi-picker-search-results hidden"></div>
+              </div>
+              <button class="wi-picker-build-btn" id="wi-picker-build-btn" onclick="buildPortfolioFromPickerClick()" title="Build a goal-optimised mix using only the tickers you've picked above. Per-holding 'better fit in segment' suggestions appear in the results.">Optimise these stocks</button>
+            </div>
+            <div class="wi-picker-chips" id="wi-picker-chips"></div>
+          </div>
+        </details>
         <div id="whatif-results">
     <div class="wi-summary-grid">
       <div class="wi-summary-card">
@@ -12934,6 +13080,9 @@ const TIP = {
   sectionVolChart: "Shows how many shares were bought and sold each week. A big price move backed by high volume is more trustworthy than one on low volume — high volume means lots of investors agreed on the direction.",
   sectionPeers: "Other stocks in the same industry, ranked by recent performance. If your stock is lagging while peers are surging, the company may have a specific problem — not just sector-wide headwinds.",
   sectionPriceChange: "How much the price changed over the past 7 days (one full week). A weekly view smooths out single-day noise and gives a cleaner read on short-term momentum than a daily percentage would.",
+  wiTotalInvested: "The total amount being simulated in this portfolio. Every per-holding allocation is expressed as a percentage of this number. No real money is moved — this is a simulation only.",
+  wiHoldings: "Number of individual positions selected by the goal's ranking formula, broken down by direct stocks and diversifying ETFs.",
+  wiExpectedReturn: "Projected gain over the selected horizon, weighted across all holdings by allocation. The sub-line shows the same estimate at 12, 24, and 36 months — longer horizons mean-revert toward the historical ~7% market average and carry lower confidence. This is a heuristic directional estimate, not a guarantee.",
 };
 function tip(key) { return (TIP[key] || '').replace(/"/g, '&quot;'); }
 
@@ -14375,7 +14524,7 @@ function buildUpcomingEvents(ticker, profile, metrics) {
     earningsApprox = true;
   }
   events.push({
-    icon: '📊', kind: 'earnings', date: earningsDate,
+    icon: '$', kind: 'earnings', date: earningsDate,
     title: earningsApprox ? 'Quarterly Earnings (approx.)' : 'Quarterly Earnings',
     impact: 'High',
     soWhat: `Quarterly results + forward guidance${earningsExtra}. Typically moves price ±5–10%. Guidance tone often matters more than the actual EPS print.${earningsApprox ? ' <i style="color:var(--warn);">Date is approximate — pulled from a deterministic synthesised schedule; LIVE Finnhub mode replaces this with the actual filing date when available.</i>' : ''}`,
@@ -14387,7 +14536,7 @@ function buildUpcomingEvents(ticker, profile, metrics) {
     const divDate = new Date(now.getTime() + (7 + (Math.abs(h * 7) % 80)) * 86400000);
     const quarterly = (metrics.dividendPerShareAnnual || 0) / 4;
     events.push({
-      icon: '💰', kind: 'dividend', date: divDate, title: 'Ex-Dividend Date',
+      icon: '%', kind: 'dividend', date: divDate, title: 'Ex-Dividend Date',
       impact: 'Low',
       soWhat: `Quarterly dividend ~$${quarterly.toFixed(2)}/share (annual yield ${divY.toFixed(2)}%). You must own the stock by this date to receive the next payout — price typically drops by the dividend amount the next day.`,
     });
@@ -14397,7 +14546,7 @@ function buildUpcomingEvents(ticker, profile, metrics) {
   const FOMC = ['2026-06-11','2026-07-30','2026-09-17','2026-11-05','2026-12-10'].map(s => new Date(s));
   const nextFomc = FOMC.find(d => d > now);
   if (nextFomc) events.push({
-    icon: '🏛', kind: 'fomc', date: nextFomc, title: 'FOMC Rate Decision',
+    icon: '⚖', kind: 'fomc', date: nextFomc, title: 'FOMC Rate Decision',
     impact: 'High',
     soWhat: `Federal Reserve interest-rate decision. Affects every stock — high-P/E growth and rate-sensitive sectors (banks, REITs, utilities) react most.`,
   });
@@ -14406,7 +14555,7 @@ function buildUpcomingEvents(ticker, profile, metrics) {
   let cpi = new Date(now.getFullYear(), now.getMonth(), 13);
   if (cpi < now) cpi = new Date(now.getFullYear(), now.getMonth() + 1, 13);
   events.push({
-    icon: '📈', kind: 'cpi', date: cpi, title: 'CPI Inflation Report',
+    icon: '⚡', kind: 'cpi', date: cpi, title: 'CPI Inflation Report',
     impact: 'High',
     soWhat: `Monthly inflation print. Hotter-than-expected = bearish for growth and bonds; cooler = bullish for growth and rate-sensitive sectors.`,
   });
@@ -14416,7 +14565,7 @@ function buildUpcomingEvents(ticker, profile, metrics) {
   let nfp = firstFriday(now.getFullYear(), now.getMonth());
   if (nfp < now) nfp = firstFriday(now.getFullYear(), now.getMonth() + 1);
   events.push({
-    icon: '👷', kind: 'jobs', date: nfp, title: 'Non-Farm Payrolls',
+    icon: '↑', kind: 'jobs', date: nfp, title: 'Non-Farm Payrolls',
     impact: 'Medium',
     soWhat: `Monthly employment report. Strong = healthy economy but Fed-tightening risk; weak = recession risk but rate-cut tailwind for stocks.`,
   });
@@ -16758,6 +16907,11 @@ const SECTOR_ROSTER = {
   'Entertainment':          ['NFLX','DIS','ROKU','SPOT'],
   'ETF · Large Blend':      ['SPY','VOO','IVV','VTI'],
   'ETF · Large Growth':     ['QQQ','VUG','SPYG'],
+  'Technology':             ['AAPL','MSFT','NVDA','GOOGL','META','AVGO','ORCL','ADBE','CRM','IBM'],
+  'Financial Services':     ['JPM','BAC','WFC','GS','MS','C','BLK','SCHW','AXP','V'],
+  'Communication Services': ['GOOGL','META','NFLX','DIS','T','VZ','CMCSA','TMUS','SNAP'],
+  'Consumer Cyclical':      ['AMZN','TSLA','HD','NKE','MCD','SBUX','BKNG','TJX','LOW','F'],
+  'Basic Materials':        ['LIN','SHW','APD','ECL','NEM','FCX','DOW','DD','NUE'],
 };
 function findSectorRoster(industry) {
   if (!industry) return null;
@@ -16776,6 +16930,11 @@ function findSectorRoster(industry) {
   if (/internet content|search/.test(lower)) return { name:'Internet Content', peers: SECTOR_ROSTER['Internet Content'] };
   if (/internet retail|e[- ]?commerce/.test(lower)) return { name:'Internet Retail', peers: SECTOR_ROSTER['Internet Retail'] };
   if (/etf|fund/.test(lower)) return { name:'ETF · Large Blend', peers: SECTOR_ROSTER['ETF · Large Blend'] };
+  if (/^technology$|tech(nology)? service/.test(lower)) return { name:'Technology', peers: SECTOR_ROSTER['Technology'] };
+  if (/financial service|diversified financial/.test(lower)) return { name:'Financial Services', peers: SECTOR_ROSTER['Financial Services'] };
+  if (/communication service|telecom/.test(lower)) return { name:'Communication Services', peers: SECTOR_ROSTER['Communication Services'] };
+  if (/consumer cycl|consumer discret/.test(lower)) return { name:'Consumer Cyclical', peers: SECTOR_ROSTER['Consumer Cyclical'] };
+  if (/basic material|material/.test(lower)) return { name:'Basic Materials', peers: SECTOR_ROSTER['Basic Materials'] };
   return null;
 }
 
@@ -17918,6 +18077,8 @@ function renderWhatIfPage() {
         <li>Click <strong>Build Portfolio</strong> — your mix, expected return, and risk appear here</li>
       </ol>
     </div>`;
+  const hint = document.getElementById('wi-simset-hint');
+  if (hint) hint.style.display = (SIM_SET && SIM_SET.size > 0) ? 'flex' : 'none';
   renderInvestorCloneStrip();
   renderPickerChips();
   renderSavedBundles();
@@ -20191,8 +20352,10 @@ function renderHoldingCard(h, goalKey, historyYears) {
   const maxDd  = (h.risk && h.risk.maxDd) || 0;
   const sharpe = (h.risk && h.risk.sharpe) || 0;
   const spark = h.sparkSamples ? sparklineSvg(h.sparkSamples, 96, 24) : '';
+  const f12 = h.forecasts.find(f => f.months === 12);
+  const fDeep = h.forecasts.filter(f => f.months !== 12);
   return `<div class="wi-holding" tabindex="0" onclick="tileClick('${h.ticker}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();tileClick('${h.ticker}')}" title="Click to view ${h.ticker} in the dashboard">
-    <div class="wi-h-heat" style="--heat-color:${heat}"></div>
+    <div class="wi-h-heat" style="--heat-color:${heat};cursor:help" title="Heat score ${h.score >= 0 ? '+' : ''}${h.score} (${h.verdict}) — ${tip('heatBar')}"></div>
     <div class="wi-h-main">
       <div class="wi-h-line1">
         <span class="wi-h-sym">${h.ticker}</span>
@@ -20201,20 +20364,26 @@ function renderHoldingCard(h, goalKey, historyYears) {
         <span class="pos-neg-pill ${pn.cls}" title="${tip('posNeg')}" style="cursor:help"><span class="pn-sym">${pn.sym}</span>${pn.label}</span>
       </div>
       <div class="wi-h-rationale">${rationale}</div>
-      <div class="wi-h-perf" title="All metrics computed on the last ${historyYears} year${historyYears===1?'':'s'} of weekly data. Hover each value for an explanation.">
-        <span class="wi-h-perf-stat" title="${tip('periodReturn')}" style="cursor:help"><span class="lbl">${historyYears}Y Return</span><b class="${periodReturn >= 0 ? 'up' : 'down'}">${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%</b></span>
-        <span class="wi-h-perf-stat" title="${tip('maxDd')}" style="cursor:help"><span class="lbl">Max Drawdown</span><b class="down">${maxDd.toFixed(1)}%</b></span>
-        <span class="wi-h-perf-stat" title="${tip('vol')}" style="cursor:help"><span class="lbl">Volatility</span><b>${h.volatility.toFixed(1)}%</b></span>
-        <span class="wi-h-perf-stat" title="${tip('sharpe')}" style="cursor:help"><span class="lbl">Sharpe</span><b>${sharpe.toFixed(2)}</b></span>
-        <span class="wi-h-perf-stat" title="${tip('beta')}" style="cursor:help"><span class="lbl">Beta</span><b>${(h.beta || 1).toFixed(2)}</b></span>
-        ${spark ? `<span class="sparkline right" title="${historyYears}-year price path · matches the period selected at the top of the Sectors / Top Picks page">${spark}</span>` : ''}
+      <div class="wi-h-forecasts wi-h-forecasts-primary">
+        ${f12 ? `<div class="wi-h-fc" title="${tip('forecast12')}\n\n— Confidence —\n${tip('confidence')}" style="cursor:help">12M <b class="${f12.expReturn >= 0 ? 'up' : 'down'}">${f12.expReturn >= 0 ? '+' : ''}${f12.expReturn.toFixed(1)}%</b> · ${f12.confidence}% conf</div>` : ''}
       </div>
-      <div class="wi-h-forecasts">
-        ${h.forecasts.map(f => {
-          const fKey = f.months === 12 ? 'forecast12' : f.months === 24 ? 'forecast24' : 'forecast36';
-          return `<div class="wi-h-fc" title="${tip(fKey)}\n\n— Confidence —\n${tip('confidence')}" style="cursor:help">${f.months}M <b class="${f.expReturn >= 0 ? 'up' : 'down'}">${f.expReturn >= 0 ? '+' : ''}${f.expReturn.toFixed(1)}%</b> · ${f.confidence}% conf</div>`;
-        }).join('')}
-      </div>
+      <details class="wi-h-deep">
+        <summary>Historical performance &amp; full forecast</summary>
+        <div class="wi-h-perf" title="All metrics computed on the last ${historyYears} year${historyYears===1?'':'s'} of weekly data. Hover each value for an explanation.">
+          <span class="wi-h-perf-stat" title="${tip('periodReturn')}" style="cursor:help"><span class="lbl">${historyYears}Y Return</span><b class="${periodReturn >= 0 ? 'up' : 'down'}">${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%</b></span>
+          <span class="wi-h-perf-stat" title="${tip('maxDd')}" style="cursor:help"><span class="lbl">Max Drawdown</span><b class="down">${maxDd.toFixed(1)}%</b></span>
+          <span class="wi-h-perf-stat" title="${tip('vol')}" style="cursor:help"><span class="lbl">Volatility</span><b>${h.volatility.toFixed(1)}%</b></span>
+          <span class="wi-h-perf-stat" title="${tip('sharpe')}" style="cursor:help"><span class="lbl">Sharpe</span><b>${sharpe.toFixed(2)}</b></span>
+          <span class="wi-h-perf-stat" title="${tip('beta')}" style="cursor:help"><span class="lbl">Beta</span><b>${(h.beta || 1).toFixed(2)}</b></span>
+          ${spark ? `<span class="sparkline right" title="${historyYears}-year price path · matches the period selected at the top of the Sectors / Top Picks page">${spark}</span>` : ''}
+        </div>
+        <div class="wi-h-forecasts">
+          ${fDeep.map(f => {
+            const fKey = f.months === 24 ? 'forecast24' : 'forecast36';
+            return `<div class="wi-h-fc" title="${tip(fKey)}\n\n— Confidence —\n${tip('confidence')}" style="cursor:help">${f.months}M <b class="${f.expReturn >= 0 ? 'up' : 'down'}">${f.expReturn >= 0 ? '+' : ''}${f.expReturn.toFixed(1)}%</b> · ${f.confidence}% conf</div>`;
+          }).join('')}
+        </div>
+      </details>
     </div>
     <div class="wi-h-side">
       <div class="wi-h-pct">${h.pct.toFixed(1)}%</div>
@@ -20227,11 +20396,15 @@ function renderHoldingCard(h, goalKey, historyYears) {
 function renderCalendarCard(p) {
   const events = buildCalendarSummary(p.holdings);
   if (!events || events.length === 0) return '';
-  return `<div class="wi-calendar-card">
-    <div class="wi-cal-head">
-      <div class="wi-cal-title">Calendar at a glance · next major events affecting this portfolio</div>
-      <div class="cd-meta">${events.length} catalysts</div>
-    </div>
+  const nearest = events[0];
+  const nearestDu = daysUntil(nearest.date);
+  const nearestLabel = nearestDu === 'Today' ? 'today' : `in ${nearestDu}`;
+  const summaryLine = `${events.length} catalyst${events.length !== 1 ? 's' : ''} — nearest: ${nearest.title} ${nearestLabel}`;
+  return `<details class="wi-calendar-card wi-calendar-details">
+    <summary class="wi-cal-summary">
+      <span class="wi-cal-summary-text">Calendar at a glance · ${summaryLine}</span>
+      <span class="cd-meta">${events.length} catalysts</span>
+    </summary>
     ${events.map(e => {
       const dun = daysUntilNum(e.date);
       const du = daysUntil(e.date);
@@ -20249,7 +20422,7 @@ function renderCalendarCard(p) {
         <div class="wi-cal-impact ${e.impact}">${e.impact}</div>
       </div>`;
     }).join('')}
-  </div>`;
+  </details>`;
 }
 
 // ========================================================================
@@ -20434,33 +20607,23 @@ function renderWhatIfResults(p) {
   const profit = finalAmt - p.amount;
   const defaultBundleName = `${def.label} · $${fmt(p.amount)} · ${todayStr()}`;
   $('whatif-results').innerHTML = `
-    <div class="wi-save-row">
-      <div class="wi-save-lbl">Save this simulation:</div>
-      <input id="wi-save-name" type="text" value="${_escapeHtml(defaultBundleName)}" placeholder="${_escapeHtml(defaultBundleName)}" maxlength="80" autocomplete="off" title="Pre-filled with a sensible default — click to edit, or hit Save as bundle as-is. Saved bundle names appear in the saved-bundles list below + on the Cockpit alerts when behind pace.">
-      <button class="btn btn-primary" onclick="saveCurrentBundle()">Save bundle</button>
-    </div>
     <div class="wi-summary-grid">
-      <div class="wi-summary-card">
+      <div class="wi-summary-card" title="${tip('wiTotalInvested')}" style="cursor:help">
         <div class="wi-sc-lbl">Total Invested</div>
         <div class="wi-sc-val">$${fmt(p.amount)}</div>
         <div class="wi-sc-sub">${def.label} strategy</div>
       </div>
-      <div class="wi-summary-card">
+      <div class="wi-summary-card" title="${tip('wiHoldings')}" style="cursor:help">
         <div class="wi-sc-lbl">Holdings</div>
         <div class="wi-sc-val">${stats.nHoldings}</div>
         <div class="wi-sc-sub">${stats.stockPct.toFixed(0)}% stocks · ${stats.etfPct.toFixed(0)}% ETFs</div>
       </div>
-      <div class="wi-summary-card">
-        <div class="wi-sc-lbl">Expected ${p.horizon}M</div>
+      <div class="wi-summary-card" title="${tip('wiExpectedReturn')}" style="cursor:help">
+        <div class="wi-sc-lbl">Expected Return</div>
         <div class="wi-sc-val ${horizonReturn >= 0 ? 'up' : 'down'}">${horizonReturn >= 0 ? '+' : ''}${horizonReturn.toFixed(1)}%</div>
-        <div class="wi-sc-sub">→ $${fmt(finalAmt)} (${profit >= 0 ? '+' : ''}$${fmt(profit)})</div>
+        <div class="wi-sc-sub">12M ${stats.expected12 >= 0 ? '+' : ''}${stats.expected12.toFixed(1)}% · 24M ${stats.expected24 >= 0 ? '+' : ''}${stats.expected24.toFixed(1)}% · 36M ${stats.expected36 >= 0 ? '+' : ''}${stats.expected36.toFixed(1)}%</div>
       </div>
-      <div class="wi-summary-card">
-        <div class="wi-sc-lbl">12 / 24 / 36 mo</div>
-        <div class="wi-sc-val small ${stats.expected12 >= 0 ? 'up' : 'down'}">${stats.expected12 >= 0 ? '+' : ''}${stats.expected12.toFixed(1)}% · ${stats.expected24 >= 0 ? '+' : ''}${stats.expected24.toFixed(1)}% · ${stats.expected36 >= 0 ? '+' : ''}${stats.expected36.toFixed(1)}%</div>
-        <div class="wi-sc-sub">Weighted forecast</div>
-      </div>
-      <div class="wi-summary-card">
+      <div class="wi-summary-card" title="${tip('confidence')}" style="cursor:help">
         <div class="wi-sc-lbl">Avg Confidence</div>
         <div class="wi-sc-val">${stats.avgConfidence.toFixed(0)}%</div>
         <div class="wi-sc-sub">Risk: <b style="color:var(--text)">${def.riskLevel}</b></div>
@@ -20539,47 +20702,33 @@ function renderWhatIfResults(p) {
           <div class="wi-method-val"><b>${def.label}</b> — ${def.summary}</div>
         </div>
         <div class="wi-method-row">
-          <div class="wi-method-lbl">Horizon & Risk</div>
-          <div class="wi-method-val">User horizon <b>${p.horizon} months</b> · suggested holding period <b>${def.horizon}</b> · risk level <b>${def.riskLevel}</b></div>
+          <div class="wi-method-lbl">Horizon &amp; History</div>
+          <div class="wi-method-val">User horizon <b>${p.horizon} months</b> · suggested hold <b>${def.horizon}</b> · risk <b>${def.riskLevel}</b> · risk metrics grounded on <b>last ${p.historyYears} year${p.historyYears===1?'':'s'}</b> of weekly bars</div>
         </div>
         <div class="wi-method-row">
-          <div class="wi-method-lbl">History Grounding</div>
-          <div class="wi-method-val">Risk metrics (return, volatility, max drawdown, Sharpe, beta) computed on the <b>last ${p.historyYears} year${p.historyYears===1?'':'s'}</b> of weekly bars (${Math.floor(p.historyYears * 52)} weeks). Heat score, RSI, and forecasts use the full available history.</div>
+          <div class="wi-method-lbl">Stock selection</div>
+          <div class="wi-method-val">~120 catalog stocks ranked by <b>${def.rankFormula}</b>. Inclusion: ${def.inclusion}. Top <code>${def.nStocks}</code> selected. ETF core: ${def.etfTickers.map(t => `<code>${t}</code>`).join(' · ')}.</div>
         </div>
         <div class="wi-method-row">
-          <div class="wi-method-lbl">Stock Ranking Formula</div>
-          <div class="wi-method-val">${def.rankFormula}</div>
+          <div class="wi-method-lbl">Allocation</div>
+          <div class="wi-method-val">Stocks <code>${(def.stockWeight*100).toFixed(0)}%</code> of capital, weighted by score (clipped <code>${def.minPct}%–${def.maxPct}%</code>). ETFs <code>${(def.etfWeight*100).toFixed(0)}%</code>, score-weighted from curated pool.</div>
         </div>
         <div class="wi-method-row">
-          <div class="wi-method-lbl">Inclusion Filter</div>
-          <div class="wi-method-val">${def.inclusion}</div>
+          <div class="wi-method-lbl">Forecasts</div>
+          <div class="wi-method-val">Annualised return from heat score (−10% to +18%), mean-reverting toward 7% over longer horizons. Confidence = signal strength × horizon decay × volatility penalty. Data: ${isLive() ? 'Finnhub live metrics' : 'catalog anchor data'}.</div>
         </div>
         <div class="wi-method-row">
-          <div class="wi-method-lbl">Allocation Rules</div>
-          <div class="wi-method-val">Stocks weighted by score within <code>${(def.stockWeight*100).toFixed(0)}%</code> of capital. ETFs equal-weighted within remaining <code>${(def.etfWeight*100).toFixed(0)}%</code>. Per-stock position clipped to <code>${def.minPct}%–${def.maxPct}%</code> to balance concentration and diversification.</div>
-        </div>
-        <div class="wi-method-row">
-          <div class="wi-method-lbl">Stock Universe</div>
-          <div class="wi-method-val">~120 US-listed stocks across 20 sectors (built-in catalog). Top <code>${def.nStocks}</code> selected after ranking and inclusion filter.</div>
-        </div>
-        <div class="wi-method-row">
-          <div class="wi-method-lbl">ETF Core</div>
-          <div class="wi-method-val">${def.etfTickers.map(t => `<code>${t}</code>`).join(' · ')} — chosen for sector role and historical fit with this strategy.</div>
-        </div>
-        <div class="wi-method-row">
-          <div class="wi-method-lbl">Forecast Engine</div>
-          <div class="wi-method-val">Annualised return derived from heat score (−10% to +18% range), with mean-reversion toward a 7% baseline over longer horizons. 1-sigma price band from historical weekly volatility. Confidence = signal strength × horizon decay × volatility penalty.</div>
-        </div>
-        <div class="wi-method-row">
-          <div class="wi-method-lbl">Data Sources</div>
-          <div class="wi-method-val">Recent performance from weekly bars · history from 5+ years of synthetic data anchored to known recent prices · forecasts from the in-app model · valuation (P/E, yield, beta) from <b>${isLive() ? 'Finnhub live metrics' : 'catalog with anchor data'}</b>.</div>
-        </div>
-        <div class="wi-method-row">
-          <div class="wi-method-lbl">Honest Limitations</div>
-          <div class="wi-method-val">Forecasts and confidence are heuristic — directional only, not predictive. Catalog-based rankings give consistent answers but won't reflect minute-to-minute market moves. <b>This is not investment advice.</b></div>
+          <div class="wi-method-lbl">Limitations</div>
+          <div class="wi-method-val">Heuristic estimates — directional only, not a price target. Catalog rankings won't reflect intraday moves. <b>This is not investment advice.</b></div>
         </div>
       </div>
     </details>
+
+    <div class="wi-save-row">
+      <div class="wi-save-lbl">Save this simulation:</div>
+      <input id="wi-save-name" type="text" value="${_escapeHtml(defaultBundleName)}" placeholder="${_escapeHtml(defaultBundleName)}" maxlength="80" autocomplete="off" title="Pre-filled with a sensible default — click to edit, or hit Save bundle as-is. Saved bundles appear in My Bundles and on the Cockpit alerts when behind pace.">
+      <button class="btn btn-primary" onclick="saveCurrentBundle()">Save bundle</button>
+    </div>
   `;
 }
 
