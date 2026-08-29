@@ -15840,8 +15840,23 @@ function _llmCacheSet(key, text) {
 const GROQ_MODELS = [
   'meta-llama/llama-4-maverick-17b-128e-instruct',
   'meta-llama/llama-4-scout-17b-16e-instruct',
-  'llama3-70b-8192',
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
 ];
+// Evict any cached winner that is a known-decommissioned model so it isn't tried first.
+(function _evictDeadGroqModels() {
+  const dead = ['llama3-70b-8192', 'llama3-8b-8192', 'llama2-70b-4096'];
+  try {
+    const w = JSON.parse(localStorage.getItem('sp_groq_model') || 'null');
+    if (w && dead.includes(w.model)) localStorage.removeItem('sp_groq_model');
+    const disc = JSON.parse(localStorage.getItem('sp_groq_models_disc') || 'null');
+    if (disc && disc.models) {
+      const filtered = disc.models.filter(m => !dead.includes(m));
+      if (filtered.length !== disc.models.length)
+        localStorage.setItem('sp_groq_models_disc', JSON.stringify({ models: filtered, ts: 0 }));
+    }
+  } catch (e) {}
+})();
 const LS_KEY_GROQ_MODEL  = 'sp_groq_model';      // {model, ts}  — cached winner (7d)
 const LS_KEY_GROQ_MODELS = 'sp_groq_models_disc'; // {models: [], ts} — live list (24h)
 
@@ -16046,8 +16061,13 @@ async function _callGroqLLM(prompt, opts) {
         if (leakedShape) return { ok: false, error: 'leaked', text: '', detail, source: 'groq' };
         if (res.status === 401 || res.status === 403) return { ok: false, error: 'auth', text: '', detail, source: 'groq' };
         if (res.status === 429) return { ok: false, error: 'rate_limit', text: '', detail, source: 'groq' };
-        // 404 = model deprecated/removed — evict cache entry and try next candidate
-        if (res.status === 404 || detailLc.includes('does not exist')) {
+        // 404 or 400 with decommission/not-found message = model removed — evict and try next
+        const modelGone = res.status === 404
+          || detailLc.includes('does not exist')
+          || detailLc.includes('decommissioned')
+          || detailLc.includes('no longer supported')
+          || detailLc.includes('model_not_found');
+        if (modelGone) {
           _evictGroqModel(model);
           lastErr = { ok: false, error: 'api_error', text: '', detail: `HTTP ${res.status} ${detail.slice(0, 200)}`, source: 'groq' };
           continue;
