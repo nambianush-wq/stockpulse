@@ -12224,7 +12224,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
       <div class="modal-row">
         <label for="groq-api-key">Groq API key <span class="help-tag muted">optional · AI</span></label>
         <input id="groq-api-key" type="password" placeholder="Paste your Groq key for AI explanations">
-        <div class="help-text">Powers <b>Why this verdict?</b> and <b>Resolve conflict</b>. Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (Llama 3.3 70B, ~500 tok/s, no card).</div>
+        <div class="help-text">Powers <b>Why this verdict?</b> and <b>Resolve conflict</b>. Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (Llama 4 Scout, fast inference, no card).</div>
       </div>
       <div class="modal-row">
         <label><input type="checkbox" id="local-llm-enabled"> In-browser LLM fallback <span class="help-tag">no key · ~400 MB once</span></label>
@@ -12849,7 +12849,7 @@ const TIP = {
   crossGoal: "Cross-Goal Strength — the small G · P · I · V · M letters on each tile.\n\nWhat this means: G=Growth, P=Preservation, I=Income, V=Value, M=Momentum. Filled letters mean this ticker is in the top-20 for that goal. More filled letters = stronger across multiple investment styles.",
   moodScale: "Sector mood — overall health rating from STRONG (deep green) to WEAK (deep red).\n\nWhat this means: Aggregates the verdicts and forecasts of every stock in the sector. STRONG = broad bullish read. HEALTHY = mostly bullish. MIXED = no clear direction. SOFT = leaning bearish. WEAK = broad bearish read.",
   pace: "Pace vs Forecast — how the bundle is tracking against the 12-month forecast prorated for elapsed days.\n\nWhat this means: 'Ahead of pace' = doing BETTER than the forecast predicted at this point. 'Behind pace' = doing WORSE than predicted. The forecast was set the day you saved the bundle; pace tells you if reality is beating or missing the plan.",
-  whyVerdict: "Asks a free LLM to explain the verdict in plain English.\n\nWhat this does: Sends the verdict score + driving signals + recent news headlines + 12M forecast to Groq (Llama 3.3 70B) and streams back a 3-4 sentence explanation of WHY the model rates this stock the way it does — including any disagreement between the chart and the news.\n\nWhy this matters: The heat score is a number. The signals list is technical jargon. This turns both into a sentence like \"the chart is bullish BUT the company just guided down — consider waiting.\" It's the human read on top of the math.\n\nProvider: Groq (free) by default. If no Groq key is set, falls back to an in-browser Qwen2.5-0.5B model (~400 MB one-time download, then runs offline). Either way, no card required. Answers are cached for 24h per ticker so re-clicking is instant and free.\n\nIMPORTANT: AI-generated explanations are advisory, not investment advice. Always cross-check with the signal table.",
+  whyVerdict: "Asks a free LLM to explain the verdict in plain English.\n\nWhat this does: Sends the verdict score + driving signals + recent news headlines + 12M forecast to Groq (Llama 4 Scout) and streams back a 3-4 sentence explanation of WHY the model rates this stock the way it does — including any disagreement between the chart and the news.\n\nWhy this matters: The heat score is a number. The signals list is technical jargon. This turns both into a sentence like \"the chart is bullish BUT the company just guided down — consider waiting.\" It's the human read on top of the math.\n\nProvider: Groq (free) by default. If no Groq key is set, falls back to an in-browser Qwen2.5-0.5B model (~400 MB one-time download, then runs offline). Either way, no card required. Answers are cached for 24h per ticker so re-clicking is instant and free.\n\nIMPORTANT: AI-generated explanations are advisory, not investment advice. Always cross-check with the signal table.",
   resolveConflict: "Asks a free LLM how to handle a CONFLICT timing signal.\n\nWhat this does: CONFLICT means the chart says one thing (e.g. bullish technicals) and the forecast says another (e.g. bearish 12M return). The timing engine refuses to commit. This button asks Groq (or the in-browser fallback) to (1) name which side is pulling each way in plain English, (2) say which side has more current evidence, and (3) propose ONE concrete action — e.g. \"half-size DCA over 3 buys\", \"wait for next earnings\", \"skip entirely\".\n\nWhy this matters: Without this, a CONFLICT chip leaves you stuck with no next step. The model can read the recent news and weigh which side is more credible right now.\n\nProvider: Groq by default, in-browser fallback when no key. Cached for 24h. AI-suggested posture, not investment advice — size to your own risk tolerance.",
 };
 function tip(key) { return (TIP[key] || '').replace(/"/g, '&quot;'); }
@@ -15269,7 +15269,7 @@ async function callLocalLLM(prompt, opts) {
 }
 
 // ============================================================
-// AI features — Groq Llama 3.3 70B (free tier) explainability
+// AI features — Groq Llama 4 Scout (free tier) explainability
 // ============================================================
 // Powers two on-demand surfaces on the ticker dashboard:
 //
@@ -15332,13 +15332,13 @@ function _llmCacheSet(key, text) {
   } catch (e) { /* quota or private mode — non-fatal */ }
 }
 
-// Groq model — Llama 3.3 70B on Groq's LPU inference runs at ~500 tok/s,
+// Groq model — Llama 4 Scout on Groq's LPU inference runs at ~500 tok/s,
 // usually returning the full 130-word explanation in well under 1 s.
 // Gemini was removed 2026-05-20 after repeated key-revocation issues
 // made it unreliable as a deployment-wide option (Google's scanner
 // revokes any key it finds in public source). Groq's free tier is also
 // faster and has higher RPM, so it became the primary remote provider.
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 // Provider-agnostic LLM call. Returns { ok, text, error }.
 //   opts.cacheKey  — required for caching; pass null to bypass
@@ -15828,7 +15828,7 @@ function _aiSourceTag(out) {
     return `<span class="ai-src" title="Local in-browser model (Qwen2.5-0.5B-Instruct). Runs via transformers.js + WebGPU when available. Quality lower than Groq but $0 / no key. ~400 MB cached in IndexedDB.">Local · Qwen2.5-0.5B${fellBack}</span>`;
   }
   // Default remote source is Groq (the only remote provider after 2026-05-20).
-  return `<span class="ai-src" title="Live Groq response (Llama 3.3 70B on LPU inference). Cached locally for the next 24h.">Groq · Llama 3.3 70B</span>`;
+  return `<span class="ai-src" title="Live Groq response (Llama 4 Scout on LPU inference). Cached locally for the next 24h.">Groq · Llama 4 Scout</span>`;
 }
 
 // Modal-text swap fired by callLLM when it transitions between providers
