@@ -3703,8 +3703,9 @@ body.cockpit-sidebar-collapsed #main { margin-left: 0; }
   color: var(--muted);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
-  text-align: right;
 }
 .cockpit-refresh-btn {
   padding: 6px 12px;
@@ -3727,17 +3728,13 @@ body.cockpit-sidebar-collapsed #main { margin-left: 0; }
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
-/* Hero stats — 6 KPI cards */
+/* Hero stats — 6 KPI cards in a 3-column grid */
 .cockpit-hero-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 18px;
 }
-@media (min-width: 1281px) {
-  .cockpit-hero-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (max-width: 1280px) { .cockpit-hero-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 640px)  { .cockpit-hero-grid { grid-template-columns: repeat(2, 1fr); } }
 .cockpit-hero-card {
   background: var(--panel);
@@ -6024,6 +6021,12 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 @media (max-width: 640px) {
   #topbar .brand .brand-text { display: none; }
   #topbar .brand { gap: 0; }
+  /* Micro-label readability: absolute-px font-sizes below 10px don't inherit
+     body scaling and become unreadable at arm's length on phones. */
+  .cockpit-hero-lbl,
+  .bundle-stat .lbl,
+  .pick-fc-h { font-size: 10px; }
+  .heat-legend-labels { font-size: 10px; margin-top: 3px; }
 }
 
 /* Phone portrait (<=480px) — squeeze further */
@@ -6062,6 +6065,8 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
   /* Tile grid: 1 wider tile on phones — easier to read */
   .tile-grid { grid-template-columns: 1fr; }
+  /* Investor card strip: 1-col on tiny phones — fund names need the width */
+  .wi-investor-strip { grid-template-columns: 1fr; }
 }
 
 /* Touch devices: enforce minimum tap targets per Apple/Material guidelines */
@@ -6075,6 +6080,11 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
   .sim-btn { width: 28px; height: 28px; font-size: 13px; }
   /* Always show the wl-item remove button on touch (no hover state) */
   .wl-item .wl-remove { display: flex; }
+  /* Cockpit action buttons and sector jump links need 36px tap height */
+  .cockpit-refresh-btn,
+  .cockpit-sidebar-btn,
+  .cockpit-auto-select,
+  .picks-jump-link { min-height: 36px; }
 }
 </style>
 </head>
@@ -6101,7 +6111,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     </button>
     <button class="btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Switch between dark and light theme. Setting is remembered across sessions." aria-label="Toggle theme"><span id="theme-toggle-icon" class="btn-icon">☀</span><span class="btn-label" id="theme-toggle-label"> Light</span></button>
     <button class="btn" onclick="openAddStock()" title="Add stock"><span class="btn-icon">+</span><span class="btn-label"> Add Stock</span></button>
-    <button class="btn" onclick="openSettings()" title="Settings"><span class="btn-icon">⚙</span><span class="btn-label"> Settings</span></button>
+    <button class="btn" onclick="openSettings()" title="Settings"><span class="btn-icon">⚙&#xFE0E;</span><span class="btn-label"> Settings</span></button>
   </div>
 </div>
 <div id="mobile-menu-backdrop" onclick="closeMobileMenu()" aria-hidden="true"></div>
@@ -11699,7 +11709,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         </div>
       </div>
       <div id="whatif-lab" class="wi-mode-section">
-        <div class="whatif-form" style="grid-template-columns: 1fr 1.1fr 0.85fr auto;">
+        <div class="whatif-form">
           <div class="wi-field">
             <label for="wi-amount">Investment amount</label>
             <div class="wi-amount-prefix">
@@ -22735,6 +22745,18 @@ function toggleMobileMenu() {
 function closeMobileMenu() {
   document.body.classList.remove('menu-open');
 }
+// Swipe-left to dismiss the mobile sidebar drawer (iOS / Android convention)
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  let _sx = 0;
+  sidebar.addEventListener('touchstart', function(e) {
+    _sx = e.touches[0].clientX;
+  }, { passive: true });
+  sidebar.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientX - _sx < -50) closeMobileMenu();
+  }, { passive: true });
+})();
 
 // Debounced renderMain — coalesces re-render bursts from async-fetch
 // completions (analyst recs + insider Form 4 + earnings date all resolve
