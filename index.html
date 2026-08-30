@@ -3813,6 +3813,26 @@ body.cockpit-sidebar-collapsed #main { margin-left: 0; }
   font-style: italic;
 }
 
+/* AI executive summary — auto-generated, inline above perf cards */
+#cockpit-exec-summary {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+  padding: 10px 14px 12px;
+  margin-bottom: 14px;
+  border-left: 2px solid rgba(83,58,253,.45);
+  background: rgba(83,58,253,.05);
+  border-radius: 0 8px 8px 0;
+}
+#cockpit-exec-summary:empty { display: none; }
+#cockpit-exec-summary.loading { color: var(--dim); font-style: italic; }
+#cockpit-exec-summary .summary-meta {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 7px;
+  letter-spacing: .03em;
+}
+
 /* Heatmap */
 .cockpit-heatmap {
   display: grid;
@@ -6333,6 +6353,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
             <div class="cockpit-section-sub">Every stock in your watchlist as a full performance card — 1W price action sparkline + 1M change + 12M forecast + heat score · ranked by 1-week move · click any card to open the ticker dashboard · starred favorites carry the ★ marker</div>
           </div>
         </div>
+        <div id="cockpit-exec-summary"></div>
         <div class="cockpit-perf-grid" id="cockpit-watchlist-perf"></div>
       </div>
       <div class="cockpit-section" id="cockpit-sectors-section">
@@ -22097,6 +22118,120 @@ function _cockpitRenderPerfCards(host, rows) {
   }).join('');
 }
 
+// -----------------------------------------------------------------------
+// Cockpit AI Executive Summary — auto-generated, cached per session
+// -----------------------------------------------------------------------
+let _execSummaryCache = null;   // { key: string, text: string, via: string }
+let _execSummaryInFlight = false;
+
+function _clearExecSummaryCache() { _execSummaryCache = null; }
+
+function _buildExecSummaryData(rows) {
+  const tickers = rows.map(r => {
+    const bars = getBars(r.ticker);
+    const closes = bars.map(b => b.close);
+    const n = closes.length;
+    const last = r.livePrice || closes[n - 1] || 0;
+    const price = (idx) => closes[Math.max(0, idx)] || last;
+    const ret = (base) => base > 0 ? ((last - base) / base * 100) : 0;
+    return {
+      ticker: r.ticker,
+      verdict: r.verdict,
+      d30: ret(price(n - 5)),
+      d60: ret(price(n - 9)),
+      d90: ret(price(n - 13)),
+      f12: r.f12,
+      score: r.score,
+    };
+  });
+  const avg = (fn) => tickers.reduce((s, t) => s + fn(t), 0) / tickers.length;
+  const pct = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const buy  = rows.filter(r => r.verdict === 'BUY' || r.verdict === 'STRONG BUY').length;
+  const sell = rows.filter(r => r.verdict === 'SELL' || r.verdict === 'STRONG SELL').length;
+  const hold = rows.length - buy - sell;
+  const sorted30 = [...tickers].sort((a, b) => b.d30 - a.d30);
+  return {
+    table: tickers.map(t =>
+      `${t.ticker}: verdict=${t.verdict} 30d=${pct(t.d30)} 60d=${pct(t.d60)} 90d=${pct(t.d90)} 12M_fcst=${pct(t.f12)} heat=${t.score >= 0 ? '+' : ''}${t.score.toFixed(0)}`
+    ).join('\n'),
+    avg30: avg(t => t.d30), avg60: avg(t => t.d60), avg90: avg(t => t.d90),
+    avgF12: avg(t => t.f12),
+    buy, hold, sell, pct,
+    best:  sorted30[0],
+    worst: sorted30[sorted30.length - 1],
+    total: rows.length,
+  };
+}
+
+async function _callFable(prompt) {
+  // Try local server (Fable via Claude CLI), fall back to Groq
+  try {
+    const r = await fetch('/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-fable-5', max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }] }),
+    });
+    if (r.ok) {
+      const j = await r.json();
+      const text = (j.content?.[0]?.text || '').trim();
+      if (text) return { ok: true, text, via: 'Fable' };
+    }
+  } catch (_) { /* server not running — fall through to Groq */ }
+  const result = await callLLM(prompt, { maxTokens: 300 });
+  return result ? { ...result, via: 'Groq' } : { ok: false, text: '', via: 'Groq' };
+}
+
+async function _cockpitGenExecSummary(rows) {
+  if (_execSummaryInFlight) return;
+  const key = WATCHLIST.join(',');
+  const host = document.getElementById('cockpit-exec-summary');
+  if (!host) return;
+  // Return cached result if watchlist hasn't changed
+  if (_execSummaryCache && _execSummaryCache.key === key) {
+    host.className = '';
+    host.innerHTML = _execSummaryCache.text +
+      `<div class="summary-meta">✦ ${_execSummaryCache.via} · Generated this session</div>`;
+    return;
+  }
+  host.className = 'loading';
+  host.textContent = 'Generating portfolio summary…';
+  _execSummaryInFlight = true;
+  try {
+    const d = _buildExecSummaryData(rows);
+    const prompt =
+`You are writing a short portfolio update for a regular investor — not a financial professional.
+
+Watchlist (${d.total} stocks):
+${d.table}
+
+Averages: 30d ${d.pct(d.avg30)}, 60d ${d.pct(d.avg60)}, 90d ${d.pct(d.avg90)}, 12M forecast ${d.pct(d.avgF12)}
+Verdicts: ${d.buy} buy / ${d.hold} hold / ${d.sell} sell
+Best 30d: ${d.best.ticker} (${d.pct(d.best.d30)}), Worst 30d: ${d.worst.ticker} (${d.pct(d.worst.d30)})
+
+Write 3-4 plain English sentences. No bullet points, no markdown, no headers, no disclaimers.
+Sentence 1: what the portfolio actually did over the last 30, 60, and 90 days — use the real numbers.
+Sentence 2: where the portfolio looks to be heading over the next 30, 60, and 90 days based on the forecasts.
+Sentences 3-4: name the one stock standing out most, and the one to keep a close eye on.
+Use plain numbers and plain language. Be direct and specific. No "as an AI" language.`;
+    const result = await _callFable(prompt);
+    if (result && result.ok && result.text) {
+      _execSummaryCache = { key, text: _escapeHtml(result.text), via: result.via };
+      host.className = '';
+      host.innerHTML = _execSummaryCache.text +
+        `<div class="summary-meta">✦ ${result.via} · Generated this session</div>`;
+    } else {
+      host.className = '';
+      host.innerHTML = `<span style="color:var(--dim);font-style:italic;">AI summary unavailable — add a Groq key in Settings or run <code>python3 server.py</code> locally for Fable.</span>`;
+    }
+  } catch (e) {
+    host.className = '';
+    host.textContent = '';
+  } finally {
+    _execSummaryInFlight = false;
+  }
+}
+
 function _cockpitRenderWatchlistPerf(ov) {
   // Renamed from _cockpitRenderFavorites — pre-2026-05-17 this rendered only
   // starred favorites as an equal-weight basket. User feedback: the full
@@ -22112,6 +22247,8 @@ function _cockpitRenderWatchlistPerf(ov) {
   }
   const sorted = [...ov.rows].sort((a, b) => b.wkChg - a.wkChg);
   _cockpitRenderPerfCards(host, sorted);
+  // Trigger AI summary (async, non-blocking — cached for the session)
+  _cockpitGenExecSummary(ov.rows);
 }
 
 function _cockpitRenderSectors(ov) {
@@ -23696,6 +23833,7 @@ async function refreshAll(silent = false) {
   if (!silent) notifyChanges(changes);
   if (!silent) notifyTimingChanges(timingChanges);
   _checkPriceAlerts();
+  _clearExecSummaryCache();
 }
 
 function startRefreshTimer() {
