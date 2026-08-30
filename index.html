@@ -3835,6 +3835,26 @@ body.cockpit-sidebar-collapsed #main { margin-left: 0; }
   letter-spacing: .03em;
 }
 
+/* Bundle AI narrative — per-bundle inline summary */
+.bundle-narrative {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text);
+  padding: 9px 13px 10px;
+  margin: 10px 0 4px;
+  border-left: 2px solid rgba(83,58,253,.35);
+  background: rgba(83,58,253,.04);
+  border-radius: 0 7px 7px 0;
+}
+.bundle-narrative:empty { display: none; }
+.bundle-narrative.loading { color: var(--dim); font-style: italic; }
+.bundle-narrative .summary-meta {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 6px;
+  letter-spacing: .03em;
+}
+
 /* Heatmap */
 .cockpit-heatmap {
   display: grid;
@@ -18726,6 +18746,79 @@ function renderModifyModal(bundle) {
   `;
 }
 
+// -----------------------------------------------------------------------
+// Bundle AI narrative — per-bundle inline summary, auto-generated
+// -----------------------------------------------------------------------
+const _bundleNarrativeCache = new Map();   // bundleId → { key, text, via }
+const _bundleNarrativeInFlight = new Set();
+
+function _buildBundleFacts(b, stats, fwd12, hl) {
+  const pct = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const dol = (v) => (v >= 0 ? '+' : '−') + '$' + fmt(Math.abs(v));
+  const daysSince = Math.max(0, Math.floor((Date.now() - b.createdAt) / 86400000));
+  const endpointVal = b.amount * (1 + (fwd12 / 100) * ((b.horizon || 12) / 12));
+  return `VERIFIED FACTS — use these numbers exactly, do not compute or change any:
+• Bundle: ${_escapeHtml(b.name)} · ${b.holdings.length} holdings · $${fmt(b.amount)} initial · created ${daysSince} day${daysSince === 1 ? '' : 's'} ago
+• Current value: $${fmt(stats.curValue)} · cumulative P&L: ${dol(stats.cumGain)} (${pct(stats.cumGainPct)}) since inception
+• Latest P&L: ${dol(stats.dayGain)} (${pct(stats.dayGainPct)})
+• 12-month weighted forecast: ${pct(fwd12)} · forecast endpoint: $${fmt(endpointVal)} at ${b.horizon || 12}M
+• Pace vs forecast: ${hl.paceStatus === 'on-pace' ? 'on pace' : hl.paceStatus === 'ahead' ? 'ahead of forecast' : 'behind forecast'} · actual ${pct(hl.actualCumPct)} vs expected ${pct(hl.expectedCumPct)} · delta ${pct(hl.paceDelta)}
+• Top performer: ${hl.best ? `${hl.best.ticker} at ${pct(hl.best.gainPct)}` : 'none yet'}
+• Weakest performer: ${hl.worst && hl.worst.ticker !== (hl.best && hl.best.ticker) ? `${hl.worst.ticker} at ${pct(hl.worst.gainPct)}` : 'none yet'}
+• Largest position: ${hl.maxHolding ? `${hl.maxHolding.ticker} at ${hl.maxHolding.pct.toFixed(1)}% weight` : 'n/a'}`;
+}
+
+async function _genBundleNarrative(b) {
+  const host = document.getElementById(`bundle-narrative-${b.id}`);
+  if (!host || _bundleNarrativeInFlight.has(b.id)) return;
+  const stats = valueBundle(b);
+  let fwd12 = 0;
+  for (const h of b.holdings) fwd12 += (h.entryForecast12 || 0) * h.pct;
+  fwd12 /= 100;
+  const hl = bundleHighlights(b, stats, fwd12);
+  const cacheKey = `${b.id}_${stats.cumGainPct.toFixed(2)}_${fwd12.toFixed(2)}`;
+  const cached = _bundleNarrativeCache.get(b.id);
+  if (cached && cached.key === cacheKey) {
+    host.className = 'bundle-narrative';
+    host.innerHTML = cached.text +
+      `<div class="summary-meta">✦ ${cached.via} · Generated this session</div>`;
+    return;
+  }
+  host.className = 'bundle-narrative loading';
+  host.textContent = 'Generating summary…';
+  _bundleNarrativeInFlight.add(b.id);
+  try {
+    const factsBlock = _buildBundleFacts(b, stats, fwd12, hl);
+    const prompt =
+`You are a financial writer turning pre-verified portfolio simulation data into plain English for a regular investor.
+
+${factsBlock}
+
+Write exactly 3-4 sentences. No bullet points, no markdown, no headers, no disclaimers, no "as an AI".
+Sentence 1: how the bundle has performed since creation — use the exact P&L numbers from VERIFIED FACTS.
+Sentence 2: whether it is on pace, ahead, or behind its 12-month forecast — use the exact pace figures.
+Sentence 3: which holding stands out most and which needs watching — use their exact gain percentages.
+Sentence 4: where the bundle is expected to end up — use the exact forecast and endpoint value.
+CRITICAL: Every number must be copied directly from VERIFIED FACTS. Do not calculate or use any other values.`;
+    const result = await _callFable(prompt);
+    if (result && result.ok && result.text) {
+      const entry = { key: cacheKey, text: _escapeHtml(result.text), via: result.via };
+      _bundleNarrativeCache.set(b.id, entry);
+      host.className = 'bundle-narrative';
+      host.innerHTML = entry.text +
+        `<div class="summary-meta">✦ ${result.via} · Generated this session</div>`;
+    } else {
+      host.className = 'bundle-narrative';
+      host.innerHTML = `<span style="color:var(--dim);font-style:italic;">Summary unavailable — add a Groq key in Settings or run <code>python3 server.py</code> locally for Fable.</span>`;
+    }
+  } catch (e) {
+    host.className = 'bundle-narrative';
+    host.textContent = '';
+  } finally {
+    _bundleNarrativeInFlight.delete(b.id);
+  }
+}
+
 function renderSavedBundles() {
   const host = $('saved-bundles-container');
   if (!host) return;
@@ -18753,6 +18846,9 @@ function renderSavedBundles() {
     </div>
     ${cards}
   </div>`;
+  // Trigger AI narratives after DOM is updated (setTimeout 0 ensures elements exist)
+  const bundlesSnap = SAVED_BUNDLES.slice();
+  setTimeout(() => { for (const b of bundlesSnap) _genBundleNarrative(b).catch(() => {}); }, 0);
 }
 
 // Forecast-vs-Actual chart for a bundle: dashed violet line = expected straight-line
@@ -19466,6 +19562,7 @@ function renderBundleCard(b) {
         </div>
       </div>`;
     })()}
+    <div id="bundle-narrative-${b.id}" class="bundle-narrative loading">Generating summary…</div>
     ${_renderBundleCorrectionsPanel(b, stats, fwd12)}
     <div class="bundle-trend">
       <div class="bundle-trend-head">
