@@ -672,6 +672,11 @@ input:focus, select:focus {
   transition: color .15s;
 }
 .verdict-score-sub-link:hover { color: var(--muted); }
+.score-breakdown { margin-top:6px; }
+.score-breakdown > summary { font-size:9.5px; color:var(--dim); cursor:pointer; list-style:none; border:none; outline:none; }
+.score-breakdown > summary::-webkit-details-marker { display:none; }
+.score-breakdown > summary:hover { color:var(--muted); }
+.score-breakdown-body { margin-top:8px; padding:10px 12px; border-radius:8px; background:rgba(255,255,255,.03); border:1px solid var(--line); }
 #verdict-meter {
   margin-top: 10px;
   height: 4px;
@@ -2389,6 +2394,20 @@ body.sectors-mode #sidebar { display: none; }
 .pick-sym { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.005em; }
 .pick-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
 .pick-verdict { padding: 2px 8px; border-radius: 99px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; display: inline-block; }
+.all-rounder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(83,58,253,.18), rgba(191,90,242,.18));
+  border: 1px solid rgba(191,90,242,.4);
+  color: rgb(191,90,242);
+  cursor: help;
+  white-space: nowrap;
+}
 .pick-stats { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; font-variant-numeric: tabular-nums; }
 .pick-stat { font-size: 11.5px; color: var(--text); }
 .pick-stat .lbl { font-size: 9px; color: var(--muted); letter-spacing: .07em; text-transform: uppercase; font-weight: 600; margin-right: 4px; }
@@ -4682,6 +4701,20 @@ body { padding-bottom: 44px; }
 .ai-btn[disabled], .ai-btn.disabled { opacity: .5; cursor: not-allowed; }
 .ai-verdict-wrap { display: flex; flex-direction: column; gap: 4px; }
 .ai-btn-sub { font-size: 9.5px; color: var(--dim); text-align: center; letter-spacing: .01em; }
+.verdict-share-btn {
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  width: 100%;
+}
+.verdict-share-btn:hover { color: var(--text); border-color: var(--muted); }
 
 /* AI modal lives at body level (outside #content) so renderMain
    re-renders cannot wipe it. Sized for a comfortable read of a
@@ -12656,6 +12689,19 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
   }
   .settings-storage-row #settings-key-status { flex: 1; min-width: 0; }
   .settings-storage-actions { display: flex; gap: 8px; flex-shrink: 0; margin-top: 2px; }
+  .settings-usp-compare { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .settings-usp-compare > summary { font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; list-style: none; padding: 4px 0; }
+  .settings-usp-compare > summary::-webkit-details-marker { display: none; }
+  .settings-usp-compare > summary:hover { color: var(--text); }
+  .settings-usp-body { margin-top: 12px; }
+  .usp-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .usp-table th { color: var(--dim); font-weight: 600; text-align: left; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); }
+  .usp-table th:first-child { width: 45%; }
+  .usp-table td { padding: 6px 8px 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--muted); }
+  .usp-table td:first-child { color: var(--text); }
+  .usp-yes { color: #30d158 !important; font-weight: 700; }
+  .usp-no { color: var(--dim) !important; }
+  .usp-partial { color: #ffd60a !important; font-size: 10px; }
 </style>
 <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" onclick="if(event.target===this) closeSettings()">
   <div class="modal">
@@ -12743,6 +12789,25 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
           </div>
         </div>
       </div>
+
+      <!-- USP COMPARISON -->
+      <details class="settings-usp-compare" id="settings-usp-section">
+        <summary>What makes StockPulse different ▾</summary>
+        <div class="settings-usp-body">
+          <table class="usp-table">
+            <thead>
+              <tr><th></th><th>StockPulse</th><th>Yahoo</th><th>TradingView</th><th>Finviz</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Composite heat score</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+              <tr><td>CONFLICT timing state</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+              <tr><td>AI explains your signals</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+              <tr><td>Multi-goal sector rank</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+              <tr><td>Free · no login</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-partial">partial</td><td class="usp-yes">✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
 
     </div>
     <div class="modal-foot">
@@ -13338,7 +13403,7 @@ const TIP = {
   moodScale: "Sector mood — overall health rating from STRONG (deep green) to WEAK (deep red).\n\nWhat this means: Aggregates the verdicts and forecasts of every stock in the sector. STRONG = broad bullish read. HEALTHY = mostly bullish. MIXED = no clear direction. SOFT = leaning bearish. WEAK = broad bearish read.",
   pace: "Pace vs Forecast — how the bundle is tracking against the 12-month forecast prorated for elapsed days.\n\nWhat this means: 'Ahead of pace' = doing BETTER than the forecast predicted at this point. 'Behind pace' = doing WORSE than predicted. The forecast was set the day you saved the bundle; pace tells you if reality is beating or missing the plan.",
   whyVerdict: "Asks a free LLM to explain the verdict in plain English.\n\nWhat this does: Sends the verdict score + driving signals + recent news headlines + 12M forecast to Groq (Llama 4 Scout) and streams back a 3-4 sentence explanation of WHY the model rates this stock the way it does — including any disagreement between the chart and the news.\n\nWhy this matters: The heat score is a number. The signals list is technical jargon. This turns both into a sentence like \"the chart is bullish BUT the company just guided down — consider waiting.\" It's the human read on top of the math.\n\nProvider: Groq (free) by default. If no Groq key is set, falls back to an in-browser Qwen2.5-0.5B model (~400 MB one-time download, then runs offline). Either way, no card required. Answers are cached for 24h per ticker so re-clicking is instant and free.\n\nIMPORTANT: AI-generated explanations are advisory, not investment advice. Always cross-check with the signal table.",
-  resolveConflict: "Asks a free LLM how to handle a CONFLICT timing signal.\n\nWhat this does: CONFLICT means the chart says one thing (e.g. bullish technicals) and the forecast says another (e.g. bearish 12M return). The timing engine refuses to commit. This button asks Groq (or the in-browser fallback) to (1) name which side is pulling each way in plain English, (2) say which side has more current evidence, and (3) propose ONE concrete action — e.g. \"half-size DCA over 3 buys\", \"wait for next earnings\", \"skip entirely\".\n\nWhy this matters: Without this, a CONFLICT chip leaves you stuck with no next step. The model can read the recent news and weigh which side is more credible right now.\n\nProvider: Groq by default, in-browser fallback when no key. Cached for 24h. AI-suggested posture, not investment advice — size to your own risk tolerance.",
+  resolveConflict: "StockPulse detected that its technical trend signals say BUY but its 12-month forecast model says negative returns. This conflict is shown explicitly so you can decide — not hidden behind an averaged score.\n\nAsks a free LLM how to handle a CONFLICT timing signal.\n\nWhat this does: CONFLICT means the chart says one thing (e.g. bullish technicals) and the forecast says another (e.g. bearish 12M return). The timing engine refuses to commit. This button asks Groq (or the in-browser fallback) to (1) name which side is pulling each way in plain English, (2) say which side has more current evidence, and (3) propose ONE concrete action — e.g. \"half-size DCA over 3 buys\", \"wait for next earnings\", \"skip entirely\".\n\nWhy this matters: Without this, a CONFLICT chip leaves you stuck with no next step. The model can read the recent news and weigh which side is more credible right now.\n\nProvider: Groq by default, in-browser fallback when no key. Cached for 24h. AI-suggested posture, not investment advice — size to your own risk tolerance.",
   evImpactHigh: "High-impact events can cause big, sudden price moves the moment the news drops. If you own this stock, watch the result closely — prices can swing 2–5% or more in minutes.",
   evImpactMedium: "Medium-impact events can nudge the stock price but rarely cause dramatic swings. Worth keeping an eye on, especially if the result surprises investors.",
   evImpactLow: "Low-impact events rarely move the stock price much on their own. They are worth knowing about but usually do not require any action from you.",
@@ -13955,19 +14020,20 @@ function computeVerdict(bars) {
 
   const signals = [];
   let score = 0;
+  let _maScore = 0, _rsiScore = 0, _volScore = 0, _fibScore = 0, _slopeScore = 0;
 
   // Trend (MA stack) — 40 pts
   if (last > lm15 && lm15 > lm40 && lm40 > lm100) {
-    score += 40;
+    score += 40; _maScore += 40;
     signals.push({ type:'bull', text:`Bullish MA stack — price ${last.toFixed(2)} > MA15 > MA40 > MA100` });
   } else if (last < lm15 && lm15 < lm40 && lm40 < lm100) {
-    score -= 40;
+    score -= 40; _maScore -= 40;
     signals.push({ type:'bear', text:`Bearish MA stack — price ${last.toFixed(2)} < MA15 < MA40 < MA100` });
   } else if (last > lm40 && lm15 > lm40) {
-    score += 15;
+    score += 15; _maScore += 15;
     signals.push({ type:'bull', text:'Price above 40-week MA (intermediate uptrend)' });
   } else if (last < lm40 && lm15 < lm40) {
-    score -= 15;
+    score -= 15; _maScore -= 15;
     signals.push({ type:'bear', text:'Price below 40-week MA (intermediate downtrend)' });
   } else {
     signals.push({ type:'neutral', text:'Mixed MA structure — no clear trend' });
@@ -13976,28 +14042,28 @@ function computeVerdict(bars) {
   // MA slope (5-bar) — 10 pts
   if (m40[n] != null && m40[n - 5] != null) {
     const slope40 = (m40[n] - m40[n - 5]) / m40[n - 5];
-    if (slope40 > 0.005) { score += 10; signals.push({ type:'bull', text:'40-week MA rising' }); }
-    else if (slope40 < -0.005) { score -= 10; signals.push({ type:'bear', text:'40-week MA falling' }); }
+    if (slope40 > 0.005) { score += 10; _slopeScore += 10; signals.push({ type:'bull', text:'40-week MA rising' }); }
+    else if (slope40 < -0.005) { score -= 10; _slopeScore -= 10; signals.push({ type:'bear', text:'40-week MA falling' }); }
   }
 
   // Momentum: RSI level — 15 pts
-  if (lr < 30) { score += 15; signals.push({ type:'bull', text:`RSI oversold at ${lr.toFixed(1)} — mean-reversion risk` }); }
-  else if (lr > 70) { score -= 15; signals.push({ type:'bear', text:`RSI overbought at ${lr.toFixed(1)} — pullback risk` }); }
-  else if (lr > 55) { score += 5; signals.push({ type:'bull', text:`RSI ${lr.toFixed(1)} in bull zone` }); }
-  else if (lr < 45) { score -= 5; signals.push({ type:'bear', text:`RSI ${lr.toFixed(1)} in bear zone` }); }
+  if (lr < 30) { score += 15; _rsiScore += 15; signals.push({ type:'bull', text:`RSI oversold at ${lr.toFixed(1)} — mean-reversion risk` }); }
+  else if (lr > 70) { score -= 15; _rsiScore -= 15; signals.push({ type:'bear', text:`RSI overbought at ${lr.toFixed(1)} — pullback risk` }); }
+  else if (lr > 55) { score += 5; _rsiScore += 5; signals.push({ type:'bull', text:`RSI ${lr.toFixed(1)} in bull zone` }); }
+  else if (lr < 45) { score -= 5; _rsiScore -= 5; signals.push({ type:'bear', text:`RSI ${lr.toFixed(1)} in bear zone` }); }
 
   // RSI slope — 10 pts
   if (r[n - 5] != null) {
     const ds = lr - r[n - 5];
-    if (ds > 6) { score += 10; signals.push({ type:'bull', text:'RSI rising momentum' }); }
-    else if (ds < -6) { score -= 10; signals.push({ type:'bear', text:'RSI falling momentum' }); }
+    if (ds > 6) { score += 10; _rsiScore += 10; signals.push({ type:'bull', text:'RSI rising momentum' }); }
+    else if (ds < -6) { score -= 10; _rsiScore -= 10; signals.push({ type:'bear', text:'RSI falling momentum' }); }
   }
 
   // Distance from MA15 — 10 pts
   if (lm15) {
     const dist = (last - lm15) / lm15 * 100;
-    if (dist > 2)  { score += 5;  signals.push({ type:'bull', text:`+${dist.toFixed(1)}% above 15-week MA` }); }
-    if (dist < -2) { score -= 5;  signals.push({ type:'bear', text:`${dist.toFixed(1)}% below 15-week MA` }); }
+    if (dist > 2)  { score += 5; _maScore += 5;  signals.push({ type:'bull', text:`+${dist.toFixed(1)}% above 15-week MA` }); }
+    if (dist < -2) { score -= 5; _maScore -= 5;  signals.push({ type:'bear', text:`${dist.toFixed(1)}% below 15-week MA` }); }
   }
 
   // Volume bias (last 10 bars) — 10 pts
@@ -14007,16 +14073,16 @@ function computeVerdict(bars) {
     if (b.close > b.open) upVol += b.volume;
     else if (b.close < b.open) dnVol += b.volume;
   }
-  if (upVol > dnVol * 1.4) { score += 5; signals.push({ type:'bull', text:'Volume favors buyers (last 10 bars)' }); }
-  else if (dnVol > upVol * 1.4) { score -= 5; signals.push({ type:'bear', text:'Volume favors sellers (last 10 bars)' }); }
+  if (upVol > dnVol * 1.4) { score += 5; _volScore += 5; signals.push({ type:'bull', text:'Volume favors buyers (last 10 bars)' }); }
+  else if (dnVol > upVol * 1.4) { score -= 5; _volScore -= 5; signals.push({ type:'bear', text:'Volume favors sellers (last 10 bars)' }); }
 
   // Fibonacci position vs 100-bar swing — 10 pts
   const window = closes.slice(-100);
   const hi = Math.max(...window);
   const lo = Math.min(...window);
   const fibPos = (last - lo) / (hi - lo);
-  if (fibPos < 0.30) { score += 5; signals.push({ type:'bull', text:`Near 100-bar swing low (Fib ${(fibPos*100).toFixed(0)}%) — potential support` }); }
-  else if (fibPos > 0.70) { score -= 5; signals.push({ type:'bear', text:`Near 100-bar swing high (Fib ${(fibPos*100).toFixed(0)}%) — potential resistance` }); }
+  if (fibPos < 0.30) { score += 5; _fibScore += 5; signals.push({ type:'bull', text:`Near 100-bar swing low (Fib ${(fibPos*100).toFixed(0)}%) — potential support` }); }
+  else if (fibPos > 0.70) { score -= 5; _fibScore -= 5; signals.push({ type:'bear', text:`Near 100-bar swing high (Fib ${(fibPos*100).toFixed(0)}%) — potential resistance` }); }
 
   // Label
   let label;
@@ -14026,7 +14092,7 @@ function computeVerdict(bars) {
   else if (score >= -50) label = 'SELL';
   else label = 'STRONG SELL';
 
-  return { label, score, signals, lastRsi: lr, ma15: lm15, ma40: lm40, ma100: lm100, fibHi: hi, fibLo: lo };
+  return { label, score, signals, lastRsi: lr, ma15: lm15, ma40: lm40, ma100: lm100, fibHi: hi, fibLo: lo, components: { ma: _maScore, rsi: _rsiScore, vol: _volScore, fib: _fibScore, slope: _slopeScore } };
 }
 
 // ========================================================================
@@ -14800,7 +14866,7 @@ const _TIMING_ICONS = {
   BUY_ON_DIP:  '↘',
   DCA:         '≡',
   WAIT:        '◇',
-  CONFLICT:    '⚠',
+  CONFLICT:    '↑↓',
   SELL:        '▼',
   AVOID:       '✕',
 };
@@ -14816,7 +14882,7 @@ function renderTimingChip(timing, compact) {
      : timing.action === 'DCA'         ? 'DCA'
      : timing.action === 'WAIT'        ? 'Wait'
      : timing.action === 'AVOID'       ? 'Avoid'
-     : timing.action === 'CONFLICT'    ? 'Conflict'
+     : timing.action === 'CONFLICT'    ? 'Signals disagree'
      : '')
     : timing.label;
   // Strip HTML for the title attribute — tooltips show raw text only.
@@ -16526,6 +16592,78 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+function shareVerdict(ticker) {
+  const d = _data[ticker];
+  if (!d) return;
+  const bars = d.bars || [];
+  const v = computeVerdict(bars);
+  const timing = computeBuyTiming(bars, v, d.forecast || {});
+  const f12 = d.forecast && d.forecast.f12 != null ? d.forecast.f12 : null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 600; canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  // Background
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, 600, 320);
+  // Border
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 598, 318);
+  // Header bar
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 0, 600, 56);
+  // Ticker
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(ticker, 24, 38);
+  // App name right-aligned
+  ctx.fillStyle = '#475569';
+  ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('StockPulse', 576, 36);
+  ctx.textAlign = 'left';
+  // Score
+  const scoreColor = v.score >= 40 ? '#30d158' : v.score >= 0 ? '#ffd60a' : '#ff453a';
+  ctx.fillStyle = scoreColor;
+  ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText((v.score >= 0 ? '+' : '') + v.score, 24, 130);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('/ 100', 24 + ctx.measureText((v.score >= 0 ? '+' : '') + v.score).width + 8, 130);
+  // Verdict label
+  ctx.fillStyle = scoreColor;
+  ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(v.label, 24, 168);
+  // Timing
+  if (timing && timing.action) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('Timing: ' + (timing.label || timing.action), 24, 204);
+  }
+  // Forecast
+  if (f12 != null) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('12M Forecast: ' + (f12 >= 0 ? '+' : '') + f12.toFixed(1) + '%', 24, 232);
+  }
+  // Bottom domain bar
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 280, 600, 40);
+  ctx.fillStyle = '#64748b';
+  ctx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('nambianush-wq.github.io/stockpulse', 24, 306);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#475569';
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('Free · no login · open source', 576, 306);
+  // Download
+  const link = document.createElement('a');
+  link.download = ticker + '-stockpulse.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast({ title: 'Verdict card saved', body: ticker + ' · share on X, Reddit, or anywhere', type: 'bull' });
+}
+
 async function whyVerdict(ticker) {
   ticker = ticker || _selected;
   // Diagnostic breadcrumb — if user reports "click does nothing" but this log
@@ -17875,7 +18013,7 @@ function _timingShortLabel(action) {
     case 'BUY_ON_DIP':  return 'On dip';
     case 'DCA':         return 'DCA';
     case 'WAIT':        return 'Wait';
-    case 'CONFLICT':    return 'Conflict';
+    case 'CONFLICT':    return 'Signals disagree';
     case 'SELL':        return 'Sell';
     case 'AVOID':       return 'Avoid';
     default:            return '';
@@ -21723,6 +21861,7 @@ function renderPickRow(m, rank) {
         <span class="pick-verdict ${verdictClass}" title="${verdictTip.replace(/"/g, '&quot;')}" style="cursor:help">${m.verdict}</span>
         ${m._timingFull ? renderTimingChip(m._timingFull, true) : ''}
         ${render13FBadge(m.ticker, true)}
+        ${(m.crossCount >= 3) ? `<span class="all-rounder-badge" title="Ranked in the top 20 under ${m.crossCount}/5 investment goals (Growth, Preservation, Value, Momentum, Income). No other free screener cross-ranks goals this way.">⬟ All-rounder · ${m.crossCount}/5 goals</span>` : ''}
         ${rowActionsHtml(m.ticker)}
       </div>
       <div class="pick-stats">
@@ -23351,12 +23490,23 @@ function renderMain() {
       <div id="verdict-card" class="${verdictPolarity}" style="color:${meterColor}; cursor:help" title="${_verdictTooltip(v).replace(/"/g,'&quot;')}">
         <div id="verdict-label">${v.label}</div>
         <div id="verdict-score" title="${tip('score')}">Score ${v.score >= 0 ? '+' : ''}${v.score} / 100</div>
-        <div class="verdict-score-sub"><a class="verdict-score-sub-link" onclick="document.getElementById('signals-panel') && document.getElementById('signals-panel').scrollIntoView({behavior:'smooth',block:'start'})" title="Scroll to the signal breakdown below">MA · RSI · Volume · Fib · Slope &mdash; see breakdown &darr;</a></div>
+        ${(() => {
+  const comps = v.components || {};
+  const bar = (val, max) => {
+    const pct = Math.min(100, Math.round(Math.abs(val) / Math.max(1, max) * 100));
+    const color = val >= 0 ? '#30d158' : '#ff453a';
+    return `<div style="height:4px;border-radius:2px;background:rgba(255,255,255,.08);margin-top:3px"><div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .4s"></div></div>`;
+  };
+  const maxComp = Math.max(Math.abs(comps.ma||0), Math.abs(comps.rsi||0), Math.abs(comps.vol||0), Math.abs(comps.fib||0), Math.abs(comps.slope||0), 1);
+  const row = (label, val) => `<div style="display:grid;grid-template-columns:1fr auto;gap:4px;align-items:end;margin-bottom:6px"><div style="font-size:10px;color:var(--muted)">${label}</div><div style="font-size:10px;font-weight:600;color:${val>=0?'#30d158':'#ff453a'};text-align:right">${val>=0?'+':''}${val}</div>${bar(val, maxComp)}<div></div></div>`;
+  return '<details class="score-breakdown"><summary>How we compute this ▾</summary><div class="score-breakdown-body">' + row('MA Stack',comps.ma||0) + row('RSI Level+Slope',comps.rsi||0) + row('Volume Bias',comps.vol||0) + row('Fibonacci Pos.',comps.fib||0) + row('MA Slope',comps.slope||0) + '<div style="margin-top:8px;font-size:9.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:8px">No other free site synthesises these 5 signals into a single score.</div></div></details>';
+})()}
         <div id="verdict-meter">
           <div id="verdict-meter-fill" style="width:${meterWidth}%; ${v.score < 0 ? 'left:50%; transform:translateX(-100%); right:auto;' : 'left:50%;'}"></div>
         </div>
         ${hasLLM() ? `<div class="ai-verdict-wrap"><button class="ai-btn" onclick="whyVerdict('${_selected}')" title="${tip('whyVerdict')}"><span class="ai-btn-spark">✦</span> Why this verdict?</button><div class="ai-btn-sub">Explains your signals — not generic market commentary</div></div>` : ''}
         ${_renderPriceAlertControl(_selected, last.close)}
+        <button class="verdict-share-btn" onclick="shareVerdict('${_selected}')" title="Share this verdict as an image">↑ Share verdict</button>
       </div>
     </div>
 
