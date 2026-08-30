@@ -50,7 +50,7 @@
   --text: #0f1728;
   --fg: #0f1728;             /* gauge needle + pivot in light mode */
   --muted: #5b6388;
-  --dim: #6b76a0;            /* was #8a93b5 — raises contrast to ~4.6:1 on white */
+  --dim: #5e6a90;            /* was #6b76a0 — darkened to pass AA on all light surfaces (4.6:1 on --bg, 5.3:1 on white) */
   --accent: #533afd;
   --accent-soft: #665efd;
   --accent-deep: #4434d4;
@@ -6348,10 +6348,10 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Top movers · this week</div>
-            <div class="cockpit-section-sub">Biggest 1-week price changes across your watchlist — both directions</div>
+            <div class="cockpit-section-sub">Top gainers and top losers by 1-week change — split so you can see what's rising vs. pulling back</div>
           </div>
         </div>
-        <div class="cockpit-perf-grid" id="cockpit-movers"></div>
+        <div id="cockpit-movers"></div>
       </div>
       <div class="cockpit-section" id="cockpit-alerts-section">
         <div class="cockpit-section-head">
@@ -22162,12 +22162,31 @@ function _cockpitRenderMovers(ov) {
   if (!host) return;
   if (ov.empty) { host.innerHTML = ''; return; }
   const sorted = [...ov.rows].sort((a, b) => b.wkChg - a.wkChg);
-  // Top 3 + bottom 3
-  const top = sorted.slice(0, 3);
-  const bot = sorted.slice(-3).reverse();
-  const seen = new Set();
-  const merged = [...top, ...bot].filter(r => { if (seen.has(r.ticker)) return false; seen.add(r.ticker); return true; });
-  _cockpitRenderPerfCards(host, merged.slice(0, 6));
+  // Gainers: positive 1W, biggest first. Losers: negative 1W, most negative first.
+  const gainers = sorted.filter(r => r.wkChg > 0).slice(0, 3);
+  const losers  = sorted.filter(r => r.wkChg < 0).reverse().slice(0, 3);
+  if (gainers.length === 0 && losers.length === 0) {
+    host.innerHTML = `<div class="cockpit-empty">No 1-week change data available yet.</div>`;
+    return;
+  }
+  const subLabel = (text, color) =>
+    `<div style="color:${color};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:0 0 6px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06);">${text}</div>`;
+  const renderGroup = (rows) => {
+    const tmp = document.createElement('div');
+    _cockpitRenderPerfCards(tmp, rows);
+    return `<div class="cockpit-perf-grid">${tmp.innerHTML}</div>`;
+  };
+  let html = '';
+  if (gainers.length > 0) {
+    html += subLabel('Gainers', 'var(--bull)');
+    html += renderGroup(gainers);
+  }
+  if (losers.length > 0) {
+    if (gainers.length > 0) html += '<div style="height:14px;"></div>';
+    html += subLabel('Losers', 'var(--bear)');
+    html += renderGroup(losers);
+  }
+  host.innerHTML = html;
 }
 
 function _cockpitRenderAlerts(ov) {
