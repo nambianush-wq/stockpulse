@@ -22127,6 +22127,8 @@ let _execSummaryInFlight = false;
 function _clearExecSummaryCache() { _execSummaryCache = null; }
 
 function _buildExecSummaryData(rows) {
+  // Compute all facts in JS — the LLM is only asked to write prose, not do math.
+  // This prevents models from hallucinating averages or misattributing verdicts.
   const tickers = rows.map(r => {
     const bars = getBars(r.ticker);
     const closes = bars.map(b => b.close);
@@ -22136,6 +22138,7 @@ function _buildExecSummaryData(rows) {
     const ret = (base) => base > 0 ? ((last - base) / base * 100) : 0;
     return {
       ticker: r.ticker,
+      name: r.name || r.ticker,
       verdict: r.verdict,
       d30: ret(price(n - 5)),
       d60: ret(price(n - 9)),
@@ -22146,21 +22149,33 @@ function _buildExecSummaryData(rows) {
   });
   const avg = (fn) => tickers.reduce((s, t) => s + fn(t), 0) / tickers.length;
   const pct = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const s   = (v) => (v >= 0 ? '+' : '') + v.toFixed(0);
   const buy  = rows.filter(r => r.verdict === 'BUY' || r.verdict === 'STRONG BUY').length;
   const sell = rows.filter(r => r.verdict === 'SELL' || r.verdict === 'STRONG SELL').length;
   const hold = rows.length - buy - sell;
-  const sorted30 = [...tickers].sort((a, b) => b.d30 - a.d30);
-  return {
-    table: tickers.map(t =>
-      `${t.ticker}: verdict=${t.verdict} 30d=${pct(t.d30)} 60d=${pct(t.d60)} 90d=${pct(t.d90)} 12M_fcst=${pct(t.f12)} heat=${t.score >= 0 ? '+' : ''}${t.score.toFixed(0)}`
-    ).join('\n'),
-    avg30: avg(t => t.d30), avg60: avg(t => t.d60), avg90: avg(t => t.d90),
-    avgF12: avg(t => t.f12),
-    buy, hold, sell, pct,
-    best:  sorted30[0],
-    worst: sorted30[sorted30.length - 1],
-    total: rows.length,
-  };
+
+  const avg30 = avg(t => t.d30), avg60 = avg(t => t.d60),
+        avg90 = avg(t => t.d90), avgF12 = avg(t => t.f12);
+
+  const byD30   = [...tickers].sort((a, b) => b.d30 - a.d30);
+  const byF12   = [...tickers].sort((a, b) => b.f12 - a.f12);
+  const best30  = byD30[0],  worst30  = byD30[byD30.length - 1];
+  const bestF12 = byF12[0],  worstF12 = byF12[byF12.length - 1];
+
+  // Pre-built facts block — every number comes from JS, not the model
+  const factsBlock =
+`VERIFIED FACTS (use these numbers exactly — do not compute, round differently, or invent alternatives):
+• Portfolio 30-day avg: ${pct(avg30)}
+• Portfolio 60-day avg: ${pct(avg60)}
+• Portfolio 90-day avg: ${pct(avg90)}
+• Portfolio 12-month consensus forecast: ${pct(avgF12)}
+• Verdicts across ${tickers.length} stocks: ${buy} buy / ${hold} hold / ${sell} sell
+• Best recent performer (30d): ${best30.name} (${best30.ticker}) up ${pct(best30.d30)}, verdict ${best30.verdict}, heat ${s(best30.score)}, 12M forecast ${pct(best30.f12)}
+• Weakest recent performer (30d): ${worst30.name} (${worst30.ticker}) ${pct(worst30.d30)}, verdict ${worst30.verdict}, heat ${s(worst30.score)}, 12M forecast ${pct(worst30.f12)}
+• Strongest 12M forecast: ${bestF12.name} (${bestF12.ticker}) at ${pct(bestF12.f12)}, verdict ${bestF12.verdict}
+• Weakest 12M forecast: ${worstF12.name} (${worstF12.ticker}) at ${pct(worstF12.f12)}, verdict ${worstF12.verdict}`;
+
+  return { factsBlock, total: tickers.length, pct };
 }
 
 async function _callFable(prompt) {
@@ -22200,20 +22215,15 @@ async function _cockpitGenExecSummary(rows) {
   try {
     const d = _buildExecSummaryData(rows);
     const prompt =
-`You are writing a short portfolio update for a regular investor — not a financial professional.
+`You are a financial writer turning pre-verified data into plain English for a regular investor.
 
-Watchlist (${d.total} stocks):
-${d.table}
+${d.factsBlock}
 
-Averages: 30d ${d.pct(d.avg30)}, 60d ${d.pct(d.avg60)}, 90d ${d.pct(d.avg90)}, 12M forecast ${d.pct(d.avgF12)}
-Verdicts: ${d.buy} buy / ${d.hold} hold / ${d.sell} sell
-Best 30d: ${d.best.ticker} (${d.pct(d.best.d30)}), Worst 30d: ${d.worst.ticker} (${d.pct(d.worst.d30)})
-
-Write 3-4 plain English sentences. No bullet points, no markdown, no headers, no disclaimers.
-Sentence 1: what the portfolio actually did over the last 30, 60, and 90 days — use the real numbers.
-Sentence 2: where the portfolio looks to be heading over the next 30, 60, and 90 days based on the forecasts.
-Sentences 3-4: name the one stock standing out most, and the one to keep a close eye on.
-Use plain numbers and plain language. Be direct and specific. No "as an AI" language.`;
+Write exactly 3-4 sentences. No bullet points, no markdown, no headers, no disclaimers, no "as an AI".
+Sentence 1: what the portfolio has done over the last 30, 60, and 90 days — copy the exact percentages from VERIFIED FACTS above.
+Sentence 2: where the portfolio is headed — use the exact 12-month consensus forecast from VERIFIED FACTS above.
+Sentences 3-4: name the standout stock and the one to watch, using their exact numbers from VERIFIED FACTS above.
+CRITICAL: Every number you write must be copied directly from VERIFIED FACTS. Do not calculate, estimate, or use any other numbers.`;
     const result = await _callFable(prompt);
     if (result && result.ok && result.text) {
       _execSummaryCache = { key, text: _escapeHtml(result.text), via: result.via };
