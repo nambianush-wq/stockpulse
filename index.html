@@ -1173,6 +1173,78 @@ input:focus, select:focus {
 }
 .fc-conf-label b { color: var(--text); font-size: 11px; font-weight: 600; }
 
+/* Analyst consensus anchor — sits inside #forecast-card below the primary forecast row */
+.fc-analyst-anchor {
+  padding: 12px 22px 14px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.fc-analyst-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.fc-analyst-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fc-analyst-count { font-size: 10px; color: var(--dim); }
+.fc-analyst-figures {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.fc-analyst-mean { font-size: 18px; font-weight: 700; color: var(--text); }
+.fc-analyst-upside { font-size: 13px; font-weight: 600; }
+.fc-analyst-upside.up  { color: var(--bull); }
+.fc-analyst-upside.down { color: var(--bear); }
+.fc-analyst-range { font-size: 11px; color: var(--dim); }
+.fc-analyst-bar {
+  display: flex;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 200px;
+  background: var(--line);
+  margin-bottom: 7px;
+}
+.fc-analyst-bar-bull { background: var(--bull); }
+.fc-analyst-bar-hold { background: var(--muted); opacity: .5; }
+.fc-analyst-bar-bear { background: var(--bear); }
+.fc-analyst-dist {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.fc-diverge-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: rgba(255,159,10,.10);
+  border: 1px solid rgba(255,159,10,.28);
+  color: var(--warn);
+}
+.fc-analyst-loading {
+  font-size: 11px;
+  color: var(--dim);
+  font-style: italic;
+  padding: 10px 22px 4px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+
 @media (max-width: 900px) { .fc-grid { grid-template-columns: repeat(2, 1fr); } }
 
 /* Search results dropdown (Add Stock modal) */
@@ -16682,7 +16754,14 @@ function _aiErrorMsg(out) {
   const switchBtn = !LOCAL_LLM_ENABLED
     ? `<div style="margin-top:14px"><button class="ai-action-btn" onclick="_enableLocalAndRetry()">✦ Switch to in-browser model &amp; retry</button></div>`
     : '';
-  if (out.error === 'no_key')            return `Add a <b>Groq</b> key in <b>⚙ Settings</b> — or tick the <b>in-browser LLM fallback</b> for a no-key option. Free Groq key at ${link}.${switchBtn}`;
+  if (out.error === 'no_key') {
+    // Distinguish "key set but dead-cached" from "no key at all"
+    if (hasGroqKey() && _isRemoteKeyDead('groq', GROQ_API_KEY)) {
+      const retryBtn = `<div style="margin-top:14px"><button class="ai-action-btn" onclick="_clearAllRemoteLlmDeadCache();showToast({title:'Error cache cleared',body:'Click the AI button again.',type:'bull'})">↺ Clear error cache &amp; retry</button></div>`;
+      return `<b style="color:var(--warn)">Groq key is set but was blocked after a previous failed call.</b> The error is cached for up to 24h to avoid account lockout. Click the button below to clear it and retry — no key change needed.${retryBtn}`;
+    }
+    return `Add a <b>Groq</b> key in <b>⚙ Settings</b> — or tick the <b>in-browser LLM fallback</b> for a no-key option. Free Groq key at ${link}.${switchBtn}`;
+  }
   if (out.error === 'leaked')            return `<b style="color:var(--bear)">Groq key is disabled.</b> Groq's scanner revokes API keys that leak into public source. Paste a fresh key in <b>⚙ Settings</b> from ${link} <i>or</i> use the button below to switch to the in-browser model.${switchBtn}`;
   if (out.error === 'auth')              return `<b style="color:var(--bear)">Groq key rejected (HTTP 401/403).</b> Open <b>⚙ Settings</b> and paste a fresh key from ${link}.${switchBtn}`;
   if (out.error === 'rate_limit')        return `Groq free-tier rate limit hit. Wait a minute and click again — cached answers stay free.`;
@@ -23369,6 +23448,66 @@ function renderMain() {
       const primary = forecast.find(f => /12/.test(f.label)) || forecast[0];
       const others  = forecast.filter(f => f !== primary);
       const confLabel = primary.confidence >= 60 ? 'High' : primary.confidence >= 35 ? 'Medium' : 'Low';
+
+      // Analyst consensus anchor — build HTML from priceTarget + analystMomentum (both
+      // may be undefined=loading, null=unavailable, or an object=ready).
+      let _analystAnchorHtml = '';
+      const _ptgt = priceTarget;       // from outer renderMain scope
+      const _amom = analystMomentum;   // from outer renderMain scope
+      const _curP = last ? last.close : null;
+      if (_ptgt === undefined && isLive()) {
+        _analystAnchorHtml = `<div class="fc-analyst-loading">Analyst consensus · loading…</div>`;
+      } else if (_ptgt && _ptgt.targetMean && _curP) {
+        const _mean   = _ptgt.targetMean;
+        const _hi     = _ptgt.targetHigh;
+        const _lo     = _ptgt.targetLow;
+        const _n      = _ptgt.numberOfAnalysts || 0;
+        const _upside = (_mean - _curP) / _curP * 100;
+        const _upcls  = _upside >= 5 ? 'up' : _upside <= -5 ? 'down' : '';
+        const _upsideStr = `${_upside >= 0 ? '+' : ''}${_upside.toFixed(1)}%`;
+        const _rangeHtml = (_hi && _lo) ? `<span class="fc-analyst-range">Range $${_lo.toFixed(0)}–$${_hi.toFixed(0)}</span>` : '';
+
+        // Buy / Hold / Sell distribution bar
+        const _c = _amom ? _amom.counts : null;
+        let _barHtml = '', _distHtml = '';
+        if (_c && _c.total) {
+          const _bullPct = Math.round((_c.strongBuy + _c.buy) / _c.total * 100);
+          const _holdPct = Math.round(_c.hold / _c.total * 100);
+          const _bearPct = Math.max(0, 100 - _bullPct - _holdPct);
+          _barHtml = `<div class="fc-analyst-bar">` +
+            `<div class="fc-analyst-bar-bull" style="width:${_bullPct}%"></div>` +
+            `<div class="fc-analyst-bar-hold" style="width:${_holdPct}%"></div>` +
+            `<div class="fc-analyst-bar-bear" style="width:${_bearPct}%"></div>` +
+            `</div>`;
+          _distHtml = `<div class="fc-analyst-dist">` +
+            `<span style="color:var(--bull)">${_c.strongBuy + _c.buy} Buy</span>` +
+            `<span>${_c.hold} Hold</span>` +
+            `<span style="color:var(--bear)">${_c.sell + _c.strongSell} Sell</span>` +
+            `</div>`;
+        }
+
+        // Divergence warning when model and analysts disagree by >15pp
+        const _gapPp = Math.abs(primary.expReturn - _upside);
+        const _divergeHtml = _gapPp > 15
+          ? `<div class="fc-diverge-warn" title="StockPulse model: ${primary.expReturn >= 0 ? '+' : ''}${primary.expReturn.toFixed(1)}% vs analyst consensus: ${_upsideStr}. A ${_gapPp.toFixed(0)}pp gap suggests conflicting reads — dig deeper before acting.">⚠ Model &amp; analyst consensus diverge by ${_gapPp.toFixed(0)}pp</div>`
+          : '';
+
+        _analystAnchorHtml = `<div class="fc-analyst-anchor">` +
+          `<div class="fc-analyst-head">` +
+            `<div class="fc-analyst-label">Analyst consensus · Wall Street</div>` +
+            `<div class="fc-analyst-count">${_n} analyst${_n === 1 ? '' : 's'}</div>` +
+          `</div>` +
+          `<div class="fc-analyst-figures">` +
+            `<span class="fc-analyst-mean">$${_mean.toFixed(0)}</span>` +
+            `<span class="fc-analyst-upside ${_upcls}">${_upsideStr} implied upside</span>` +
+            _rangeHtml +
+          `</div>` +
+          _barHtml +
+          _distHtml +
+          _divergeHtml +
+          `</div>`;
+      }
+
       return `
     <div id="forecast-card">
       <div class="fc-head">
@@ -23386,6 +23525,7 @@ function renderMain() {
           <span class="fc-conf-label" title="${tip('confidence')}">Confidence <b>${confLabel}</b> (${primary.confidence}%)</span>
         </div>
       </div>
+      ${_analystAnchorHtml}
       ${others.length ? `
       <details class="fc-longer">
         <summary>Show longer horizons · ${others.map(o => o.label).join(' & ')}</summary>
@@ -24222,7 +24362,10 @@ function renderKeyStorageStatus() {
     lines.push(`<span style="color:var(--muted)">○ Twelve Data not set</span>`);
   }
   // Groq — the only remote LLM provider after 2026-05-20.
-  if (s.groq.has && s.groq.hasBackup && s.groq.inSync) {
+  const groqDeadCached = s.groq.has && _isRemoteKeyDead('groq', GROQ_API_KEY);
+  if (groqDeadCached) {
+    lines.push(`<span style="color:var(--bear)">⚠ Groq · previous call failed — AI blocked for up to 24h · <a href="#" style="color:var(--warn);text-decoration:underline" onclick="event.preventDefault();_clearAllRemoteLlmDeadCache();renderKeyStorageStatus();showToast({title:'AI error cache cleared',body:'Click Why this verdict? again — Groq will retry.',type:'bull'})">Clear error &amp; retry</a></span>`);
+  } else if (s.groq.has && s.groq.hasBackup && s.groq.inSync) {
     lines.push(`<span style="color:var(--bull)">✓ Groq · AI on</span>`);
   } else if (s.groq.has) {
     lines.push(`<span style="color:var(--warn)">⚠ Groq · backup out of sync — click Save</span>`);
