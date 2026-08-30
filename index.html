@@ -3812,6 +3812,8 @@ body.cockpit-sidebar-collapsed #main { margin-left: 0; }
   color: var(--dim);
   font-style: italic;
 }
+.cockpit-section-sub:empty { display: none; }
+.cockpit-sub:empty { display: none; }
 
 /* AI executive summary — auto-generated, inline above perf cards */
 #cockpit-exec-summary {
@@ -6300,7 +6302,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
       <div class="cockpit-header">
         <div>
           <div class="cockpit-title">Market Cockpit</div>
-          <div class="cockpit-sub" id="cockpit-sub">Real-time dashboard for your watchlist + favorites — market mood, breadth, top movers, sector heat, and the alerts you should act on this session. Updates every refresh.</div>
+          <div class="cockpit-sub" id="cockpit-sub"></div>
           <div class="cockpit-last-refresh" id="cockpit-last-refresh" title="Wall-clock time the cockpit data was last refreshed. Auto-refresh setting controls how often a new refresh fires while you're on this tab.">Last refreshed —</div>
         </div>
         <div class="cockpit-meta">
@@ -6323,7 +6325,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Key exchanges &amp; indices</div>
-            <div class="cockpit-section-sub">Animated gauges for the headline US benchmarks — S&amp;P 500, NASDAQ-100, Dow 30, Russell 2000, Gold, and 20-year Treasuries · needle position = 1-week change · click any card to add the proxy ETF to your watchlist</div>
+            <div class="cockpit-section-sub">Needle = 1-week change · click any card to add the ETF to your watchlist</div>
           </div>
         </div>
         <div class="cockpit-indices-grid" id="cockpit-indices"></div>
@@ -6341,7 +6343,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Watchlist heatmap</div>
-            <div class="cockpit-section-sub">One tile per stock in your watchlist · color = composite heat score (cold blue → hot red) · click any tile to open the full dashboard for that ticker</div>
+            <div class="cockpit-section-sub"></div>
           </div>
         </div>
         <div class="cockpit-heatmap" id="cockpit-heatmap"></div>
@@ -6350,7 +6352,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Watchlist performance</div>
-            <div class="cockpit-section-sub">Every stock in your watchlist as a full performance card — 1W price action sparkline + 1M change + 12M forecast + heat score · ranked by 1-week move · click any card to open the ticker dashboard · starred favorites carry the ★ marker</div>
+            <div class="cockpit-section-sub"></div>
           </div>
         </div>
         <div id="cockpit-exec-summary"></div>
@@ -6360,7 +6362,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Sector mood</div>
-            <div class="cockpit-section-sub">Which corners of the market are running hot vs. cold · computed across the full catalog · bar fill width = average heat score for that sector</div>
+            <div class="cockpit-section-sub">Bar width = avg heat score · full catalog</div>
           </div>
         </div>
         <div id="cockpit-sectors-host"></div>
@@ -6369,7 +6371,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Top movers · this week</div>
-            <div class="cockpit-section-sub">Top gainers and top losers by 1-week change — split so you can see what's rising vs. pulling back</div>
+            <div class="cockpit-section-sub"></div>
           </div>
         </div>
         <div id="cockpit-movers"></div>
@@ -6378,7 +6380,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">What to look at first</div>
-            <div class="cockpit-section-sub">Verdict changes, bundles behind pace, and all-rounders worth a look — ranked by what most likely needs your attention</div>
+            <div class="cockpit-section-sub">Verdict changes, bundles off-pace, and notable opportunities</div>
           </div>
         </div>
         <div class="cockpit-alerts-grid" id="cockpit-alerts"></div>
