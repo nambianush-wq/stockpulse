@@ -491,11 +491,66 @@ input:focus, select:focus {
 .pick-line1 .row-actions { margin-left: auto; }
 
 .empty-watchlist {
-  padding: 40px 20px;
+  padding: 32px 16px 40px;
+}
+.empty-wl-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
   text-align: center;
+  margin-bottom: 6px;
+}
+.empty-wl-sub {
+  font-size: 11px;
   color: var(--muted);
+  text-align: center;
+  margin-bottom: 20px;
+}
+.empty-wl-bento {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 540px;
+  margin: 0 auto 20px;
+}
+.empty-wl-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 13px 12px;
+  background: var(--surface);
+}
+.empty-wl-card-icon {
+  font-size: 18px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.empty-wl-card-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.empty-wl-card-body {
+  font-size: 10.5px;
+  color: var(--dim);
+  line-height: 1.55;
+}
+.empty-wl-cta {
+  display: block;
+  margin: 0 auto;
+  padding: 8px 22px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
   font-size: 12px;
-  line-height: 1.6;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.empty-wl-cta:hover { opacity: .85; }
+@media (max-width: 480px) {
+  .empty-wl-bento { grid-template-columns: 1fr; max-width: 280px; }
 }
 
 /* Main */
@@ -604,6 +659,19 @@ input:focus, select:focus {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.verdict-score-sub {
+  margin-top: 3px;
+  font-size: 9px;
+  color: var(--dim);
+}
+.verdict-score-sub-link {
+  color: var(--dim);
+  text-decoration: none;
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(255,255,255,.12);
+  transition: color .15s;
+}
+.verdict-score-sub-link:hover { color: var(--muted); }
 #verdict-meter {
   margin-top: 10px;
   height: 4px;
@@ -4335,10 +4403,19 @@ body { padding-bottom: 44px; }
 .timing-chip.timing-CONFLICT {
   /* Verdict-vs-forecast disagreement — amber/orange, deliberately stands
      out so the user sees "two models disagree, speculative" rather than
-     reading either side as actionable. */
+     reading either side as actionable. Slow pulse draws the eye without
+     being noisy — this is the one state worth calling attention to. */
   background: rgba(255,159,10,.16);
   border-color: rgba(255,159,10,.55);
   color: var(--warn);
+  animation: conflict-pulse 2.4s ease-in-out infinite;
+}
+@keyframes conflict-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,159,10,0); border-color: rgba(255,159,10,.55); }
+  50%       { box-shadow: 0 0 0 3px rgba(255,159,10,.18); border-color: rgba(255,159,10,.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timing-chip.timing-CONFLICT { animation: none; }
 }
 .timing-chip.timing-SELL {
   /* Bearish but DISTINCT from AVOID — pinker red, signals "structural sell"
@@ -4351,6 +4428,25 @@ body { padding-bottom: 44px; }
   background: rgba(255,69,58,.14);
   border-color: rgba(255,69,58,.4);
   color: var(--bear);
+}
+
+/* CONFLICT call-to-action block inside the timing card */
+.conflict-cta-block {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,159,10,.3);
+  background: rgba(255,159,10,.07);
+}
+.conflict-cta-label {
+  font-size: 10.5px;
+  color: rgba(255,159,10,.8);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.conflict-resolve-btn {
+  width: 100%;
+  justify-content: center;
 }
 
 /* EARLY_RALLY — distinct timing action (was a flag on BUY_NOW pre-2026-05-19).
@@ -4512,6 +4608,8 @@ body { padding-bottom: 44px; }
 }
 .ai-btn .ai-btn-spark { font-size: 10px; opacity: .85; }
 .ai-btn[disabled], .ai-btn.disabled { opacity: .5; cursor: not-allowed; }
+.ai-verdict-wrap { display: flex; flex-direction: column; gap: 4px; }
+.ai-btn-sub { font-size: 9.5px; color: var(--dim); text-align: center; letter-spacing: .01em; }
 
 /* AI modal lives at body level (outside #content) so renderMain
    re-renders cannot wipe it. Sized for a comfortable read of a
@@ -6372,7 +6470,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div class="cockpit-section-head">
           <div>
             <div class="cockpit-section-title">Watchlist performance</div>
-            <div class="cockpit-section-sub"></div>
+            <div class="cockpit-section-sub" id="cockpit-wl-sub">Personalised to your watchlist · AI briefing above</div>
           </div>
         </div>
         <div id="cockpit-exec-summary"></div>
@@ -14646,6 +14744,7 @@ function renderTimingChip(timing, compact) {
      : timing.action === 'DCA'         ? 'DCA'
      : timing.action === 'WAIT'        ? 'Wait'
      : timing.action === 'AVOID'       ? 'Avoid'
+     : timing.action === 'CONFLICT'    ? 'Conflict'
      : '')
     : timing.label;
   // Strip HTML for the title attribute — tooltips show raw text only.
@@ -22356,6 +22455,9 @@ function _cockpitRenderWatchlistPerf(ov) {
   }
   const sorted = [...ov.rows].sort((a, b) => b.wkChg - a.wkChg);
   _cockpitRenderPerfCards(host, sorted);
+  // Update the section sub-label with the live watchlist count
+  const wlSub = document.getElementById('cockpit-wl-sub');
+  if (wlSub) wlSub.textContent = `Personalised to your ${ov.rows.length} stock${ov.rows.length !== 1 ? 's' : ''} · AI briefing above`;
   // Trigger AI summary (async, non-blocking — cached for the session)
   _cockpitGenExecSummary(ov.rows);
 }
@@ -22852,7 +22954,28 @@ function heatTier(score) {
 function renderWatchlist(filter = '') {
   const host = $('watchlist');
   if (WATCHLIST.length === 0) {
-    host.innerHTML = `<div class="empty-watchlist">Watchlist is empty.<br>Click <b>+ Add Stock</b> to get started.</div>`;
+    host.innerHTML = `<div class="empty-watchlist">
+      <div class="empty-wl-heading">Add your first stock to unlock StockPulse's edge</div>
+      <div class="empty-wl-sub">Free · no login · no account · your data stays in your browser</div>
+      <div class="empty-wl-bento">
+        <div class="empty-wl-card">
+          <div class="empty-wl-card-icon" style="color:#30d158">◈</div>
+          <div class="empty-wl-card-title">Heat Score</div>
+          <div class="empty-wl-card-body">One composite score (−100 → +100) merging MA stack, RSI, volume, Fibonacci &amp; slope. No other free site synthesises these five signals.</div>
+        </div>
+        <div class="empty-wl-card">
+          <div class="empty-wl-card-icon" style="color:#ff9f0a">⚠</div>
+          <div class="empty-wl-card-title">Buy Timing + CONFLICT</div>
+          <div class="empty-wl-card-body">8 states including CONFLICT — shown explicitly when technical and forecast engines disagree, so you&apos;re never silently misled by an averaged signal.</div>
+        </div>
+        <div class="empty-wl-card">
+          <div class="empty-wl-card-icon" style="color:#533afa">✦</div>
+          <div class="empty-wl-card-title">AI on your signals</div>
+          <div class="empty-wl-card-body">&ldquo;Why this verdict?&rdquo; narrates your computed score + signals in plain English — not generic stock commentary. Runs free via Groq or fully offline.</div>
+        </div>
+      </div>
+      <button class="empty-wl-cta" onclick="openAddStock()">+ Add Stock</button>
+    </div>`;
     return;
   }
 
@@ -23149,10 +23272,11 @@ function renderMain() {
       <div id="verdict-card" class="${verdictPolarity}" style="color:${meterColor}; cursor:help" title="${_verdictTooltip(v).replace(/"/g,'&quot;')}">
         <div id="verdict-label">${v.label}</div>
         <div id="verdict-score" title="${tip('score')}">Score ${v.score >= 0 ? '+' : ''}${v.score} / 100</div>
+        <div class="verdict-score-sub"><a class="verdict-score-sub-link" onclick="document.getElementById('signals-panel') && document.getElementById('signals-panel').scrollIntoView({behavior:'smooth',block:'start'})" title="Scroll to the signal breakdown below">MA · RSI · Volume · Fib · Slope &mdash; see breakdown &darr;</a></div>
         <div id="verdict-meter">
           <div id="verdict-meter-fill" style="width:${meterWidth}%; ${v.score < 0 ? 'left:50%; transform:translateX(-100%); right:auto;' : 'left:50%;'}"></div>
         </div>
-        ${hasLLM() ? `<button class="ai-btn" onclick="whyVerdict('${_selected}')" title="${tip('whyVerdict')}"><span class="ai-btn-spark">✦</span> Why this verdict?</button>` : ''}
+        ${hasLLM() ? `<div class="ai-verdict-wrap"><button class="ai-btn" onclick="whyVerdict('${_selected}')" title="${tip('whyVerdict')}"><span class="ai-btn-spark">✦</span> Why this verdict?</button><div class="ai-btn-sub">Explains your signals — not generic market commentary</div></div>` : ''}
         ${_renderPriceAlertControl(_selected, last.close)}
       </div>
     </div>
@@ -23182,7 +23306,11 @@ function renderMain() {
       <div class="timing-card-window">Window: <b style="color:var(--text)">${timing.window}</b> ${approxBadge}</div>
       <div class="timing-card-rationale">${timing.rationale}</div>
       ${approxNote}
-      ${(timing.action === 'CONFLICT' && hasLLM()) ? `<button class="ai-btn" style="margin-top:10px;" onclick="resolveConflict('${_selected}')" title="${tip('resolveConflict')}"><span class="ai-btn-spark">✦</span> Resolve this conflict</button>` : ''}
+      ${timing.action === 'CONFLICT' ? `
+        <div class="conflict-cta-block">
+          <div class="conflict-cta-label">StockPulse detected a signal disagreement — two engines point opposite ways. This state is shown explicitly so you can decide, not averaged away.</div>
+          ${hasLLM() ? `<button class="ai-btn conflict-resolve-btn" onclick="resolveConflict('${_selected}')" title="${tip('resolveConflict')}"><span class="ai-btn-spark">✦</span> Resolve this conflict — get a concrete next step</button>` : ''}
+        </div>` : ''}
     </div>`;
     })()}
 
