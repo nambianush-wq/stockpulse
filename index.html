@@ -18242,8 +18242,18 @@ async function renderPeerCard(ticker, profile) {
   const host = $('peer-card-body');
   const sectorEl = $('peer-card-sector');
   if (!host) return;
-  const found = findSectorRoster(profile && profile.finnhubIndustry);
-  if (sectorEl) sectorEl.textContent = found ? found.name : 'Industry · ' + (profile.finnhubIndustry || 'unknown');
+  // Try Finnhub industry first; fall back to internal catalog if Finnhub returns
+  // a generic label ("Other", blank) or nothing matched in the roster.
+  let found = findSectorRoster(profile && profile.finnhubIndustry);
+  if (!found) {
+    const catEntry = STOCK_CATALOG.find(e => e.t === ticker);
+    if (catEntry && catEntry.i) found = findSectorRoster(catEntry.i);
+  }
+  // Last-resort: check STATIC_PROFILES which carries baked industry strings
+  if (!found && typeof STATIC_PROFILES !== 'undefined' && STATIC_PROFILES[ticker]) {
+    found = findSectorRoster(STATIC_PROFILES[ticker].industry);
+  }
+  if (sectorEl) sectorEl.textContent = found ? found.name : 'Industry · ' + (profile && profile.finnhubIndustry || 'unknown');
   if (!found) {
     host.innerHTML = `<div class="peer-empty">No peer roster mapped for this industry yet.<br>The peer card covers Tech, Banks, Insurance, Pharma, Energy, Utilities, Retail, Auto, ETFs and more — but not every niche.</div>`;
     return;
