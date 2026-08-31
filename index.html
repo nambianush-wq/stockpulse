@@ -1549,6 +1549,33 @@ input:focus, select:focus {
   animation: pop .25s;
   overflow: hidden;
 }
+/* Settings modal uses a wider 2-column layout */
+#settings-modal .modal {
+  width: 800px;
+  max-width: 96vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+#settings-modal .modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow-y: auto;
+  padding: 0;
+}
+.settings-col {
+  padding: 18px 20px;
+  min-width: 0;
+}
+.settings-col + .settings-col {
+  border-left: 1px solid var(--line);
+}
+.settings-col .settings-section:last-child { margin-bottom: 0; }
+@media (max-width: 640px) {
+  #settings-modal .modal-body { grid-template-columns: 1fr; }
+  .settings-col + .settings-col { border-left: none; border-top: 1px solid var(--line); }
+}
 @keyframes pop {
   from { opacity: 0; transform: scale(.96); }
   to { opacity: 1; transform: scale(1); }
@@ -12744,118 +12771,128 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     </div>
     <div class="modal-body">
 
-      <!-- DATA SOURCES -->
-      <div class="settings-section">
-        <div class="settings-section-head">Data Sources</div>
-        <div class="modal-row">
-          <label for="api-key">Finnhub API key <span class="help-tag">required</span></label>
-          <input id="api-key" type="password" placeholder="Runs in DEMO mode without one">
-          <div class="help-text" style="margin-top:4px">Free 60 calls/min — <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a></div>
-        </div>
-        <div class="modal-row">
-          <label for="td-api-key">Twelve Data API key <span class="help-tag muted">optional · cross-check</span></label>
-          <input id="td-api-key" type="password" placeholder="Second-source price sanity check">
-          <div class="help-text" style="margin-top:4px">Free 800/day — <a href="https://twelvedata.com/register" target="_blank">twelvedata.com/register</a></div>
-        </div>
-      </div>
+      <!-- LEFT COLUMN: API keys -->
+      <div class="settings-col">
 
-      <!-- AI FEATURES -->
-      <div class="settings-section">
-        <div class="settings-section-head">AI Features</div>
-        <div class="modal-row">
-          <label for="groq-api-key">Groq API key <span class="help-tag muted">optional</span></label>
-          <input id="groq-api-key" type="password" placeholder="Paste your Groq key for AI explanations">
-          <div class="help-text" style="margin-top:4px">Powers <b>Why this verdict?</b> &amp; <b>Resolve conflict</b> — <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a></div>
-        </div>
-        <div class="modal-row">
-          <label class="toggle-row">
-            <input type="checkbox" id="local-llm-enabled">
-            <div class="toggle-info">
-              <span class="toggle-label">In-browser LLM fallback <span class="help-tag">no key · ~400 MB once</span></span>
-              <span class="toggle-desc">Fallback when Groq is unavailable. Downloads Qwen2.5-0.5B on first use (~400 MB, cached forever). Offline-capable, lower quality.</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- CROSS-DEVICE SYNC -->
-      <div class="settings-section">
-        <div class="settings-section-head">Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></div>
-        <div class="modal-row">
-          <label for="gh-pat">GitHub Personal Access Token</label>
-          <input id="gh-pat" type="password" placeholder="ghp_… (gist scope only)">
-          <div class="help-text" style="margin-top:4px">Syncs watchlist, favorites, sim set &amp; bundles across devices. API keys are never synced. Create at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a> — select <b>gist</b> scope only.</div>
-        </div>
-        <div class="modal-row">
-          <label for="gh-gist-id">Gist ID</label>
-          <input id="gh-gist-id" type="text" placeholder="Paste the Gist ID (from the URL after creating one)">
-          <div class="help-text" style="margin-top:4px">Create a private Gist at <a href="https://gist.github.com" target="_blank">gist.github.com</a> and paste the ID here.</div>
-        </div>
-      </div>
-
-      <!-- PREFERENCES -->
-      <div class="settings-section">
-        <div class="settings-section-head">Preferences</div>
-        <div class="modal-row">
-          <label for="refresh-interval">Refresh interval</label>
-          <select id="refresh-interval">
-            <option value="0">Manual only</option>
-            <option value="60">Every 1 minute</option>
-            <option value="300" selected="">Every 5 minutes</option>
-            <option value="900">Every 15 minutes</option>
-            <option value="3600">Every 1 hour</option>
-          </select>
-        </div>
-        <div class="modal-row">
-          <label class="toggle-row">
-            <input type="checkbox" id="notify-on-change" checked="">
-            <div class="toggle-info">
-              <span class="toggle-label">Verdict-change alerts</span>
-              <span class="toggle-desc">Browser notifications + toasts when a stock flips between BUY / HOLD / SELL.</span>
-            </div>
-          </label>
-        </div>
-        <div class="modal-row">
-          <label class="toggle-row">
-            <input type="checkbox" id="buy-timing-alerts">
-            <div class="toggle-info">
-              <span class="toggle-label">Buy-timing alerts</span>
-              <span class="toggle-desc">Fires once when a ticker enters a buy window (MA40 pull-back, oversold-bounce, early-rally). No repeat spam.</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- STORAGE -->
-      <div class="settings-section" style="margin-bottom:0">
-        <div class="settings-section-head">Storage</div>
-        <div class="modal-row settings-storage-row">
-          <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
-          <div class="settings-storage-actions">
-            <button type="button" class="btn" onclick="exportKeys()" title="Download a JSON file with your API keys, watchlist, favorites, sim set, saved bundles, and preferences." style="padding:6px 12px; font-size:11px;">⬇ Export</button>
-            <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore from a previously-exported JSON backup." style="padding:6px 12px; font-size:11px;">⬆ Import</button>
+        <!-- DATA SOURCES -->
+        <div class="settings-section">
+          <div class="settings-section-head">Data Sources</div>
+          <div class="modal-row">
+            <label for="api-key">Finnhub API key <span class="help-tag">required</span></label>
+            <input id="api-key" type="password" placeholder="Runs in DEMO mode without one">
+            <div class="help-text" style="margin-top:4px">Free 60 calls/min — <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a></div>
+          </div>
+          <div class="modal-row">
+            <label for="td-api-key">Twelve Data API key <span class="help-tag muted">optional · cross-check</span></label>
+            <input id="td-api-key" type="password" placeholder="Second-source price sanity check">
+            <div class="help-text" style="margin-top:4px">Free 800/day — <a href="https://twelvedata.com/register" target="_blank">twelvedata.com/register</a></div>
           </div>
         </div>
-      </div>
 
-      <!-- USP COMPARISON -->
-      <details class="settings-usp-compare" id="settings-usp-section">
-        <summary>What makes StockPulse different ▾</summary>
-        <div class="settings-usp-body">
-          <table class="usp-table">
-            <thead>
-              <tr><th></th><th>StockPulse</th><th>Yahoo</th><th>TradingView</th><th>Finviz</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Composite heat score</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-              <tr><td>CONFLICT timing state</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-              <tr><td>AI explains your signals</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-              <tr><td>Multi-goal sector rank</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-              <tr><td>Free · no login</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-partial">partial</td><td class="usp-yes">✓</td></tr>
-            </tbody>
-          </table>
+        <!-- AI FEATURES -->
+        <div class="settings-section">
+          <div class="settings-section-head">AI Features</div>
+          <div class="modal-row">
+            <label for="groq-api-key">Groq API key <span class="help-tag muted">optional</span></label>
+            <input id="groq-api-key" type="password" placeholder="Paste your Groq key for AI explanations">
+            <div class="help-text" style="margin-top:4px">Powers <b>Why this verdict?</b> &amp; <b>Resolve conflict</b> — <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a></div>
+          </div>
+          <div class="modal-row">
+            <label class="toggle-row">
+              <input type="checkbox" id="local-llm-enabled">
+              <div class="toggle-info">
+                <span class="toggle-label">In-browser LLM fallback <span class="help-tag">no key · ~400 MB once</span></span>
+                <span class="toggle-desc">Fallback when Groq is unavailable. Downloads Qwen2.5-0.5B on first use (~400 MB, cached forever). Offline-capable, lower quality.</span>
+              </div>
+            </label>
+          </div>
         </div>
-      </details>
+
+        <!-- CROSS-DEVICE SYNC -->
+        <div class="settings-section" style="margin-bottom:0">
+          <div class="settings-section-head">Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></div>
+          <div class="modal-row">
+            <label for="gh-pat">GitHub Personal Access Token</label>
+            <input id="gh-pat" type="password" placeholder="ghp_… (gist scope only)">
+            <div class="help-text" style="margin-top:4px">Syncs watchlist, favorites, sim set &amp; bundles across devices. API keys are never synced. Create at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a> — select <b>gist</b> scope only.</div>
+          </div>
+          <div class="modal-row">
+            <label for="gh-gist-id">Gist ID</label>
+            <input id="gh-gist-id" type="text" placeholder="Paste the Gist ID (from the URL after creating one)">
+            <div class="help-text" style="margin-top:4px">Create a private Gist at <a href="https://gist.github.com" target="_blank">gist.github.com</a> and paste the ID here.</div>
+          </div>
+        </div>
+
+      </div><!-- /settings-col left -->
+
+      <!-- RIGHT COLUMN: Preferences + Storage + USP -->
+      <div class="settings-col">
+
+        <!-- PREFERENCES -->
+        <div class="settings-section">
+          <div class="settings-section-head">Preferences</div>
+          <div class="modal-row">
+            <label for="refresh-interval">Refresh interval</label>
+            <select id="refresh-interval">
+              <option value="0">Manual only</option>
+              <option value="60">Every 1 minute</option>
+              <option value="300" selected="">Every 5 minutes</option>
+              <option value="900">Every 15 minutes</option>
+              <option value="3600">Every 1 hour</option>
+            </select>
+          </div>
+          <div class="modal-row">
+            <label class="toggle-row">
+              <input type="checkbox" id="notify-on-change" checked="">
+              <div class="toggle-info">
+                <span class="toggle-label">Verdict-change alerts</span>
+                <span class="toggle-desc">Browser notifications + toasts when a stock flips between BUY / HOLD / SELL.</span>
+              </div>
+            </label>
+          </div>
+          <div class="modal-row">
+            <label class="toggle-row">
+              <input type="checkbox" id="buy-timing-alerts">
+              <div class="toggle-info">
+                <span class="toggle-label">Buy-timing alerts</span>
+                <span class="toggle-desc">Fires once when a ticker enters a buy window (MA40 pull-back, oversold-bounce, early-rally). No repeat spam.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- STORAGE -->
+        <div class="settings-section">
+          <div class="settings-section-head">Storage</div>
+          <div class="modal-row settings-storage-row">
+            <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
+            <div class="settings-storage-actions">
+              <button type="button" class="btn" onclick="exportKeys()" title="Download a JSON file with your API keys, watchlist, favorites, sim set, saved bundles, and preferences." style="padding:6px 12px; font-size:11px;">⬇ Export</button>
+              <button type="button" class="btn" onclick="importKeysFromFile()" title="Restore from a previously-exported JSON backup." style="padding:6px 12px; font-size:11px;">⬆ Import</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- USP COMPARISON -->
+        <details class="settings-usp-compare" id="settings-usp-section">
+          <summary>What makes StockPulse different ▾</summary>
+          <div class="settings-usp-body">
+            <table class="usp-table">
+              <thead>
+                <tr><th></th><th>StockPulse</th><th>Yahoo</th><th>TradingView</th><th>Finviz</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Composite heat score</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+                <tr><td>CONFLICT timing state</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+                <tr><td>AI explains your signals</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+                <tr><td>Multi-goal sector rank</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
+                <tr><td>Free · no login</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-partial">partial</td><td class="usp-yes">✓</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+      </div><!-- /settings-col right -->
 
     </div>
     <div class="modal-foot">
