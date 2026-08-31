@@ -1565,7 +1565,7 @@ input:focus, select:focus {
   padding: 0;
 }
 .settings-col {
-  padding: 18px 20px;
+  padding: 16px 20px;
   min-width: 0;
 }
 .settings-col + .settings-col {
@@ -12719,7 +12719,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
 <!-- Settings Modal -->
 <style>
-  .settings-section { margin-bottom: 20px; }
+  .settings-section { margin-bottom: 16px; }
   .settings-section-head {
     font-size: 10px; letter-spacing: 0.08em; color: var(--muted);
     text-transform: uppercase; margin-bottom: 10px;
@@ -12750,7 +12750,14 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
   .settings-feature-card:hover { border-color: rgba(255,255,255,.12); }
   .settings-feature-icon { font-size: 15px; line-height: 1; flex-shrink: 0; margin-top: 2px; }
   .settings-feature-title { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-  .settings-feature-body { font-size: 10px; color: var(--dim); line-height: 1.5; }
+  .settings-feature-body { font-size: 10px; color: var(--dim); line-height: 1.45; }
+  /* Cross-device sync — advanced, collapsed */
+  .settings-sync-advanced > summary { margin-bottom: 0; }
+  .settings-sync-advanced > summary::-webkit-details-marker { display: none; }
+  .settings-sync-advanced[open] .sync-chevron { transform: rotate(90deg); }
+  .sync-chevron { font-size: 9px; color: var(--dim); transition: transform .15s; flex-shrink: 0; }
+  /* Tighten toggle descriptions */
+  .toggle-desc { font-size: 10.5px; }
   /* Override .modal-row label's block/uppercase rules for toggle rows */
   .modal-row label.toggle-row {
     display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
@@ -12829,26 +12836,28 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
               <input type="checkbox" id="local-llm-enabled">
               <div class="toggle-info">
                 <span class="toggle-label">In-browser LLM fallback <span class="help-tag">no key · ~400 MB once</span></span>
-                <span class="toggle-desc">Fallback when Groq is unavailable. Downloads Qwen2.5-0.5B on first use (~400 MB, cached forever). Offline-capable, lower quality.</span>
+                <span class="toggle-desc">No key needed — downloads Qwen2.5-0.5B once (~400 MB, then offline forever).</span>
               </div>
             </label>
           </div>
         </div>
 
-        <!-- CROSS-DEVICE SYNC -->
-        <div class="settings-section" style="margin-bottom:0">
-          <div class="settings-section-head sh-sync">Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></div>
-          <div class="modal-row">
+        <!-- CROSS-DEVICE SYNC — collapsed by default (advanced / infrequent) -->
+        <details class="settings-sync-advanced" style="margin-bottom:0">
+          <summary class="settings-section-head sh-sync" style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between">
+            <span>Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></span>
+            <span class="sync-chevron">▸</span>
+          </summary>
+          <div class="modal-row" style="margin-top:8px">
             <label for="gh-pat">GitHub Personal Access Token</label>
             <input id="gh-pat" type="password" placeholder="ghp_… (gist scope only)">
-            <div class="help-text" style="margin-top:4px">Syncs watchlist, favorites, sim set &amp; bundles across devices. API keys are never synced. Create at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a> — select <b>gist</b> scope only.</div>
+            <div class="help-text" style="margin-top:4px">Syncs watchlist, favorites &amp; bundles. API keys are never synced. <a href="https://github.com/settings/tokens/new" target="_blank">Create token</a> — gist scope only.</div>
           </div>
           <div class="modal-row">
             <label for="gh-gist-id">Gist ID</label>
-            <input id="gh-gist-id" type="text" placeholder="Paste the Gist ID (from the URL after creating one)">
-            <div class="help-text" style="margin-top:4px">Create a private Gist at <a href="https://gist.github.com" target="_blank">gist.github.com</a> and paste the ID here.</div>
+            <input id="gh-gist-id" type="text" placeholder="Paste Gist ID from the URL">
           </div>
-        </div>
+        </details>
 
       </div><!-- /settings-col left -->
 
@@ -12874,7 +12883,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
               <input type="checkbox" id="notify-on-change" checked="">
               <div class="toggle-info">
                 <span class="toggle-label">Verdict-change alerts</span>
-                <span class="toggle-desc">Browser notifications + toasts when a stock flips between BUY / HOLD / SELL.</span>
+                <span class="toggle-desc">Notifies when a stock flips between BUY / HOLD / SELL.</span>
               </div>
             </label>
           </div>
@@ -12883,7 +12892,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
               <input type="checkbox" id="buy-timing-alerts">
               <div class="toggle-info">
                 <span class="toggle-label">Buy-timing alerts</span>
-                <span class="toggle-desc">Fires once when a ticker enters a buy window (MA40 pull-back, oversold-bounce, early-rally). No repeat spam.</span>
+                <span class="toggle-desc">Fires once on entry to a buy window (MA40 pull-back, oversold-bounce, early-rally).</span>
               </div>
             </label>
           </div>
@@ -12909,21 +12918,21 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
               <div class="settings-feature-icon" style="color:#30d158">◈</div>
               <div>
                 <div class="settings-feature-title">One heat score across every surface</div>
-                <div class="settings-feature-body">MA stack, RSI, volume bias, Fibonacci, and slope merged into a single −100→+100 score — shown consistently on every tab, not buried in a chart.</div>
+                <div class="settings-feature-body">5 signals merged into one −100→+100 score. Same number, every tab.</div>
               </div>
             </div>
             <div class="settings-feature-card">
               <div class="settings-feature-icon" style="color:#ff9f0a">↑↓</div>
               <div>
                 <div class="settings-feature-title">Signal disagreements shown, not hidden</div>
-                <div class="settings-feature-body">When technical signals are bullish but the forecast is bearish, StockPulse labels this CONFLICT explicitly — so you decide, rather than getting an averaged signal that masks the tension.</div>
+                <div class="settings-feature-body">Bullish technicals + bearish forecast = CONFLICT, shown explicitly. Not averaged away.</div>
               </div>
             </div>
             <div class="settings-feature-card">
               <div class="settings-feature-icon" style="color:#533afa">✦</div>
               <div>
                 <div class="settings-feature-title">AI explains your signals, not the news</div>
-                <div class="settings-feature-body">"Why this verdict?" narrates your stock's own computed score and signals in plain English — not a generic article summary. Powered by Groq (free) or runs offline.</div>
+                <div class="settings-feature-body">Narrates your computed signals in plain English — not a generic article. Free via Groq or offline.</div>
               </div>
             </div>
           </div>
@@ -17828,6 +17837,7 @@ const STOCK_CATALOG = [
 
 // Sector roster — used by the peer top-performers card
 const SECTOR_ROSTER = {
+  // Tech
   'IT Services':            ['ACN','IBM','INFY','EPAM','CTSH','WIT'],
   'Software':               ['MSFT','ORCL','ADBE','CRM','NOW','INTU','PANW','SNPS','CDNS','WDAY'],
   'Semiconductors':         ['NVDA','AMD','AVGO','TSM','INTC','QCOM','TXN','AMAT','MU','ASML','ARM'],
@@ -17835,49 +17845,176 @@ const SECTOR_ROSTER = {
   'Internet Content':       ['GOOGL','META','BIDU','SNAP','PINS','RBLX','UBER'],
   'Internet Retail':        ['AMZN','SHOP','MELI','EBAY','BABA','PDD'],
   'Social Media':           ['META','SNAP','PINS','MTCH','RBLX'],
+  'Electronic Components':  ['AVGO','TXN','AMAT','MU','KLAC','LRCX','TEL','APH','GLW'],
+  // Auto
   'Auto Manufacturers':     ['TSLA','TM','F','GM','HMC','STLA','RIVN','LCID','NIO'],
-  'Banks':                  ['JPM','BAC','WFC','C','GS','MS','PNC','SCHW'],
-  'Insurance':              ['BRK.B','PGR','CB','MMC','AIG','MET','PRU'],
-  'Pharmaceuticals':        ['JNJ','PFE','LLY','MRK','ABBV','BMY','GILD','NVO'],
-  'Healthcare':             ['UNH','CVS','JNJ','LLY','ABBV'],
-  'Oil & Gas':              ['XOM','CVX','COP','SLB','OXY','EOG'],
-  'Utilities':              ['NEE','DUK','SO','D','AEP'],
-  'Retail':                 ['WMT','HD','COST','TGT','LOW','NKE','LULU'],
-  'Restaurants':            ['MCD','SBUX','CMG'],
-  'Consumer Staples':       ['KO','PEP','WMT','COST'],
-  'Aerospace & Defense':    ['BA','LMT','RTX','GE','HON'],
-  'Industrials':            ['CAT','DE','GE','HON','BA'],
-  'Entertainment':          ['NFLX','DIS','ROKU','SPOT'],
+  'Auto Parts':             ['MGA','BWA','LEA','ALV','LKQ','APTV','MOD'],
+  // Finance
+  'Banks':                  ['JPM','BAC','WFC','C','GS','MS','PNC','SCHW','USB','TFC'],
+  'Insurance':              ['BRK.B','PGR','CB','MMC','AIG','MET','PRU','TRV','ALL'],
+  'Capital Markets':        ['BLK','GS','MS','SCHW','ICE','CME','NDAQ','CBOE'],
+  'Financial Services':     ['JPM','BAC','WFC','GS','MS','C','BLK','SCHW','AXP','V'],
+  'Asset Management':       ['BLK','IVZ','WDR','AMG','TROW','BEN','APAM'],
+  'Credit Services':        ['V','MA','AXP','DFS','COF','SYF','ALLY'],
+  // Healthcare
+  'Pharmaceuticals':        ['JNJ','PFE','LLY','MRK','ABBV','BMY','GILD','NVO','AZN','GSK'],
+  'Biotechnology':          ['AMGN','BIIB','REGN','VRTX','MRNA','BNTX','ILMN','ALNY','SGEN'],
+  'Healthcare':             ['UNH','CVS','JNJ','LLY','ABBV','CI','HUM','ELV'],
+  'Medical Devices':        ['MDT','ABT','BSX','EW','ZBH','SYK','ISRG','BDX','BAX','ZTS'],
+  'Medical Instruments':    ['TMO','A','DHR','BIO','ILMN','IDXX','MTD','WAT'],
+  'Diagnostics':            ['LH','DGX','EXAS','NTRA','HOLX','ALGM'],
+  // Energy
+  'Oil & Gas':              ['XOM','CVX','COP','SLB','OXY','EOG','ENB','SU','CNQ','TRP','PBA'],
+  'Energy':                 ['XOM','CVX','COP','SLB','OXY','EOG','ENB','SU','CNQ'],
+  'Oil & Gas Midstream':    ['ENB','TRP','PBA','KMI','WMB','EPD','ET','MPLX','PAA'],
+  'Oil & Gas E&P':          ['COP','OXY','EOG','DVN','FANG','MRO','APA','HES','CNQ','SU'],
+  'Oil & Gas Integrated':   ['XOM','CVX','BP','SHEL','TTE'],
+  'Oil & Gas Equipment':    ['SLB','HAL','BKR','OIS','NOV'],
+  'Utilities':              ['NEE','DUK','SO','D','AEP','EXC','SRE','PEG','XEL','ED'],
+  'Electric Utilities':     ['NEE','DUK','SO','D','AEP','EXC','SRE','PEG'],
+  'Gas Utilities':          ['NI','ATO','UGI','OGE','SPTN'],
+  'Renewable Energy':       ['NEE','BEP','CWEN','RUN','ENPH','SEDG','FSLR'],
+  // Consumer
+  'Retail':                 ['WMT','HD','COST','TGT','LOW','NKE','LULU','DG','DLTR'],
+  'Specialty Retail':       ['HD','LOW','ORLY','AZO','BBY','ULTA','WSM','RH','FIVE'],
+  'Apparel Retail':         ['NKE','LULU','TJX','GPS','ANF','PVH','RL','VF'],
+  'Internet Retail':        ['AMZN','SHOP','MELI','EBAY','BABA','PDD','ETSY'],
+  'Grocery Stores':         ['WMT','KR','SFM','GO','CASY','PFGC'],
+  'Restaurants':            ['MCD','SBUX','CMG','YUM','DPZ','WEN','QSR','DNUT'],
+  'Consumer Staples':       ['KO','PEP','WMT','COST','PG','CL','KMB','GIS','K','CAG'],
+  'Beverages':              ['KO','PEP','BUD','TAP','STZ','MNST','CELH'],
+  'Food Products':          ['GIS','K','CPB','HRL','SJM','MKC','CAG','KHC'],
+  'Household Products':     ['PG','CL','KMB','CHD','ENR','SPB'],
+  'Personal Products':      ['EL','COTY','REV','HBI'],
+  'Tobacco':                ['MO','PM','BTI','VGR'],
+  'Leisure':                ['MAR','HLT','H','IHG','WH','LVS','MGM','WYNN','CZR'],
+  'Travel Services':        ['BKNG','EXPE','TRIP','ABNB','PCLN'],
+  'Entertainment':          ['NFLX','DIS','ROKU','SPOT','WBD','PARA','FOX'],
+  'Gaming':                 ['ATVI','EA','TTWO','RBLX','NTES','SNE'],
+  // Industrials
+  'Industrials':            ['CAT','DE','GE','HON','BA','MMM','EMR','ETN','PH','ROK'],
+  'Machinery':              ['CAT','DE','CMI','PCAR','PH','ITW','EMR','ROK','ETN','AGCO'],
+  'Aerospace & Defense':    ['BA','LMT','RTX','GE','HON','NOC','GD','HII','L3H','TDG'],
+  'Railroads':              ['UNP','CSX','NSC','CP','CNI'],
+  'Transportation':         ['UPS','FDX','JBHT','XPO','ODFL','SAIA','CHRW','KNX'],
+  'Airlines':               ['DAL','UAL','AAL','LUV','JBLU','ALK','SAVE'],
+  'Trucking':               ['JBHT','ODFL','SAIA','KNX','XPO','WERN'],
+  'Waste Management':       ['WM','RSG','CWST','SRCL'],
+  'Construction':           ['CAT','URI','MLM','VMC','SUM','BLDR','MAS'],
+  'Engineering':            ['JCI','OTIS','CARR','TT','IR','AME','FTV'],
+  'Electrical Equipment':   ['ETN','EMR','ROK','AMETEK','AOS','RBC','HUBB'],
+  'Diversified Industrials':['MMM','HON','GE','ITW','EMR','ROK','ETN','PH'],
+  // Materials / Chemicals
+  'Basic Materials':        ['LIN','SHW','APD','ECL','NEM','FCX','DOW','DD','NUE'],
+  'Chemicals':              ['LIN','APD','ECL','DOW','DD','EMN','PPG','RPM','IFF','CE'],
+  'Specialty Chemicals':    ['SHW','RPM','IFF','EMN','ALB','KPLT','CE','AXTA'],
+  'Metals & Mining':        ['NEM','FCX','BHP','RIO','VALE','NUE','STLD','CLF','AA'],
+  'Gold':                   ['NEM','GOLD','AEM','WPM','KGC','AGI','AU'],
+  'Steel':                  ['NUE','STLD','CLF','X','RS','CMC','MTL'],
+  'Paper & Packaging':      ['IP','PKG','SON','SEE','AVERY','GPK','ATR'],
+  // Real Estate
+  'Real Estate':            ['AMT','PLD','SPG','EQIX','DLR','O','PSA','EXR','AVB','EQR'],
+  'REIT':                   ['O','SPG','PLD','EQIX','AMT','DLR','PSA','EXR','AVB','EQR'],
+  'REIT - Retail':          ['SPG','O','REG','KIM','FRT','MAC','PREIT'],
+  'REIT - Industrial':      ['PLD','REXR','EGP','STAG','COLD'],
+  'REIT - Data Center':     ['EQIX','DLR','COR','QTS','CONE'],
+  'REIT - Residential':     ['AVB','EQR','UDR','ESS','CPT','INVH','AMH'],
+  'REIT - Healthcare':      ['WELL','VTR','HR','OHI','PEAK','CTRE'],
+  'REIT - Diversified':     ['O','AMT','WPC','NNN','STOR','NTST'],
+  // Telecom / Comms
+  'Telecom':                ['T','VZ','TMUS','CMCSA','CHTR','BCE','RCI'],
+  'Communication Services': ['GOOGL','META','NFLX','DIS','T','VZ','CMCSA','TMUS','SNAP'],
+  'Wireless Telecom':       ['T','VZ','TMUS','DISH','LUMN'],
+  // ETFs
   'ETF · Large Blend':      ['SPY','VOO','IVV','VTI'],
   'ETF · Large Growth':     ['QQQ','VUG','SPYG'],
+  // Broad fallback buckets (Finnhub sometimes returns these broad labels)
   'Technology':             ['AAPL','MSFT','NVDA','GOOGL','META','AVGO','ORCL','ADBE','CRM','IBM'],
-  'Financial Services':     ['JPM','BAC','WFC','GS','MS','C','BLK','SCHW','AXP','V'],
-  'Communication Services': ['GOOGL','META','NFLX','DIS','T','VZ','CMCSA','TMUS','SNAP'],
   'Consumer Cyclical':      ['AMZN','TSLA','HD','NKE','MCD','SBUX','BKNG','TJX','LOW','F'],
-  'Basic Materials':        ['LIN','SHW','APD','ECL','NEM','FCX','DOW','DD','NUE'],
 };
 function findSectorRoster(industry) {
   if (!industry) return null;
+  // 1. Exact match
   if (SECTOR_ROSTER[industry]) return { name: industry, peers: SECTOR_ROSTER[industry] };
   const lower = industry.toLowerCase();
+  // 2. Substring match against all roster keys
   for (const k of Object.keys(SECTOR_ROSTER)) {
     if (lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) return { name: k, peers: SECTOR_ROSTER[k] };
   }
-  if (/semi/.test(lower)) return { name:'Semiconductors', peers: SECTOR_ROSTER['Semiconductors'] };
-  if (/software/.test(lower)) return { name:'Software', peers: SECTOR_ROSTER['Software'] };
-  if (/bank/.test(lower)) return { name:'Banks', peers: SECTOR_ROSTER['Banks'] };
-  if (/insur/.test(lower)) return { name:'Insurance', peers: SECTOR_ROSTER['Insurance'] };
-  if (/auto|motor/.test(lower)) return { name:'Auto Manufacturers', peers: SECTOR_ROSTER['Auto Manufacturers'] };
+  // 3. Keyword fallbacks — ordered most-specific first
+  if (/semiconductor|semi(?!conductor)/.test(lower)) return { name:'Semiconductors', peers: SECTOR_ROSTER['Semiconductors'] };
+  if (/biotech/.test(lower)) return { name:'Biotechnology', peers: SECTOR_ROSTER['Biotechnology'] };
+  if (/medical\s*device|med.*device/.test(lower)) return { name:'Medical Devices', peers: SECTOR_ROSTER['Medical Devices'] };
+  if (/medical\s*instrument|diagnostic/.test(lower)) return { name:'Medical Instruments', peers: SECTOR_ROSTER['Medical Instruments'] };
   if (/pharma|drug/.test(lower)) return { name:'Pharmaceuticals', peers: SECTOR_ROSTER['Pharmaceuticals'] };
+  if (/health/.test(lower)) return { name:'Healthcare', peers: SECTOR_ROSTER['Healthcare'] };
+  if (/midstream|pipeline/.test(lower)) return { name:'Oil & Gas Midstream', peers: SECTOR_ROSTER['Oil & Gas Midstream'] };
+  if (/e&p|explor|produc/.test(lower)) return { name:'Oil & Gas E&P', peers: SECTOR_ROSTER['Oil & Gas E&P'] };
+  if (/oil.*gas\s*equip|drill/.test(lower)) return { name:'Oil & Gas Equipment', peers: SECTOR_ROSTER['Oil & Gas Equipment'] };
   if (/oil|gas|petroleum/.test(lower)) return { name:'Oil & Gas', peers: SECTOR_ROSTER['Oil & Gas'] };
-  if (/internet content|search/.test(lower)) return { name:'Internet Content', peers: SECTOR_ROSTER['Internet Content'] };
-  if (/internet retail|e[- ]?commerce/.test(lower)) return { name:'Internet Retail', peers: SECTOR_ROSTER['Internet Retail'] };
+  if (/^energy$|energy\s*sector/.test(lower)) return { name:'Energy', peers: SECTOR_ROSTER['Energy'] };
+  if (/renew|solar|wind|clean\s*energy/.test(lower)) return { name:'Renewable Energy', peers: SECTOR_ROSTER['Renewable Energy'] };
+  if (/electric\s*util/.test(lower)) return { name:'Electric Utilities', peers: SECTOR_ROSTER['Electric Utilities'] };
+  if (/util/.test(lower)) return { name:'Utilities', peers: SECTOR_ROSTER['Utilities'] };
+  if (/software/.test(lower)) return { name:'Software', peers: SECTOR_ROSTER['Software'] };
+  if (/it\s*service|tech.*service/.test(lower)) return { name:'IT Services', peers: SECTOR_ROSTER['IT Services'] };
+  if (/internet\s*content|search\s*engine/.test(lower)) return { name:'Internet Content', peers: SECTOR_ROSTER['Internet Content'] };
+  if (/internet\s*retail|e[- ]?commerce/.test(lower)) return { name:'Internet Retail', peers: SECTOR_ROSTER['Internet Retail'] };
+  if (/social\s*media/.test(lower)) return { name:'Social Media', peers: SECTOR_ROSTER['Social Media'] };
+  if (/electronic\s*component|electronic\s*equip/.test(lower)) return { name:'Electronic Components', peers: SECTOR_ROSTER['Electronic Components'] };
+  if (/^technology$|tech(nology)?\s*hardware/.test(lower)) return { name:'Technology', peers: SECTOR_ROSTER['Technology'] };
+  if (/bank|savings\s*institution/.test(lower)) return { name:'Banks', peers: SECTOR_ROSTER['Banks'] };
+  if (/capital\s*market|brokerage/.test(lower)) return { name:'Capital Markets', peers: SECTOR_ROSTER['Capital Markets'] };
+  if (/asset\s*manag/.test(lower)) return { name:'Asset Management', peers: SECTOR_ROSTER['Asset Management'] };
+  if (/credit|consumer\s*finance/.test(lower)) return { name:'Credit Services', peers: SECTOR_ROSTER['Credit Services'] };
+  if (/financial\s*service|diversified\s*financial/.test(lower)) return { name:'Financial Services', peers: SECTOR_ROSTER['Financial Services'] };
+  if (/insur/.test(lower)) return { name:'Insurance', peers: SECTOR_ROSTER['Insurance'] };
+  if (/auto|motor\s*vehicle/.test(lower)) return { name:'Auto Manufacturers', peers: SECTOR_ROSTER['Auto Manufacturers'] };
+  if (/auto\s*part|auto\s*component/.test(lower)) return { name:'Auto Parts', peers: SECTOR_ROSTER['Auto Parts'] };
+  if (/machin|heavy\s*equip|farm\s*equip/.test(lower)) return { name:'Machinery', peers: SECTOR_ROSTER['Machinery'] };
+  if (/aerospace|defense|defence/.test(lower)) return { name:'Aerospace & Defense', peers: SECTOR_ROSTER['Aerospace & Defense'] };
+  if (/railroad|railway/.test(lower)) return { name:'Railroads', peers: SECTOR_ROSTER['Railroads'] };
+  if (/airline|air\s*freight/.test(lower)) return { name:'Airlines', peers: SECTOR_ROSTER['Airlines'] };
+  if (/trucking|freight/.test(lower)) return { name:'Trucking', peers: SECTOR_ROSTER['Trucking'] };
+  if (/transport/.test(lower)) return { name:'Transportation', peers: SECTOR_ROSTER['Transportation'] };
+  if (/waste|environment\s*service/.test(lower)) return { name:'Waste Management', peers: SECTOR_ROSTER['Waste Management'] };
+  if (/construct|building\s*material/.test(lower)) return { name:'Construction', peers: SECTOR_ROSTER['Construction'] };
+  if (/electric.*equip|electrical/.test(lower)) return { name:'Electrical Equipment', peers: SECTOR_ROSTER['Electrical Equipment'] };
+  if (/engineer/.test(lower)) return { name:'Engineering', peers: SECTOR_ROSTER['Engineering'] };
+  if (/diversified\s*industrial|conglomerate/.test(lower)) return { name:'Diversified Industrials', peers: SECTOR_ROSTER['Diversified Industrials'] };
+  if (/industrial/.test(lower)) return { name:'Industrials', peers: SECTOR_ROSTER['Industrials'] };
+  if (/specialty\s*retail|home\s*improvement/.test(lower)) return { name:'Specialty Retail', peers: SECTOR_ROSTER['Specialty Retail'] };
+  if (/apparel|footwear|clothing/.test(lower)) return { name:'Apparel Retail', peers: SECTOR_ROSTER['Apparel Retail'] };
+  if (/grocery|food\s*retail/.test(lower)) return { name:'Grocery Stores', peers: SECTOR_ROSTER['Grocery Stores'] };
+  if (/retail/.test(lower)) return { name:'Retail', peers: SECTOR_ROSTER['Retail'] };
+  if (/restaurant|fast\s*food/.test(lower)) return { name:'Restaurants', peers: SECTOR_ROSTER['Restaurants'] };
+  if (/beverage/.test(lower)) return { name:'Beverages', peers: SECTOR_ROSTER['Beverages'] };
+  if (/food\s*product|packaged\s*food/.test(lower)) return { name:'Food Products', peers: SECTOR_ROSTER['Food Products'] };
+  if (/household|personal\s*product/.test(lower)) return { name:'Household Products', peers: SECTOR_ROSTER['Household Products'] };
+  if (/tobacco/.test(lower)) return { name:'Tobacco', peers: SECTOR_ROSTER['Tobacco'] };
+  if (/hotel|lodging|resort|hospitality/.test(lower)) return { name:'Leisure', peers: SECTOR_ROSTER['Leisure'] };
+  if (/travel|tourism/.test(lower)) return { name:'Travel Services', peers: SECTOR_ROSTER['Travel Services'] };
+  if (/gaming|casino|gambl/.test(lower)) return { name:'Gaming', peers: SECTOR_ROSTER['Gaming'] };
+  if (/entertainment|media|broadcast/.test(lower)) return { name:'Entertainment', peers: SECTOR_ROSTER['Entertainment'] };
+  if (/consumer\s*staple/.test(lower)) return { name:'Consumer Staples', peers: SECTOR_ROSTER['Consumer Staples'] };
+  if (/consumer\s*cycl|consumer\s*discret/.test(lower)) return { name:'Consumer Cyclical', peers: SECTOR_ROSTER['Consumer Cyclical'] };
+  if (/reit.*retail/.test(lower)) return { name:'REIT - Retail', peers: SECTOR_ROSTER['REIT - Retail'] };
+  if (/reit.*industrial/.test(lower)) return { name:'REIT - Industrial', peers: SECTOR_ROSTER['REIT - Industrial'] };
+  if (/reit.*data|data\s*center/.test(lower)) return { name:'REIT - Data Center', peers: SECTOR_ROSTER['REIT - Data Center'] };
+  if (/reit.*resid|apartment/.test(lower)) return { name:'REIT - Residential', peers: SECTOR_ROSTER['REIT - Residential'] };
+  if (/reit.*health/.test(lower)) return { name:'REIT - Healthcare', peers: SECTOR_ROSTER['REIT - Healthcare'] };
+  if (/reit/.test(lower)) return { name:'REIT', peers: SECTOR_ROSTER['REIT'] };
+  if (/real\s*estate/.test(lower)) return { name:'Real Estate', peers: SECTOR_ROSTER['Real Estate'] };
+  if (/specialty\s*chem/.test(lower)) return { name:'Specialty Chemicals', peers: SECTOR_ROSTER['Specialty Chemicals'] };
+  if (/chem/.test(lower)) return { name:'Chemicals', peers: SECTOR_ROSTER['Chemicals'] };
+  if (/gold/.test(lower)) return { name:'Gold', peers: SECTOR_ROSTER['Gold'] };
+  if (/steel/.test(lower)) return { name:'Steel', peers: SECTOR_ROSTER['Steel'] };
+  if (/metal|mining|copper|aluminum/.test(lower)) return { name:'Metals & Mining', peers: SECTOR_ROSTER['Metals & Mining'] };
+  if (/paper|packag/.test(lower)) return { name:'Paper & Packaging', peers: SECTOR_ROSTER['Paper & Packaging'] };
+  if (/basic\s*material|material/.test(lower)) return { name:'Basic Materials', peers: SECTOR_ROSTER['Basic Materials'] };
+  if (/telecom|wireless/.test(lower)) return { name:'Telecom', peers: SECTOR_ROSTER['Telecom'] };
+  if (/communication\s*service/.test(lower)) return { name:'Communication Services', peers: SECTOR_ROSTER['Communication Services'] };
   if (/etf|fund/.test(lower)) return { name:'ETF · Large Blend', peers: SECTOR_ROSTER['ETF · Large Blend'] };
-  if (/^technology$|tech(nology)? service/.test(lower)) return { name:'Technology', peers: SECTOR_ROSTER['Technology'] };
-  if (/financial service|diversified financial/.test(lower)) return { name:'Financial Services', peers: SECTOR_ROSTER['Financial Services'] };
-  if (/communication service|telecom/.test(lower)) return { name:'Communication Services', peers: SECTOR_ROSTER['Communication Services'] };
-  if (/consumer cycl|consumer discret/.test(lower)) return { name:'Consumer Cyclical', peers: SECTOR_ROSTER['Consumer Cyclical'] };
-  if (/basic material|material/.test(lower)) return { name:'Basic Materials', peers: SECTOR_ROSTER['Basic Materials'] };
   return null;
 }
 
