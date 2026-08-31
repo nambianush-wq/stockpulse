@@ -612,6 +612,22 @@ input:focus, select:focus {
   border-radius: 4px;
   vertical-align: 2px;
 }
+#firstrun-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: rgba(10,132,255,.08); border: 1px solid rgba(10,132,255,.22);
+  border-radius: 8px; padding: 10px 14px; margin: 10px 16px 0;
+  font-size: 12px; color: var(--text); line-height: 1.4;
+}
+#firstrun-banner .frb-icon { font-size: 14px; flex-shrink: 0; }
+#firstrun-banner .frb-msg  { flex: 1; color: var(--muted); }
+#firstrun-banner .frb-msg b { color: var(--text); }
+#firstrun-banner .frb-btn {
+  padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 600; background: var(--accent); color: #fff; white-space: nowrap;
+}
+#firstrun-banner .frb-dismiss {
+  background: none; border: none; cursor: pointer; color: var(--dim); font-size: 13px; padding: 2px 4px; flex-shrink: 0;
+}
 .data-warning {
   display: inline-flex;
   align-items: center;
@@ -5722,6 +5738,17 @@ body { padding-bottom: 44px; }
 .news-summary b { color: var(--text); font-style: normal; font-weight: 600; }
 .news-foot a { color: var(--accent); text-decoration: none; }
 .news-foot a:hover { text-decoration: underline; }
+.news-sent-bar { display: flex; height: 4px; border-radius: 2px; overflow: hidden; margin: 10px 0 4px; background: var(--line); }
+.news-sent-bull { background: var(--bull); }
+.news-sent-neu  { background: var(--muted); opacity: .35; }
+.news-sent-bear { background: var(--bear); }
+.news-src-groq {
+  display: inline-block; margin-left: 6px; padding: 0 5px;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .08em;
+  background: rgba(10,132,255,.12); color: var(--accent);
+  border: 1px solid rgba(10,132,255,.28); border-radius: 4px;
+  cursor: help; vertical-align: middle;
+}
 .news-empty, .news-loading {
   padding: 18px;
   text-align: center;
@@ -6388,6 +6415,12 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         <div id="timing-filter" class="verdict-filter" style="margin-top:6px" title="Filter by buy-timing recommendation (Buy now / On dip / DCA / Wait / Avoid)"></div>
         <div id="inst-filter" class="verdict-filter" style="margin-top:6px" title="Filter by 13F institutional ownership — how many top active managers hold this stock"></div>
       </div>
+    </div>
+    <div id="firstrun-banner" style="display:none">
+      <div class="frb-icon">&#128273;</div>
+      <div class="frb-msg"><b>Welcome to StockPulse.</b> Add your free Finnhub API key in Settings to see live prices &amp; signals for your watchlist.</div>
+      <button class="frb-btn" onclick="openSettings()">Open Settings</button>
+      <button class="frb-dismiss" onclick="_dismissFirstRunBanner()" title="Dismiss">&#10005;</button>
     </div>
     <div id="watchlist"><div class="wl-item heat-hot  " data-ticker="AMAT" onclick="selectTicker(&#39;AMAT&#39;)" title="Heat score: +70">
       <div class="wl-heat" style="--heat-color: rgb(255, 150, 0)"></div>
@@ -12745,6 +12778,21 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
         </div>
       </div>
 
+      <!-- CROSS-DEVICE SYNC -->
+      <div class="settings-section">
+        <div class="settings-section-head">Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></div>
+        <div class="modal-row">
+          <label for="gh-pat">GitHub Personal Access Token</label>
+          <input id="gh-pat" type="password" placeholder="ghp_… (gist scope only)">
+          <div class="help-text" style="margin-top:4px">Syncs watchlist, favorites, sim set &amp; bundles across devices. API keys are never synced. Create at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a> — select <b>gist</b> scope only.</div>
+        </div>
+        <div class="modal-row">
+          <label for="gh-gist-id">Gist ID</label>
+          <input id="gh-gist-id" type="text" placeholder="Paste the Gist ID (from the URL after creating one)">
+          <div class="help-text" style="margin-top:4px">Create a private Gist at <a href="https://gist.github.com" target="_blank">gist.github.com</a> and paste the ID here.</div>
+        </div>
+      </div>
+
       <!-- PREFERENCES -->
       <div class="settings-section">
         <div class="settings-section-head">Preferences</div>
@@ -13422,6 +13470,11 @@ const TIP = {
   wiTotalInvested: "The total amount being simulated in this portfolio. Every per-holding allocation is expressed as a percentage of this number. No real money is moved — this is a simulation only.",
   wiHoldings: "Number of individual positions selected by the goal's ranking formula, broken down by direct stocks and diversifying ETFs.",
   wiExpectedReturn: "Projected gain over the selected horizon, weighted across all holdings by allocation. The sub-line shows the same estimate at 12, 24, and 36 months — longer horizons mean-revert toward the historical ~7% market average and carry lower confidence. This is a heuristic directional estimate, not a guarantee.",
+  pb: "Price-to-Book ratio — share price divided by book value per share. A P/B below 1 means the stock trades below its net asset value. Lower generally signals value; higher suggests growth premium or intangibles. Varies widely by industry.",
+  roe: "Return on Equity — net profit divided by shareholders' equity, as a percentage. Measures how efficiently management turns equity into profit. Above 15% is generally considered strong.",
+  roa: "Return on Assets — net profit divided by total assets, as a percentage. Shows how well the company converts assets into profit regardless of how it is financed. Above 5% is considered solid for most sectors.",
+  de: "Debt-to-Capital ratio — total debt divided by (total debt + equity). Shows what fraction of the company's funding comes from debt. Higher values mean more financial leverage and risk; below 0.5 is conservative.",
+  fcfYield: "Free Cash Flow Yield — free cash flow per share divided by the share price. Measures how much cash the business generates relative to its market value. Higher is better; above 5% is considered attractive.",
 };
 function tip(key) { return (TIP[key] || '').replace(/"/g, '&quot;'); }
 
@@ -13908,6 +13961,7 @@ function pickInitialSelected() {
 }
 function saveWatchlist() {
   persistJsonResilient(LS_KEY_WL, LS_KEY_WL_BACKUP, WATCHLIST);
+  syncPush();
 }
 
 // ========================================================================
@@ -15805,6 +15859,7 @@ function renderNewsCard(ticker, result, opts) {
   }
   const counts = { pos: 0, neg: 0, neutral: 0 };
   const usingFinBert = !!(opts.classifications && opts.classifications.some(c => c && c.source === 'finbert'));
+  const usingGroq    = !!(opts.classifications && opts.classifications.some(c => c && c.source === 'groq'));
   const rendered = news.map((n, i) => {
     const text = (n.headline || '') + ' ' + (n.summary || '');
     // Prefer the supplied classification (FinBERT) when present; fall back
@@ -15814,6 +15869,8 @@ function renderNewsCard(ticker, result, opts) {
     counts[sent.type]++;
     const srcTag = sent.source === 'finbert'
       ? ` <span class="news-src" title="Classified by FinBERT (in-browser, free) — confidence ${(sent.score * 100).toFixed(0)}%">FinBERT</span>`
+      : sent.source === 'groq'
+      ? ` <span class="news-src-groq" title="Classified by Groq Llama 3.3 70B — batched once per ticker per day, cached 24h">Groq</span>`
       : '';
     return `<a class="news-item news-${sent.type}" href="${_escapeHtml(n.url || '#')}" target="_blank" rel="noopener noreferrer" title="${_escapeHtml((n.summary || n.headline || '').slice(0, 280))}">
       <div class="news-sym" aria-hidden="true" title="${tip('newsSent')}">${sent.icon}</div>
@@ -15825,9 +15882,22 @@ function renderNewsCard(ticker, result, opts) {
     </a>`;
   }).join('');
   const dominant = counts.pos > counts.neg ? 'lean positive' : counts.neg > counts.pos ? 'lean negative' : 'mixed';
+  const _sTotal  = counts.pos + counts.neg + counts.neutral || 1;
+  const _sBull   = Math.round(counts.pos / _sTotal * 100);
+  const _sBear   = Math.round(counts.neg / _sTotal * 100);
+  const _sNeu    = Math.max(0, 100 - _sBull - _sBear);
+  const _srcNote = usingGroq    ? ' · <span style="color:var(--accent)">Groq Llama 3.3 70B</span>'
+                 : usingFinBert ? ' · classified by <b>FinBERT</b>'
+                 : '';
   slot.innerHTML = `<div class="news-list">${rendered}</div>
+  <div class="news-sent-bar">
+    <div class="news-sent-bull" style="width:${_sBull}%"></div>
+    <div class="news-sent-neu"  style="width:${_sNeu}%"></div>
+    <div class="news-sent-bear" style="width:${_sBear}%"></div>
+  </div>
+  <div id="st-pulse-slot" style="display:none;margin:10px 0 4px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--line)"></div>
   <div class="news-foot">
-    <div class="news-summary">News flow: <b>${counts.pos}</b> positive · <b>${counts.neg}</b> negative · <b>${counts.neutral}</b> neutral — overall <b>${dominant}</b>${usingFinBert ? ' · classified by <b>FinBERT</b>' : ''}</div>
+    <div class="news-summary">News flow: <b>${counts.pos}</b> positive · <b>${counts.neg}</b> negative · <b>${counts.neutral}</b> neutral — overall <b>${dominant}</b>${_srcNote}</div>
     <a href="https://finance.yahoo.com/quote/${encodeURIComponent(ticker)}/news" target="_blank" rel="noopener">All news ↗</a>
   </div>`;
   // Patch the sub-line at the news-card level (sits outside #news-slot).
@@ -15886,6 +15956,122 @@ function toggleFinBERT() {
   if (_selected) loadNewsFor(_selected);
   // Re-render the dashboard so the toggle button reflects the new state.
   if (_selected && _data[_selected]) renderMain();
+}
+
+// ── Groq NLP news sentiment ──
+const LS_NEWS_SENT_PREFIX = 'sp_groq_nsent:';
+const _groqNewsSentCache = {};
+
+async function _kickGroqNewsSentiment(ticker, news) {
+  if (!news || !news.length) return;
+  if (!hasUsableRemote()) return;
+  if (Object.prototype.hasOwnProperty.call(_groqNewsSentCache, ticker)) {
+    const mem = _groqNewsSentCache[ticker];
+    if (mem && mem.length) _applyGroqNewsSentiment(ticker, news, mem);
+    return;
+  }
+  _groqNewsSentCache[ticker] = null;
+  const day = new Date().toISOString().slice(0, 10);
+  const lsKey = LS_NEWS_SENT_PREFIX + ticker + ':' + day;
+  try {
+    const lsCached = JSON.parse(localStorage.getItem(lsKey) || 'null');
+    if (lsCached && Array.isArray(lsCached)) {
+      _groqNewsSentCache[ticker] = lsCached;
+      _applyGroqNewsSentiment(ticker, news, lsCached);
+      return;
+    }
+  } catch (_) {}
+  const headlines = news.slice(0, 8);
+  const prompt =
+    `Score each headline for ${ticker} stock as POSITIVE, NEGATIVE, or NEUTRAL.\n` +
+    `Reply ONLY with a JSON array: [{"i":0,"s":"POSITIVE"}, ...]\n\n` +
+    `Headlines:\n${headlines.map((h, i) => `${i}. ${h.headline || ''}`).join('\n')}`;
+  const { ok, text } = await callLLM(prompt, { maxTokens: 150, cacheKey: 'groq_nsent:' + ticker + ':' + day });
+  if (!ok || !text) { delete _groqNewsSentCache[ticker]; return; }
+  try {
+    const match = text.match(/\[[\s\S]*?\]/);
+    if (!match) { delete _groqNewsSentCache[ticker]; return; }
+    const scores = JSON.parse(match[0]);
+    if (!Array.isArray(scores) || !scores.length) { delete _groqNewsSentCache[ticker]; return; }
+    _groqNewsSentCache[ticker] = scores;
+    try { localStorage.setItem(lsKey, JSON.stringify(scores)); } catch (_) {}
+    _applyGroqNewsSentiment(ticker, news, scores);
+  } catch (_) { delete _groqNewsSentCache[ticker]; }
+}
+
+function _applyGroqNewsSentiment(ticker, news, scores) {
+  if (_selected !== ticker) return;
+  const classifications = news.map((_, i) => {
+    const entry = scores.find(s => s.i === i);
+    if (!entry) return null;
+    const s = (entry.s || '').toUpperCase();
+    if (s === 'POSITIVE') return { type: 'pos',     icon: '▲', impact: 'POSITIVE', source: 'groq' };
+    if (s === 'NEGATIVE') return { type: 'neg',     icon: '▼', impact: 'NEGATIVE', source: 'groq' };
+    return                       { type: 'neutral', icon: '●', impact: 'NEUTRAL',  source: 'groq' };
+  });
+  renderNewsCard(ticker, { ok: true, news }, {
+    classifications,
+    sourceLabel: 'Sentiment by Groq · Llama 3.3 70B · cached 24h per ticker',
+  });
+}
+
+// ── StockTwits community pulse ──
+const LS_ST_PREFIX = 'sp_st_pulse:';
+
+async function _fetchStockTwitsPulse(ticker) {
+  const day = new Date().toISOString().slice(0, 10);
+  const lsKey = LS_ST_PREFIX + ticker + ':' + day;
+  try {
+    const cached = JSON.parse(localStorage.getItem(lsKey) || 'null');
+    if (cached) return cached;
+  } catch (_) {}
+  const apiUrl = `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`;
+  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`;
+  try {
+    const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const messages = (data.messages || []).slice(0, 30);
+    if (!messages.length) return null;
+    let bull = 0, bear = 0, neu = 0;
+    messages.forEach(m => {
+      const s = m.entities && m.entities.sentiment && m.entities.sentiment.basic;
+      if (s === 'Bullish') bull++;
+      else if (s === 'Bearish') bear++;
+      else neu++;
+    });
+    const result = { bull, bear, neu, total: messages.length };
+    try { localStorage.setItem(lsKey, JSON.stringify(result)); } catch (_) {}
+    return result;
+  } catch (_) { return null; }
+}
+
+async function _kickStockTwitsPulse(ticker) {
+  const slot = document.getElementById('st-pulse-slot');
+  if (!slot) return;
+  const data = await _fetchStockTwitsPulse(ticker);
+  if (_selected !== ticker) return;
+  const s2 = document.getElementById('st-pulse-slot');
+  if (!s2) return;
+  if (!data) { s2.style.display = 'none'; return; }
+  const { bull, bear, neu, total } = data;
+  const bullPct = Math.round((bull / total) * 100);
+  const bearPct = Math.round((bear / total) * 100);
+  const neuPct  = 100 - bullPct - bearPct;
+  const mood = bull > bear * 1.5 ? 'Bullish' : bear > bull * 1.5 ? 'Bearish' : 'Mixed';
+  const moodColor = mood === 'Bullish' ? 'var(--bull)' : mood === 'Bearish' ? 'var(--bear)' : 'var(--muted)';
+  s2.style.display = '';
+  s2.innerHTML = `
+    <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px" title="Sentiment from the last ${total} messages on StockTwits (cached 24h). Not financial advice.">StockTwits Community · ${total} recent posts</div>
+    <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px">
+      <span style="font-size:12px;font-weight:700;color:${moodColor}">${mood}</span>
+      <span style="font-size:11px;color:var(--muted)">· ${bullPct}% bull / ${bearPct}% bear</span>
+    </div>
+    <div style="display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px">
+      ${bullPct ? `<div style="flex:${bullPct};background:var(--bull)"></div>` : ''}
+      ${neuPct  ? `<div style="flex:${neuPct};background:var(--muted);opacity:.35"></div>` : ''}
+      ${bearPct ? `<div style="flex:${bearPct};background:var(--bear)"></div>` : ''}
+    </div>`;
 }
 
 // ── Theme toggle ──
@@ -16994,7 +17180,10 @@ async function loadNewsFor(ticker) {
   // FinBERT pass patches the rows once the model resolves.
   if (FINBERT_ENABLED && result && result.ok && result.news && result.news.length) {
     _upgradeNewsCardWithFinBERT(ticker, result.news);
+  } else if (!FINBERT_ENABLED && result && result.ok && result.news && result.news.length) {
+    _kickGroqNewsSentiment(ticker, result.news);
   }
+  if (result && result.ok) _kickStockTwitsPulse(ticker);
 }
 
 // ---- Synthetic profile/metrics for DEMO ----
@@ -17016,6 +17205,12 @@ function demoMetrics(ticker, bars) {
   const divYield = a ? a.divYield : ((ticker.charCodeAt(1) || 65) % 4);
   const div = (divYield / 100) * last;
   const beta = a ? a.beta : (0.6 + (ticker.charCodeAt(0) % 15) * 0.1);
+  const pbSeed = ticker.charCodeAt(0) % 30;
+  const pb = a ? (a.pb || (1.5 + pbSeed * 0.1)) : (1.5 + pbSeed * 0.1);
+  const roe = a ? (a.roe || (8 + (ticker.charCodeAt(1) || 65) % 20)) : (8 + (ticker.charCodeAt(1) || 65) % 20);
+  const roa = a ? (a.roa || (3 + (ticker.charCodeAt(0) % 10))) : (3 + (ticker.charCodeAt(0) % 10));
+  const de = a ? (a.de || (0.2 + (ticker.charCodeAt(2) || 70) % 6 * 0.1)) : (0.2 + (ticker.charCodeAt(2) || 70) % 6 * 0.1);
+  const fcfYield = a ? (a.fcfYield || (2 + (ticker.charCodeAt(0) % 8))) : (2 + (ticker.charCodeAt(0) % 8));
   return {
     peExclExtraTTM: pe,
     epsBasicExclExtraItemsTTM: eps,
@@ -17024,6 +17219,11 @@ function demoMetrics(ticker, bars) {
     '52WeekHigh': w52hi,
     '52WeekLow': w52lo,
     beta: beta,
+    pbAnnual: pb,
+    roeTTM: roe,
+    roaTTM: roa,
+    totalDebt_totalCapital: de,
+    fcfYieldTTM: fcfYield,
   };
 }
 
@@ -23744,6 +23944,11 @@ function renderMain() {
         <div class="cd-cell" title="${tip('hi52')}\n\nSource priority: Finnhub /stock/metric (intraday daily extremes) → fallback to bar-computed (weekly closes only — may miss intra-week wicks)." style="cursor:help"><div class="cd-lbl">52W High</div><div class="cd-val">$${fmtNum((metrics['52WeekHigh'] && metrics['52WeekHigh'] > 0) ? metrics['52WeekHigh'] : w52hi)}</div></div>
         <div class="cd-cell" title="${tip('lo52')}\n\nSource priority: Finnhub /stock/metric (intraday daily extremes) → fallback to bar-computed (weekly closes only — may miss intra-week wicks)." style="cursor:help"><div class="cd-lbl">52W Low</div><div class="cd-val">$${fmtNum((metrics['52WeekLow'] && metrics['52WeekLow'] > 0) ? metrics['52WeekLow'] : w52lo)}</div></div>
         <div class="cd-cell" title="${tip('beta')}" style="cursor:help"><div class="cd-lbl">Beta</div><div class="cd-val">${fmtNum(metrics.beta)}</div></div>
+        <div class="cd-cell" title="${tip('pb')}" style="cursor:help"><div class="cd-lbl">P/B Ratio</div><div class="cd-val">${fmtNum(metrics.pbAnnual)}</div></div>
+        <div class="cd-cell" title="${tip('roe')}" style="cursor:help"><div class="cd-lbl">ROE</div><div class="cd-val">${fmtPct(metrics.roeTTM)}</div></div>
+        <div class="cd-cell" title="${tip('roa')}" style="cursor:help"><div class="cd-lbl">ROA</div><div class="cd-val">${fmtPct(metrics.roaTTM)}</div></div>
+        <div class="cd-cell" title="${tip('de')}" style="cursor:help"><div class="cd-lbl">Debt/Capital</div><div class="cd-val">${fmtNum(metrics.totalDebt_totalCapital)}</div></div>
+        <div class="cd-cell" title="${tip('fcfYield')}" style="cursor:help"><div class="cd-lbl">FCF Yield</div><div class="cd-val">${fmtPct(metrics.fcfYieldTTM)}</div></div>
       </div>
     </div>
 
@@ -24479,6 +24684,10 @@ function openSettings() {
   $('notify-on-change').checked = NOTIFY_ON_CHANGE;
   const buyAlertsEl = $('buy-timing-alerts');
   if (buyAlertsEl) buyAlertsEl.checked = BUY_ALERTS_ON;
+  const ghPatEl = $('gh-pat');
+  if (ghPatEl) ghPatEl.value = localStorage.getItem(LS_KEY_GH_TOKEN) || '';
+  const ghGistEl = $('gh-gist-id');
+  if (ghGistEl) ghGistEl.value = localStorage.getItem(LS_KEY_GIST_ID) || '';
   renderKeyStorageStatus();
   $('settings-modal').classList.remove('hidden');
 }
@@ -24744,6 +24953,13 @@ async function saveSettings() {
   const newNotify = $('notify-on-change').checked;
   const buyAlertsInput = $('buy-timing-alerts');
   const newBuyAlerts = buyAlertsInput ? !!buyAlertsInput.checked : BUY_ALERTS_ON;
+  const ghPatInput = $('gh-pat');
+  const newGhPat = ghPatInput ? ghPatInput.value.trim() : '';
+  const ghGistInput = $('gh-gist-id');
+  const newGhGist = ghGistInput ? ghGistInput.value.trim() : '';
+  try { if (newGhPat)  localStorage.setItem(LS_KEY_GH_TOKEN, newGhPat);  else localStorage.removeItem(LS_KEY_GH_TOKEN);  } catch (_) {}
+  try { if (newGhGist) localStorage.setItem(LS_KEY_GIST_ID,  newGhGist); else localStorage.removeItem(LS_KEY_GIST_ID);  } catch (_) {}
+  if (newGhPat && newGhGist) syncPull().catch(() => {});
   const keyChanged = newKey !== API_KEY;
   const tdKeyChanged = newTdKey !== TD_API_KEY;
   const groqKeyChanged = newGroqKey !== GROQ_API_KEY;
@@ -24885,6 +25101,116 @@ async function init() {
   // Export-reminder nudge — fires once per session if the watchlist is big
   // enough and no recent export exists.
   try { maybeShowExportNudge(); } catch (e) {}
+  try { _initFirstRunBanner(); } catch (e) {}
+  syncPull().catch(() => {});
+}
+
+// ── GitHub Gist cross-device sync ──
+const LS_KEY_GH_TOKEN  = 'sp_gh_pat';
+const LS_KEY_GIST_ID   = 'sp_gist_id';
+const LS_KEY_LAST_SYNC = 'sp_last_sync';
+const GIST_FILENAME    = 'stockpulse_sync.json';
+
+function _buildSyncPayload() {
+  return {
+    v: 1,
+    ts: Date.now(),
+    watchlist: WATCHLIST,
+    favorites: loadJsonResilient(LS_KEY_FAVS,   LS_KEY_FAVS_BACKUP,   []),
+    simSet:    loadJsonResilient(LS_KEY_SIMSET,  LS_KEY_SIMSET_BACKUP, []),
+    bundles:   loadJsonResilient(LS_KEY_BUNDLES, LS_KEY_BUNDLES_BACKUP, []),
+  };
+}
+
+function _applyRemoteState(payload) {
+  if (!payload || payload.v !== 1) return;
+  if (Array.isArray(payload.watchlist) && payload.watchlist.length) {
+    WATCHLIST.length = 0;
+    payload.watchlist.forEach(t => WATCHLIST.push(t));
+    persistJsonResilient(LS_KEY_WL, LS_KEY_WL_BACKUP, WATCHLIST);
+  }
+  if (Array.isArray(payload.favorites))
+    persistJsonResilient(LS_KEY_FAVS, LS_KEY_FAVS_BACKUP, payload.favorites);
+  if (Array.isArray(payload.simSet))
+    persistJsonResilient(LS_KEY_SIMSET, LS_KEY_SIMSET_BACKUP, payload.simSet);
+  if (Array.isArray(payload.bundles))
+    persistJsonResilient(LS_KEY_BUNDLES, LS_KEY_BUNDLES_BACKUP, payload.bundles);
+}
+
+async function syncPull() {
+  const token  = localStorage.getItem(LS_KEY_GH_TOKEN)  || '';
+  const gistId = localStorage.getItem(LS_KEY_GIST_ID)   || '';
+  if (!token || !gistId) return;
+  try {
+    const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const file = data.files && data.files[GIST_FILENAME];
+    if (!file || !file.content) return;
+    const payload = JSON.parse(file.content);
+    const localTs = parseInt(localStorage.getItem(LS_KEY_LAST_SYNC) || '0', 10);
+    if (payload.ts > localTs) {
+      _applyRemoteState(payload);
+      try { localStorage.setItem(LS_KEY_LAST_SYNC, String(payload.ts)); } catch (_) {}
+      renderWatchlist();
+    }
+  } catch (_) {}
+}
+
+let _syncPushTimer = null;
+async function syncPush() {
+  const token  = localStorage.getItem(LS_KEY_GH_TOKEN)  || '';
+  const gistId = localStorage.getItem(LS_KEY_GIST_ID)   || '';
+  if (!token || !gistId) return;
+  clearTimeout(_syncPushTimer);
+  _syncPushTimer = setTimeout(async () => {
+    try {
+      const payload = _buildSyncPayload();
+      const body = JSON.stringify({
+        files: { [GIST_FILENAME]: { content: JSON.stringify(payload) } }
+      });
+      const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body
+      });
+      if (resp.ok) {
+        try { localStorage.setItem(LS_KEY_LAST_SYNC, String(payload.ts)); } catch (_) {}
+      }
+    } catch (_) {}
+  }, 2000);
+}
+
+// ── First-run banner ──
+const LS_KEY_FRB_DISMISSED = 'sp_frb_dismissed';
+
+function _isOnBakedKey() {
+  // Returns true if the user has no personal key configured (still using
+  // the operator-baked Finnhub key, which means they haven't visited Settings).
+  const fhKey = localStorage.getItem('sp_finnhub_key') || '';
+  const tdKey = localStorage.getItem('sp_td_key') || '';
+  // If either personal key is set, they've already configured the app.
+  return !fhKey && !tdKey;
+}
+
+function _initFirstRunBanner() {
+  if (localStorage.getItem(LS_KEY_FRB_DISMISSED) === '1') return;
+  if (!_isOnBakedKey()) return;
+  const banner = document.getElementById('firstrun-banner');
+  if (!banner) return;
+  banner.style.display = 'flex';
+}
+
+function _dismissFirstRunBanner() {
+  try { localStorage.setItem(LS_KEY_FRB_DISMISSED, '1'); } catch (_) {}
+  const banner = document.getElementById('firstrun-banner');
+  if (banner) banner.style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', init);
