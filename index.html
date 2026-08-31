@@ -1577,13 +1577,10 @@ input:focus, select:focus {
   border-left: 1px solid var(--line);
 }
 .settings-col .settings-section:last-child { margin-bottom: 0; }
-@media (max-width: 768px) {
-  /* Each settings column is ~300-380px on tablets — feature cards can't stay row */
-  .settings-feature-cards { flex-direction: column; }
-}
 @media (max-width: 640px) {
   #settings-modal .modal-body { grid-template-columns: 1fr; }
   .settings-col + .settings-col { border-left: none; border-top: 1px solid var(--line); }
+  .settings-feature-cards { flex-direction: column; }
 }
 @keyframes pop {
   from { opacity: 0; transform: scale(.96); }
@@ -12758,10 +12755,14 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
     color: var(--dim); margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
   }
   .settings-col-label::after { content:''; flex:1; height:1px; background:var(--line); }
-  /* Feature highlight cards — replaces comparison table */
-  .settings-feature-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  /* Feature highlight cards — full-width band below both columns */
+  .settings-feature-section {
+    grid-column: 1 / -1;
+    margin: 0; padding: 12px 20px 14px;
+    border-top: 1px solid var(--line);
+  }
   .settings-feature-label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
-  .settings-feature-cards { display: flex; flex-direction: row; gap: 7px; }
+  .settings-feature-cards { display: flex; flex-direction: row; gap: 10px; }
   .settings-feature-card {
     flex: 1; min-width: 0;
     display: flex; align-items: flex-start; gap: 8px;
@@ -12932,35 +12933,36 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
           </div>
         </div>
 
-        <!-- WHAT'S UNIQUE -->
-        <div class="settings-feature-section" id="settings-usp-section">
-          <div class="settings-feature-label">What StockPulse does differently</div>
-          <div class="settings-feature-cards">
-            <div class="settings-feature-card">
-              <div class="settings-feature-icon" style="color:#30d158">◈</div>
-              <div>
-                <div class="settings-feature-title">One heat score across every surface</div>
-                <div class="settings-feature-body">5 signals merged into one −100→+100 score. Same number, every tab.</div>
-              </div>
+
+      </div><!-- /settings-col right -->
+
+      <!-- FULL-WIDTH BAND: spans both columns, keeps both column heights short -->
+      <div class="settings-feature-section" id="settings-usp-section">
+        <div class="settings-feature-label">What StockPulse does differently</div>
+        <div class="settings-feature-cards">
+          <div class="settings-feature-card">
+            <div class="settings-feature-icon" style="color:#30d158">◈</div>
+            <div>
+              <div class="settings-feature-title">One heat score across every surface</div>
+              <div class="settings-feature-body">5 signals merged into one −100→+100 score. Same number, every tab.</div>
             </div>
-            <div class="settings-feature-card">
-              <div class="settings-feature-icon" style="color:#ff9f0a">↑↓</div>
-              <div>
-                <div class="settings-feature-title">Signal disagreements shown, not hidden</div>
-                <div class="settings-feature-body">Bullish technicals + bearish forecast = CONFLICT, shown explicitly. Not averaged away.</div>
-              </div>
+          </div>
+          <div class="settings-feature-card">
+            <div class="settings-feature-icon" style="color:#ff9f0a">↑↓</div>
+            <div>
+              <div class="settings-feature-title">Signal disagreements shown, not hidden</div>
+              <div class="settings-feature-body">Bullish technicals + bearish forecast = CONFLICT, shown explicitly. Not averaged away.</div>
             </div>
-            <div class="settings-feature-card">
-              <div class="settings-feature-icon" style="color:#533afa">✦</div>
-              <div>
-                <div class="settings-feature-title">AI explains your signals, not the news</div>
-                <div class="settings-feature-body">Narrates your computed signals in plain English — not a generic article. Free via Groq or offline.</div>
-              </div>
+          </div>
+          <div class="settings-feature-card">
+            <div class="settings-feature-icon" style="color:#533afa">✦</div>
+            <div>
+              <div class="settings-feature-title">AI explains your signals, not the news</div>
+              <div class="settings-feature-body">Narrates your computed signals in plain English — not a generic article. Free via Groq or offline.</div>
             </div>
           </div>
         </div>
-
-      </div><!-- /settings-col right -->
+      </div>
 
     </div>
     <div class="modal-foot">
