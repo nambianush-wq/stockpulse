@@ -6444,7 +6444,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
       </div>
     </div>
     <div id="firstrun-banner" style="display:none">
-      <div class="frb-icon">&#128273;</div>
+      <div class="frb-icon">&#9432;</div>
       <div class="frb-msg"><b>Welcome to StockPulse.</b> Add your free Finnhub API key in Settings to see live prices &amp; signals for your watchlist.</div>
       <button class="frb-btn" onclick="openSettings()">Open Settings</button>
       <button class="frb-dismiss" onclick="_dismissFirstRunBanner()" title="Dismiss">&#10005;</button>
@@ -15982,6 +15982,7 @@ async function _upgradeNewsCardWithFinBERT(ticker, news) {
     classifications: results,
     sourceLabel: 'Sentiment classified by FinBERT (in-browser, free) · falls back to keyword if unavailable',
   });
+  _kickStockTwitsPulse(ticker);
 }
 
 // Toggle the FinBERT setting and re-classify the open news card. Persists
@@ -16050,6 +16051,7 @@ function _applyGroqNewsSentiment(ticker, news, scores) {
     classifications,
     sourceLabel: 'Sentiment by Groq · Llama 3.3 70B · cached 24h per ticker',
   });
+  _kickStockTwitsPulse(ticker);
 }
 
 // ── StockTwits community pulse ──
