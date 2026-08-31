@@ -12719,12 +12719,38 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
 <!-- Settings Modal -->
 <style>
-  .settings-section { margin-bottom: 18px; }
+  .settings-section { margin-bottom: 20px; }
   .settings-section-head {
     font-size: 10px; letter-spacing: 0.08em; color: var(--muted);
-    text-transform: uppercase; margin-bottom: 8px;
-    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+    text-transform: uppercase; margin-bottom: 10px;
+    padding: 4px 0 4px 9px;
+    border-left: 3px solid var(--line);
   }
+  .settings-section-head.sh-data  { border-left-color: #30d158; color: rgba(48,209,88,.75); }
+  .settings-section-head.sh-ai    { border-left-color: #533afa; color: rgba(83,58,250,.9); }
+  .settings-section-head.sh-sync  { border-left-color: var(--muted); }
+  .settings-section-head.sh-prefs { border-left-color: #ff9f0a; color: rgba(255,159,10,.8); }
+  .settings-section-head.sh-storage{ border-left-color: var(--dim); }
+  /* Column-level purpose label */
+  .settings-col-label {
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+  .settings-col-label::after { content:''; flex:1; height:1px; background:var(--line); }
+  /* Feature highlight cards — replaces comparison table */
+  .settings-feature-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .settings-feature-label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+  .settings-feature-cards { display: flex; flex-direction: column; gap: 7px; }
+  .settings-feature-card {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.02);
+    transition: border-color .15s;
+  }
+  .settings-feature-card:hover { border-color: rgba(255,255,255,.12); }
+  .settings-feature-icon { font-size: 15px; line-height: 1; flex-shrink: 0; margin-top: 2px; }
+  .settings-feature-title { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .settings-feature-body { font-size: 10px; color: var(--dim); line-height: 1.5; }
   /* Override .modal-row label's block/uppercase rules for toggle rows */
   .modal-row label.toggle-row {
     display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
@@ -12773,10 +12799,11 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
       <!-- LEFT COLUMN: API keys -->
       <div class="settings-col">
+        <div class="settings-col-label">Connect</div>
 
         <!-- DATA SOURCES -->
         <div class="settings-section">
-          <div class="settings-section-head">Data Sources</div>
+          <div class="settings-section-head sh-data">Market Data</div>
           <div class="modal-row">
             <label for="api-key">Finnhub API key <span class="help-tag">required</span></label>
             <input id="api-key" type="password" placeholder="Runs in DEMO mode without one">
@@ -12791,7 +12818,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
         <!-- AI FEATURES -->
         <div class="settings-section">
-          <div class="settings-section-head">AI Features</div>
+          <div class="settings-section-head sh-ai">AI Features</div>
           <div class="modal-row">
             <label for="groq-api-key">Groq API key <span class="help-tag muted">optional</span></label>
             <input id="groq-api-key" type="password" placeholder="Paste your Groq key for AI explanations">
@@ -12810,7 +12837,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
         <!-- CROSS-DEVICE SYNC -->
         <div class="settings-section" style="margin-bottom:0">
-          <div class="settings-section-head">Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></div>
+          <div class="settings-section-head sh-sync">Cross-Device Sync <span class="help-tag muted">optional · GitHub Gist</span></div>
           <div class="modal-row">
             <label for="gh-pat">GitHub Personal Access Token</label>
             <input id="gh-pat" type="password" placeholder="ghp_… (gist scope only)">
@@ -12827,10 +12854,11 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
       <!-- RIGHT COLUMN: Preferences + Storage + USP -->
       <div class="settings-col">
+        <div class="settings-col-label">Behaviour &amp; Status</div>
 
         <!-- PREFERENCES -->
         <div class="settings-section">
-          <div class="settings-section-head">Preferences</div>
+          <div class="settings-section-head sh-prefs">Alerts &amp; Refresh</div>
           <div class="modal-row">
             <label for="refresh-interval">Refresh interval</label>
             <select id="refresh-interval">
@@ -12863,7 +12891,7 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
 
         <!-- STORAGE -->
         <div class="settings-section">
-          <div class="settings-section-head">Storage</div>
+          <div class="settings-section-head sh-storage">Your Data</div>
           <div class="modal-row settings-storage-row">
             <div id="settings-key-status" class="help-text" style="line-height:1.6"></div>
             <div class="settings-storage-actions">
@@ -12873,24 +12901,33 @@ body:has(#sp-recovery-banner) #sp-export-nudge { display: none !important; }
           </div>
         </div>
 
-        <!-- USP COMPARISON -->
-        <details class="settings-usp-compare" id="settings-usp-section">
-          <summary>What makes StockPulse different ▾</summary>
-          <div class="settings-usp-body">
-            <table class="usp-table">
-              <thead>
-                <tr><th></th><th>StockPulse</th><th>Yahoo</th><th>TradingView</th><th>Finviz</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Composite heat score</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-                <tr><td>CONFLICT timing state</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-                <tr><td>AI explains your signals</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-                <tr><td>Multi-goal sector rank</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-no">—</td><td class="usp-no">—</td></tr>
-                <tr><td>Free · no login</td><td class="usp-yes">✓</td><td class="usp-no">—</td><td class="usp-partial">partial</td><td class="usp-yes">✓</td></tr>
-              </tbody>
-            </table>
+        <!-- WHAT'S UNIQUE -->
+        <div class="settings-feature-section" id="settings-usp-section">
+          <div class="settings-feature-label">What StockPulse does differently</div>
+          <div class="settings-feature-cards">
+            <div class="settings-feature-card">
+              <div class="settings-feature-icon" style="color:#30d158">◈</div>
+              <div>
+                <div class="settings-feature-title">One heat score across every surface</div>
+                <div class="settings-feature-body">MA stack, RSI, volume bias, Fibonacci, and slope merged into a single −100→+100 score — shown consistently on every tab, not buried in a chart.</div>
+              </div>
+            </div>
+            <div class="settings-feature-card">
+              <div class="settings-feature-icon" style="color:#ff9f0a">↑↓</div>
+              <div>
+                <div class="settings-feature-title">Signal disagreements shown, not hidden</div>
+                <div class="settings-feature-body">When technical signals are bullish but the forecast is bearish, StockPulse labels this CONFLICT explicitly — so you decide, rather than getting an averaged signal that masks the tension.</div>
+              </div>
+            </div>
+            <div class="settings-feature-card">
+              <div class="settings-feature-icon" style="color:#533afa">✦</div>
+              <div>
+                <div class="settings-feature-title">AI explains your signals, not the news</div>
+                <div class="settings-feature-body">"Why this verdict?" narrates your stock's own computed score and signals in plain English — not a generic article summary. Powered by Groq (free) or runs offline.</div>
+              </div>
+            </div>
           </div>
-        </details>
+        </div>
 
       </div><!-- /settings-col right -->
 
